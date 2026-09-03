@@ -1,0 +1,135 @@
+---
+tags:
+  - 환경/windows
+  - 환경/ad
+  - 서비스/winrm
+시작조건: ["<JUMP_HOST>의 WinRM PowerShell 세션에서 로컬 명령은 성공하지만 DC 또는 두 번째 Kerberos 서비스 접근 실패"]
+필요권한: ["원래 AD 계정의 대상 리소스 읽기 권한", "RunAs endpoint 사용 시 <JUMP_HOST>의 상승된 로컬 관리자 권한"]
+필요조건: ["원래 AD 계정의 plaintext password", "<JUMP_HOST>에서 DC 또는 두 번째 대상의 FQDN·Kerberos·LDAP 포트 도달 가능", "현재 Kerberos ticket 목록"]
+결과: ["명시적 AD 자격 증명으로 두 번째 리소스 조회", "RunAs 선택 시 지정 계정의 TGT를 가진 임시 WinRM 세션"]
+---
+
+# WinRM 두 번째 홉 명시적 자격 증명 재인증
+
+## 한 줄 판단
+
+`<JUMP_HOST>`의 WinRM 세션에서 로컬 명령은 성공하지만 DC 또는 두 번째 Kerberos 서비스 접근만 실패하고 원래 AD 계정의 plaintext password가 있으면, 지원되는 명령에 `PSCredential`을 전달해 해당 계정으로 두 번째 서비스에 다시 인증한다.
+
+## 사용할 때
+
+- 공격 호스트에서 `<JUMP_HOST>:5985/5986` WinRM 세션을 확보했다.
+- `<JUMP_HOST>`에서 DC 또는 `<SECOND_HOST>`의 DNS와 필요한 Kerberos·LDAP·서비스 포트에 연결할 수 있다.
+- 현재 WinRM 세션에는 `HTTP/<JUMP_HOST>` service ticket만 있고 재사용 가능한 사용자 TGT가 없거나, 두 번째 Kerberos 서비스 요청에서만 인증 오류가 발생한다.
+- 원래 WinRM 로그인 계정의 plaintext password를 보유한다.
+- 기본 선택은 명령별 `-Credential $Cred` 전달이다. RunAs endpoint는 관리자 콘솔과 GUI credential prompt를 사용할 수 있고 WinRM 서비스 재시작 영향을 감수할 때만 사용한다.
+
+## 전제 조건
+
+| 확인할 것 | 필요한 상태 | 확인 방법 | 미충족 시 다음 확인 |
+|---|---|---|---|
+| 명령 실행 위치 | `<JUMP_HOST>`의 WinRM PowerShell 세션 | `whoami`, `hostname` | 공격 호스트 셸과 원격 PowerShell prompt를 구분 |
+| 현재 인증 상태 | WinRM 대상 service ticket과 TGT 보유 여부 구분 | `klist` | ticket 주체·SPN·만료와 현재 로그온 계정을 확인 |
+| 두 번째 서비스 경로 | `<JUMP_HOST>`에서 DC 또는 `<SECOND_HOST>`의 FQDN과 필요한 포트 도달 | DNS와 포트 연결 확인 | IP 대신 FQDN, DNS suffix, SPN, 방화벽과 시간 확인 |
+| 재인증 자료 | 원래 AD 계정의 plaintext password | 동일 계정의 직접 인증 가능 여부 확인 | 계정의 도메인 표기, password 만료·오류를 확인 |
+| RunAs 선택 조건 | `<JUMP_HOST>`의 상승된 로컬 관리자 token과 GUI prompt | 관리자 token과 endpoint 목록 확인 | 조건이 없으면 `PSCredential` 방식만 사용 |
+
+## 실행
+
+### 1. Windows 점프 호스트에서 두 번째 홉 후보 확인
+
+```powershell
+klist
+Get-DomainUser -SPN
+```
+
+확인할 출력:
+
+- `klist`에 `HTTP/<JUMP_HOST>` ticket은 있지만 `krbtgt/<DOMAIN>` TGT가 없다.
+- 로컬 명령은 성공하지만 PowerView 조회에서 `FindAll` 또는 `An operations error occurred`가 나타난다.
+- 이 조합만으로 원인을 확정하지 않는다. DNS, DC 포트, 시간, PowerView 모듈과 현재 계정의 LDAP 읽기 권한을 먼저 분리 확인한다.
+
+### 2. Windows 점프 호스트에서 PSCredential로 재인증
+
+```powershell
+$SecPassword = ConvertTo-SecureString '<PASSWORD>' -AsPlainText -Force
+$Cred = New-Object System.Management.Automation.PSCredential('<DOMAIN>\<USER>', $SecPassword)
+Get-DomainUser -SPN -Credential $Cred | Select-Object samaccountname
+```
+
+확인할 출력:
+
+- `samaccountname` 목록이 반환되면 해당 명령이 `<DOMAIN>\<USER>`로 DC에 재인증해 객체를 읽은 것이다.
+- 다른 PowerView 명령도 `-Credential`을 지원할 때만 같은 객체를 전달한다.
+- 조회 성공은 원래 계정의 AD 읽기 권한을 보여 줄 뿐, 점프 호스트 또는 두 번째 대상의 관리자 권한을 의미하지 않는다.
+
+### 3. Windows 점프 호스트에서 RunAs endpoint 사용
+
+관리자 권한 Windows PowerShell 콘솔과 GUI credential prompt를 사용할 수 있고, 현재 WinRM 세션 단절 가능성을 확인한 경우에만 수행한다.
+
+```powershell
+Register-PSSessionConfiguration -Name '<TEMP_ENDPOINT>' -RunAsCredential '<DOMAIN>\<USER>'
+Restart-Service WinRM
+Enter-PSSession -ComputerName '<JUMP_HOST>' -Credential '<DOMAIN>\<USER>' -ConfigurationName '<TEMP_ENDPOINT>'
+klist
+```
+
+확인할 출력:
+
+- `<TEMP_ENDPOINT>`가 `WSManConfig`에 등록된다.
+- 새 세션의 `klist`에 `krbtgt/<DOMAIN>` TGT가 표시된다.
+- credential 매개변수 없이 두 번째 Kerberos 서비스 조회가 성공한다.
+
+## 관찰과 판단
+
+| 관찰 | 판단 | 결과 상태 | 다음 행동 |
+|---|---|---|---|
+| 명시적 credential 조회 성공 | 원래 AD 계정으로 두 번째 서비스에 재인증됨 | 점프 호스트에서 해당 계정 권한의 AD 조회 가능 | [[AD Identity 확인 후 도메인 컨텍스트 열거]] |
+| RunAs 세션에서 TGT와 AD 조회 확인 | 임시 endpoint가 지정 계정으로 동작함 | 지정 계정으로 두 번째 Kerberos 리소스 접근 가능 | 필요한 작업 후 endpoint 복구 |
+| 동일 오류 지속 | Double Hop 외 원인이 남아 있음 | AD 접근 실패 | DNS·DC 포트·LDAP 권한·도메인 지정·시간·모듈 상태를 분리 확인 |
+| WinRM 세션 단절 | 서비스 재시작 영향 | 원격 세션 없음 | 새 endpoint 또는 기존 endpoint로 다시 연결 |
+| RunAs 등록 실패 | GUI prompt 또는 상승된 관리자 조건 미충족 | 구성 변경 불가 | `PSCredential` 방식 사용 |
+
+## 결과 상태
+
+- WinRM 로그인 성공, `HTTP/<JUMP_HOST>` service ticket, 사용자 TGT와 두 번째 서비스 인증 성공은 서로 다른 상태다.
+- 두 번째 서비스 인증 성공도 최종 리소스의 읽기·쓰기 또는 관리자 권한을 뜻하지 않는다. 원래 AD 계정의 ACL과 그룹 권한을 별도로 확인한다.
+- `PSCredential` 방식은 지원되는 명령 하나에만 자격 증명을 전달한다. RunAs endpoint는 새 세션 전체의 실행 Identity와 WinRM 구성을 바꾼다.
+
+## 다음 행동
+
+- AD 객체 조회가 가능해지면 [[AD Identity 확인 후 도메인 컨텍스트 열거]]에서 현재 계정의 읽기·객체 권한을 확인한다.
+- 새 원격 Windows 세션을 얻으면 [[Windows 셸 또는 세션 확보 후 컨텍스트 열거]]에서 실행 주체와 token을 확인한다.
+
+## 변경 영향과 복구
+
+`PSCredential` 방식은 영속 구성을 바꾸지 않는다. RunAs endpoint를 만들었다면 정확한 임시 이름만 제거한다.
+
+```powershell
+Exit-PSSession
+Unregister-PSSessionConfiguration -Name '<TEMP_ENDPOINT>' -Force
+Restart-Service WinRM
+Get-PSSessionConfiguration | Where-Object { $_.Name -eq '<TEMP_ENDPOINT>' }
+```
+
+| 변경 대상 | 예상 영향 | 검증 방법 | 복구 절차 |
+|---|---|---|---|
+| WinRM PSSession endpoint | 지정 계정으로 실행되는 endpoint 생성 | `Get-PSSessionConfiguration` | `<TEMP_ENDPOINT>`만 제거하고 빈 조회 확인 |
+| WinRM 서비스 | 연결된 세션 단절 | 기존·새 endpoint 재접속 | endpoint 제거 후 서비스를 재시작하고 기본 endpoint 동작 확인 |
+
+## 관련 공격기법
+
+- [[WinRM 원격 PowerShell 세션]]
+- [[AD 도메인 컨텍스트 기본 확인]]
+- [[SPN 계정 열거]]
+
+## 관련 도구
+
+- [[PowerView]]
+- [[evil-winrm]]
+- [[klist]]
+- [[powershell]]
+
+## 관련 상태 라우터
+
+- [[WinRM Kerberos Double Hop 진단과 재인증]]
+- [[AD Identity 확인 후 도메인 컨텍스트 열거]]

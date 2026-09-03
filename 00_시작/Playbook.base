@@ -1,0 +1,128 @@
+filters:
+  and:
+    - file.ext == "md"
+    - or:
+        - file.inFolder("01_포트별 서비스")
+        - file.inFolder("02_공격기법")
+        - file.inFolder("03_공격도구")
+        - file.inFolder("00_시작/상태별 라우터")
+        - file.inFolder("04_시나리오")
+properties:
+  file.name:
+    displayName: 문서
+  file.folder:
+    displayName: 폴더
+  file.tags:
+    displayName: 태그
+  대표포트:
+    displayName: 포트
+  서비스:
+    displayName: 서비스
+  시작조건:
+    displayName: 지금 공격을 시작할 수 있는 조건
+  시작상태:
+    displayName: 시작 상태
+  목표:
+    displayName: 지금 얻으려는 것
+  현재계정:
+    displayName: 현재 계정
+  현재 가능한 행위:
+    displayName: 현재 가능한 행위
+  필요권한:
+    displayName: 현재 필요한 권한
+  필요정보:
+    displayName: 현재 가지고 있어야 할 정보
+  필요조건:
+    displayName: 가지고 있어야 할 정보·접근
+  결과:
+    displayName: 성공하면 얻는 것
+  네트워크위치:
+    displayName: 현재 네트워크 위치
+  실행환경:
+    displayName: 도구 실행 위치
+views:
+  - type: table
+    name: 상태 라우터
+    filters:
+      and:
+        - file.inFolder("00_시작/상태별 라우터")
+    order:
+      - file.name
+      - file.tags
+      - 시작상태
+      - 목표
+      - 현재계정
+      - 현재 가능한 행위
+      - 필요권한
+      - 필요정보
+      - 네트워크위치
+  - type: table
+    name: 실전 시나리오
+    filters:
+      and:
+        - file.inFolder("04_시나리오")
+    order:
+      - file.name
+      - file.tags
+      - 시작상태
+      - 목표
+      - 필요권한
+      - 필요정보
+      - 네트워크위치
+  - type: table
+    name: 서비스
+    filters:
+      and:
+        - file.inFolder("01_포트별 서비스")
+    order:
+      - file.name
+      - 대표포트
+      - 서비스
+      - file.tags
+  - type: table
+    name: 공격기법
+    filters:
+      and:
+        - file.inFolder("02_공격기법")
+    groupBy:
+      property: file.folder
+      direction: ASC
+    order:
+      - file.folder
+      - file.name
+      - file.tags
+      - 시작조건
+      - 필요권한
+      - 필요조건
+      - 결과
+  - type: table
+    name: 공격도구
+    filters:
+      and:
+        - file.inFolder("03_공격도구")
+    groupBy:
+      property: file.folder
+      direction: ASC
+    order:
+      - file.folder
+      - file.name
+      - file.tags
+      - 실행환경
+      - 필요권한
+      - 필요조건
+      - 결과
+  - type: table
+    name: 결과별 기법
+    filters:
+      and:
+        - file.inFolder("02_공격기법")
+    groupBy:
+      property: 결과
+      direction: ASC
+    order:
+      - 결과
+      - file.name
+      - file.folder
+      - file.tags
+      - 시작조건
+      - 필요권한

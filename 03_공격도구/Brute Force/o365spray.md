@@ -1,0 +1,96 @@
+---
+tags:
+  - 환경/cloud
+  - 서비스/microsoft365
+  - 기능/열거
+  - 기능/인증검증
+실행환경: ["Linux"]
+필요조건: ["Python 3 실행 환경", "대상 도메인", "열거 또는 spraying 시 사용자 목록", "spraying 시 비밀번호 후보와 잠금 정책"]
+결과: ["유효 계정 후보", "유효 자격증명"]
+---
+
+# o365spray
+
+## 도구 개요
+
+`o365spray`는 Microsoft 365 도메인 검증, 사용자 열거, Password Spraying을 단계별로 수행하는 도구다. 같은 도구 안에서 tenant 확인부터 유효 계정 후보 축소와 단일 비밀번호 검증까지 이어서 다룰 때 유용하다.
+
+## 필요한 입력과 실행 환경
+
+- 실행 환경: Python 3와 도구 의존성이 설치된 Linux 호스트
+- 공통 입력: Microsoft 365 도메인
+- 열거 입력: UPN 또는 이메일 형식의 사용자 목록
+- spraying 입력: 유효 사용자 목록, 비밀번호 후보, 잠금 정책의 시도 횟수와 reset window
+
+## 표준 사용법
+
+```bash
+python3 o365spray.py --validate --domain <DOMAIN>
+python3 o365spray.py --enum -U users.txt --domain <DOMAIN>
+python3 o365spray.py --spray -U usersfound.txt -p '<PASSWORD>' --count 1 --lockout 1 --domain <DOMAIN>
+```
+
+검증, 사용자 열거, spraying 순서로 진행하고 `--count`와 `--lockout`을 확인한 잠금 정책에 맞춘다.
+
+## 대표 예시
+
+### Microsoft 365 도메인 검증
+
+```bash
+python3 o365spray.py --validate --domain <DOMAIN>
+```
+
+확인할 출력:
+
+- `[VALID] The following domain is using O365`.
+
+### 사용자 열거
+
+```bash
+python3 o365spray.py --enum -U users.txt --domain <DOMAIN>
+```
+
+확인할 출력:
+
+- `[VALID] user@<DOMAIN>`.
+- `enum_valid_accounts` 결과 파일.
+
+### Password Spraying
+
+```bash
+python3 o365spray.py --spray -U usersfound.txt -p '<PASSWORD>' --count 1 --lockout 1 --domain <DOMAIN>
+```
+
+확인할 출력:
+
+- `[VALID] user@<DOMAIN>:<PASSWORD>`.
+- `spray_valid_credentials` 결과 파일.
+
+## 주요 옵션
+
+| 옵션 | 의미 | 자주 쓰는 상황 |
+|---|---|---|
+| `--validate` | 대상 도메인의 O365 사용 여부 확인 | spraying 전 대상 서비스 확인 |
+| `--domain` | 대상 도메인 지정 | 모든 모드 |
+| `--enum` | 사용자 열거 모드 | 유효 계정 후보 축소 |
+| `-U` | 사용자 목록 파일 | enum/spray 대상 지정 |
+| `--spray` | Password Spraying 모드 | 단일 또는 제한된 비밀번호 검증 |
+| `-p` | 단일 비밀번호 지정 | lockout 위험을 낮춘 spraying |
+| `--count` | 한 lockout window에서 사용할 비밀번호 수 | 잠금 임계값에 맞춘 시도 수 지정 |
+| `--lockout` | spray 사이 대기 시간 | 잠금 정책의 reset window 반영 |
+
+## 도구 고유 출력
+
+| 출력/상태 | 의미 | 다음 행동 |
+|---|---|---|
+| O365 validation `VALID` | Microsoft 365 사용 가능성 높음 | 사용자 열거 또는 spraying 준비 |
+| enum `VALID` | 유효 사용자 후보 | 중복을 제거해 spraying 입력 목록으로 사용 |
+| spray `VALID user:password` | credential 유효 가능성 | MFA/Conditional Access와 실제 접근 권한 분리 확인 |
+| validation 실패 | O365 미사용, 탐지 방식 변경 | MX 레코드, 로그인 포털, 제공자 확인 |
+| enum 오류 | 사용자 형식 또는 모듈 문제 | 전체 이메일 주소, UPN, 도구 버전 확인 |
+| spray 차단 | rate limit, 잠금 정책, Conditional Access | 추가 시도를 멈추고 응답 코드와 정책 조건 확인 |
+| 도구가 동작하지 않음 | Microsoft 응답 변경 또는 도구 노후화 | 최신 버전과 모듈 상태 확인 |
+
+## 관련 공격기법
+
+- [[Microsoft 365 사용자 열거]], [[Microsoft 365 Password Spraying]]
