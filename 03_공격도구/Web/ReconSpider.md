@@ -34,7 +34,7 @@ python3 ReconSpider.py <url>
 
 ### ReconSpider 준비
 
-승인된 배포 원본에서 `ReconSpider.py`와 필요한 의존성을 확보한다.
+배포 원본에서 `ReconSpider.py`와 필요한 의존성을 확보한다.
 
 확인할 출력:
 

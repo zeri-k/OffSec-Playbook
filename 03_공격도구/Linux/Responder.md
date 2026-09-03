@@ -45,7 +45,7 @@ sudo responder -I <INTERFACE> -v
 sudo responder -I <INTERFACE> -wrfv
 ```
 
-`-wrfv`는 `-w -r -f -v`를 붙여 쓴 형태다. WPAD rogue proxy와 NetBIOS `wredir` suffix 응답을 활성화하고, 요청 호스트 fingerprinting과 상세 출력을 함께 사용한다. 시작 요약에서 활성화된 poisoner·server를 확인하고 `NTLMv1` 또는 `NTLMv2` capture가 표시되는지 확인한다. `-r`은 정상 파일·프린터 연결에 영향을 줄 수 있으므로 승인된 범위와 중지 조건을 정한 경우에만 사용한다.
+`-wrfv`는 `-w -r -f -v`를 붙여 쓴 형태다. WPAD rogue proxy와 NetBIOS `wredir` suffix 응답을 활성화하고, 요청 호스트 fingerprinting과 상세 출력을 함께 사용한다. 시작 요약에서 활성화된 poisoner·server를 확인하고 `NTLMv1` 또는 `NTLMv2` capture가 표시되는지 확인한다. `-r`은 정상 파일·프린터 연결에 영향을 줄 수 있으므로 중지 조건을 정하고 사용한다.
 
 ### 응답하지 않고 이름 해석 트래픽만 관찰
 

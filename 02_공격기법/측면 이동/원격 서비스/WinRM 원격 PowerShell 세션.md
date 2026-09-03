@@ -144,7 +144,7 @@ evil-winrm -i <TARGET> -u <USER> -H <NTLM_HASH>
 ## 확인할 출력과 권한
 
 - credential 보유, NetExec `[+]` 인증 성공, Evil-WinRM prompt, 원격 명령 출력과 상승된 관리자 token은 서로 다른 확인 지점이다.
-- `(Pwn3d!)`만으로 작업 범위를 넓히지 말고 `whoami /all`에서 현재 사용자, Administrators 그룹과 실제 token·privilege를 확인한다.
+- `(Pwn3d!)`만으로 권한 확대를 판단하지 말고 `whoami /all`에서 현재 사용자, Administrators 그룹과 실제 token·privilege를 확인한다.
 
 ## 변경 영향과 복구
 

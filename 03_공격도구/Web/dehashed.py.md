@@ -45,7 +45,7 @@ sudo python3 dehashed.py -q example.local -p
 | 옵션 | 의미 | 사용하는 상황 |
 |---|---|---|
 | `-q <DOMAIN>` | 검색할 도메인 질의 | 특정 조직 도메인으로 결과 제한 |
-| `-p` | 비밀번호 관련 필드 포함 | API 권한과 승인 범위 안에서 credential 후보를 함께 확인할 때 |
+| `-p` | 비밀번호 관련 필드 포함 | API 권한으로 credential 후보를 함께 확인할 때 |
 
 ## 도구 고유 출력
 

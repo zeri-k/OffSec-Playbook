@@ -75,7 +75,7 @@ Get-DomainObjectACL -ResolveGUIDs -Identity * |
 ### 4. BloodHound로 경로 교차 검증
 
 - 시작 사용자의 `Outbound Object Control`과 `Transitive Object Control`을 확인한다.
-- edge 도움말의 필요 권한과 변경 영향을 확인하고, 실제 수행은 대응하는 원자 기법으로 넘긴다.
+- edge 도움말의 필요 권한과 변경 영향을 확인하고, 실제 수행은 대응하는 세부 기법으로 넘긴다.
 - 수집 시점이 오래됐거나 PowerView 결과와 다르면 현재 LDAP ACL과 현재 그룹 멤버십을 기준으로 다시 수집한다.
 
 ## 관찰과 상태 전환

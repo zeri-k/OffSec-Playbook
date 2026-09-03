@@ -50,7 +50,7 @@ reg save HKLM\SECURITY security.save
 impacket-secretsdump -sam sam.save -security security.save -system system.save LOCAL
 ```
 
-이 명령은 세 종류의 결과를 한 번에 출력한다. `Dumping local SAM hashes`, `Dumping LSA Secrets`, cached domain logon을 각각 아래 원자 기법으로 나눠 해석한다.
+이 명령은 세 종류의 결과를 한 번에 출력한다. `Dumping local SAM hashes`, `Dumping LSA Secrets`, cached domain logon을 각각 아래 세부 기법으로 나눠 해석한다.
 
 ### Windows Meterpreter 세션에서 직접 추출
 
@@ -95,7 +95,7 @@ meterpreter > hashdump
 
 | 관찰 | 판단 | 결과 상태 | 다음 행동 |
 |---|---|---|---|
-| SAM·SECURITY·SYSTEM 세 파일 생성 | hive 획득 성공 | 오프라인 추출 입력 확보 | 필요한 산출물별 원자 기법 선택 |
+| SAM·SECURITY·SYSTEM 세 파일 생성 | hive 획득 성공 | 오프라인 추출 입력 확보 | 필요한 산출물별 세부 기법 선택 |
 | 한 hive만 누락 | 완전한 추출 입력이 아님 | 부분 파일만 확보 | 같은 대상·시점에서 누락 hive 재획득 |
 | `Access is denied` | 상승된 토큰 또는 hive 읽기 권한 부족 | hive 미획득 | UAC, 현재 토큰과 SYSTEM 전환 확인 |
 

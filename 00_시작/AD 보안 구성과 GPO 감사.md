@@ -62,7 +62,7 @@ Get-ADGroup -Identity "Protected Users" -Properties Name,Description,Members
 | GPO 설정 문제만 발견 | 정책 위험 후보이며 GPO 쓰기 권한은 미확정 | GPO·설정·적용 범위 단서 | Group3r 결과와 GPO 링크 범위를 확인하고, 쓰기 ACL이 있을 때만 [[AD GPO 쓰기 권한과 영향 범위 열거]] |
 | LAPS·BitLocker·고권한 그룹 정보가 보고서에 표시됨 | 도구가 객체나 설정을 발견함 | 읽기 권한 검증 전 후보 | LAPS 비밀번호가 실제 반환될 때 [[LAPS 비밀번호 읽기 권한과 자격 증명 수집]], 그룹은 직접 멤버십·중첩 확인 |
 | Spooler·SMB·LDAP·NTLM 관련 설정 문제 표시 | 서비스별 보호 설정 검증 필요 | 원격 인터페이스·signing·익명 접근 후보 | 해당 서비스 문서와 [[Print Spooler 원격 인터페이스 노출 확인]], [[NTLM Relay 조건 검토]]에서 직접 확인 |
-| 스냅샷·HTML·CSV·log 생성 | 감사 자료 생성 성공 | 수집 시점이 기록된 AD 구성 자료 | 중요 발견 사항을 원자 기법으로 재검증하고 보고 근거와 현재 상태를 분리 |
+| 스냅샷·HTML·CSV·log 생성 | 감사 자료 생성 성공 | 수집 시점이 기록된 AD 구성 자료 | 중요 발견 사항을 세부 기법으로 재검증하고 보고 근거와 현재 상태를 분리 |
 
 ## 확인할 출력과 권한
 

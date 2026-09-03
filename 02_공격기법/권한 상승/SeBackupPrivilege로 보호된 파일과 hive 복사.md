@@ -61,7 +61,7 @@ reg save HKLM\SECURITY <WRITABLE_PATH>\security.save
 
 ### DC의 섀도 복사본에서 NTDS.dit 복사
 
-DC에서만, 승인된 범위 안에서 `diskshadow`로 `C:`의 섀도 복사본을 노출한 후 `robocopy /B`로 `NTDS.dit` 사본을 만든다.
+DC에서만 `diskshadow`로 `C:`의 섀도 복사본을 노출한 후 `robocopy /B`로 `NTDS.dit` 사본을 만든다.
 
 ```text
 diskshadow
@@ -95,7 +95,7 @@ robocopy /B <SHADOW_DRIVE>:\Windows\NTDS <WRITABLE_PATH>\ntds ntds.dit
 | 변경 대상 | 예상 영향 | 검증 방법 | 복구 절차 |
 |---|---|---|---|
 | 대상에 만든 파일·hive·NTDS 사본 | 민감 데이터가 대상 디스크와 회수 경로에 남음 | 생성 경로·hash·전송 완료 확인 | 이번 작업으로 만든 사본만 삭제하고 부재 확인 |
-| persistent VSS 섀도 복사본과 노출 드라이브 | 디스크 공간·노출 경로가 남을 수 있음 | `vssadmin list shadows`와 노출 드라이브 확인 | 승인된 절차로 이번에 생성한 shadow와 노출 경로 제거 |
+| persistent VSS 섀도 복사본과 노출 드라이브 | 디스크 공간·노출 경로가 남을 수 있음 | `vssadmin list shadows`와 노출 드라이브 확인 | 복구 절차로 이번에 생성한 shadow와 노출 경로 제거 |
 
 ## 관련 도구
 

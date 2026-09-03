@@ -4,7 +4,7 @@ tags:
 문서역할: 수동절차
 시작조건: ["대상 Windows 호스트에서 명령 실행", "현재 token에 SeTakeOwnershipPrivilege가 할당됨"]
 필요권한: ["SeTakeOwnershipPrivilege", "대상 파일의 ACL 변경에 필요한 권한"]
-필요조건: ["대상 파일 경로와 원래 owner·ACL 기록", "변경을 허용한 범위"]
+필요조건: ["대상 파일 경로와 원래 owner·ACL 기록"]
 결과: ["대상 파일의 소유권과 읽기 권한", "파일에서 확인한 정보·자격 증명 후보"]
 ---
 
@@ -12,12 +12,12 @@ tags:
 
 ## 한 줄 판단
 
-현재 token에 `SeTakeOwnershipPrivilege`가 있고 변경이 승인된 대상 파일이 있으면, 소유권을 현재 사용자로 바꾼 뒤 필요한 최소 ACL을 부여하여 파일을 읽고 원래 보안 설명자로 복구한다.
+현재 token에 `SeTakeOwnershipPrivilege`가 있고 변경할 대상 파일이 있으면, 소유권을 현재 사용자로 바꾼 뒤 필요한 최소 ACL을 부여하여 파일을 읽고 원래 보안 설명자로 복구한다.
 
 ## 사용할 때
 
 - `whoami /priv`에서 `SeTakeOwnershipPrivilege`가 확인되고, 파일은 나열할 수 있지만 내용 읽기가 거부될 때.
-- 파일·폴더·레지스트리 같은 securable object의 owner·ACL 변경이 실제 대상의 동작에 영향을 줄 수 있음을 승인 범위에서 다뤄도 될 때.
+- 파일·폴더·레지스트리 같은 securable object의 owner·ACL 변경이 실제 대상의 동작에 영향을 줄 수 있을 때.
 - 이미 읽기 가능한 다른 정보 수집 경로가 없고, 파일 경로·원래 owner·ACL을 기록할 수 있을 때.
 
 ## 전제 조건
@@ -25,7 +25,7 @@ tags:
 | 확인할 것 | 필요한 상태 | 확인 방법 | 미충족 시 다음 확인 |
 |---|---|---|---|
 | 현재 token 권한 | `SeTakeOwnershipPrivilege`가 존재하고 활성화 가능 | `whoami /priv` | 권한이 없으면 일반 ACL 또는 다른 수집 기법 선택 |
-| 대상 | 파일 경로·현재 owner·ACL과 업무 영향 파악 | `Get-Acl`, `icacls` | 민감 파일·실행 중 설정 파일이면 변경 승인부터 확인 |
+| 대상 | 파일 경로·현재 owner·ACL과 업무 영향 파악 | `Get-Acl`, `icacls` | 민감 파일·실행 중 설정 파일이면 변경 영향을 먼저 확인 |
 | 복구 정보 | 변경 전 owner와 ACL이 기록됨 | `Get-Acl <FILE> | Format-List` | 기록 없이 소유권·ACL 변경을 시작하지 않음 |
 | 실행 위치 | 파일이 존재하는 대상 Windows 호스트 | `hostname`, `Test-Path` | 대상 세션·경로를 재확인 |
 
@@ -59,13 +59,13 @@ type "<TARGET_FILE>"
 |---|---|---|---|
 | owner 변경과 읽기 성공 | 보호 파일 접근 성공 | 파일 내용과 자격 증명 후보 확보 | [[Windows 파일 자격증명 검색]] 또는 [[확보한 자격 증명으로 원격 접근 경로 선택]] |
 | owner 변경 후에도 읽기 실패 | 소유권과 DACL 권한이 별개 | 파일 접근 미완료 | 최소 ACL 부여 조건과 deny ACE를 검토 |
-| owner·ACL 변경이 업무 영향 우려 | 파괴적 변경 가능성 | 변경 중단 또는 증거 수준 확인 | 승인된 범위와 복구 계획을 재확인 |
+| owner·ACL 변경이 업무 영향 우려 | 파괴적 변경 가능성 | 변경 중단 또는 증거 수준 확인 | 복구 계획을 재확인 |
 
 ## 변경 영향과 복구
 
 | 변경 대상 | 예상 영향 | 검증 방법 | 복구 절차 |
 |---|---|---|---|
-| `<TARGET_FILE>` owner와 DACL | 애플리케이션·원래 사용자 접근이 바뀔 수 있음 | 변경 전 기록과 `Get-Acl`, `icacls` 비교 | 기록한 원래 owner와 ACL을 승인된 방법으로 복원하고 원래 접근을 검증 |
+| `<TARGET_FILE>` owner와 DACL | 애플리케이션·원래 사용자 접근이 바뀔 수 있음 | 변경 전 기록과 `Get-Acl`, `icacls` 비교 | 기록한 원래 owner와 ACL을 복원하고 원래 접근을 검증 |
 
 ## 관련 상태 라우터
 
