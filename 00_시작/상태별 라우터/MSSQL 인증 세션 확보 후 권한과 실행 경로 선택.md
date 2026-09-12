@@ -47,10 +47,10 @@ MSSQL 인증에 성공하면 현재 SQL 로그인의 DB 권한, `IMPERSONATE`, l
 - SQL `sysadmin`, Windows 로컬 관리자와 SYSTEM은 서로 다른 권한이다.
 - `SeImpersonatePrivilege` 표시는 권한 상승 후보이며 `nt authority\system` 명령 출력이 있어야 SYSTEM 실행으로 전환한다.
 - linked server query가 성공하면 현재 서버가 아니라 query가 실행된 원격 서버의 login·호스트·OS 권한을 다시 확인한다.
-- 새 파일, Windows 셸, SYSTEM 실행, 자격 증명 또는 내부 SQL Server 경로를 얻으면 해당 결과 상태 라우터를 우선한다.
+- 새 파일·Windows 셸·SYSTEM 실행·자격 증명·내부 SQL Server 경로를 얻어도 MSSQL 세션 상태를 버리지 않는다. SQL 고유 기능, 플랫폼 실행 환경, 파일·자격 증명 또는 피벗 중 현재 목표에 직접 답하는 라우터를 고른다.
 
 ## 관련 노트
 
-- [[1433_MSSQL]]
+- [[MSSQL 서비스]]
 - [[impacket-mssqlclient]]
 - [[MSSQL xp_cmdshell 명령 실행]]

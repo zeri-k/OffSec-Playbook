@@ -30,16 +30,7 @@ Meterpreter 세션을 확보하면 대상 운영체제, 현재 사용자와 권�
 | 네트워크 위치 | 공격 호스트와 연결된 대상 호스트 |
 | 목표 | 세션 상태를 확정하고 플랫폼·권한·네트워크 조건에 맞는 후속 공격 선택 |
 
-먼저 Meterpreter 프롬프트에서 다음 상태를 확인한다.
-
-```text
-getuid
-getprivs
-sysinfo
-pwd
-```
-
-현재 사용자, privilege, 운영체제, architecture와 작업 디렉터리가 출력돼야 한다. 명령이 반복 실행되지 않으면 후속 모듈보다 세션 안정성과 연결 상태를 먼저 확인한다.
+먼저 Meterpreter 프롬프트에서 `getuid`, `getprivs`, `sysinfo`, `pwd`로 현재 사용자·privilege·운영체제·architecture·작업 디렉터리를 수동 확인한다. 명령이 반복 실행되지 않으면 후속 모듈보다 세션 안정성과 연결 상태를 먼저 확인한다.
 
 ## 판단 경로
 

