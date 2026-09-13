@@ -13,13 +13,6 @@ tags:
 
 SMTP 클라이언트를 실행할 수 있는 호스트에서 인증 없이 도달 가능한 대상 SMTP 서비스에 후보와 임의 사용자 기준값을 같은 방식으로 요청하여, 반복되는 응답 차이로 사용자명·메일 주소 후보와 계정 형식을 수집한다.
 
-## 사용할 때
-
-- 현재 보유 정보: 대상의 25/TCP, 465/TCP 또는 587/TCP에서 SMTP 배너나 `EHLO` 응답을 확인했고 메일 주소·이름 규칙·직원명 wordlist 중 하나가 있다.
-- 명령 실행 위치와 도달성: `telnet`, `netcat`, `openssl` 또는 `smtp-user-enum`을 실행할 수 있는 호스트에서 대상 SMTP 포트에 도달할 수 있다.
-- 현재 계정과 권한: 사전 SMTP 인증 계정은 없으며, 서버가 인증 전에 허용하는 `VRFY`, `EXPN` 또는 envelope 단계의 `RCPT TO` 응답만 비교한다.
-- 지금 가능한 행동과 결과: 후보와 명백히 존재하지 않는 사용자 응답을 같은 모드에서 비교해 사용자 존재 가능성을 좁힌다. 응답 차이는 비밀번호, 로그인 권한, 메일함 접근 또는 계정 활성 상태를 확정하지 않는다.
-
 ## 전제 조건
 
 | 확인할 것 | 필요한 상태 | 확인 방법 | 미충족 시 다음 확인 |
@@ -41,6 +34,8 @@ SMTP 클라이언트를 실행할 수 있는 호스트에서 인증 없이 도�
 
 ## 실행
 
+`<TARGET>`·`<SMTP_HOST>`는 SMTP 서버 주소(가상 예시 `mail.example.test`)이고, `<DOMAIN>`은 envelope에 쓸 메일 도메인, `<USER>`는 후보 local-part다. `users.txt`는 공격 호스트의 후보 목록이며 같은 모드에서 존재하지 않는 기준 사용자와 비교한다. 아래 명령은 SMTP 서비스에 도달하는 공격 호스트에서 실행하며, 응답 코드는 인증·메일함 READ가 아니라 사용자 후보만 판단한다.
+
 1. 명령 실행 호스트에서 `EHLO`로 SMTP 기능, STARTTLS와 인증 방식을 확인한다.
 2. 같은 연결 조건에서 명백히 존재하지 않는 사용자와 후보 사용자의 응답을 비교한다.
 3. `VRFY`, `EXPN`, `RCPT` 모드를 나눠 반복되는 차이만 사용자 후보로 기록한다.
@@ -50,13 +45,15 @@ SMTP 클라이언트를 실행할 수 있는 호스트에서 인증 없이 도�
 
 #### 수동 사용자 확인
 
+`<TARGET>`은 SMTP 서버 주소이고 가상 예시는 `mail.example.test`다. `<USER>`는 비교할 local-part 예시 `alice`, `<DOMAIN>`은 메일 도메인 예시 `example.test`다. `MAIL FROM:<test@<DOMAIN>>`처럼 중첩된 꺾쇠를 쓰지 않고, SMTP 주소 전체를 한 쌍의 `<`·`>`로 감싼다.
+
 ```bash
 telnet <TARGET> 25
 EHLO test.local
 VRFY <USER>
 EXPN <USER>
-MAIL FROM:<test@<DOMAIN>>
-RCPT TO:<user@<DOMAIN>>
+MAIL FROM:<test@example.test>
+RCPT TO:<alice@example.test>
 RSET
 QUIT
 ```

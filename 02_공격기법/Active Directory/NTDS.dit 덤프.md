@@ -14,23 +14,20 @@ tags:
 
 도메인 컨트롤러의 관리자급 파일·VSS 접근으로 NTDS.dit와 대응 SYSTEM hive를 함께 확보하고, 분석 호스트에서 도메인 계정의 NTLM hash와 Kerberos key를 추출한다.
 
-## 사용할 때
-
-- 현재 보유 정보: DC FQDN·IP와 현재 제어 중인 요청자 계정의 비밀번호·NT hash·Kerberos ticket 또는 DC에서 실행 가능한 관리자급 shell·파일 접근 중 하나.
-- 명령 실행 위치: 원격 덤프라면 DC의 SMB·RPC·관리 서비스에 접근 가능한 공격 호스트, 파일 추출이라면 DC 자체의 관리자 shell 또는 사전에 정한 파일 접근 경로.
-- 현재 권한과 대상: 일반 도메인 사용자, DC 로컬 관리자, Backup Operators, Domain Admin과 DCSync 복제 권한은 같지 않다. 이 절차는 NTDS 파일·VSS 또는 원격 VSS 관리 권한을 사용한다. `secretsdump`의 기본 원격 DRSUAPI 방식은 파일 복사가 아니라 [[DCSync]]이므로 별도 기법으로 분리한다.
-- 공격 대상과 결과: 대상은 DC의 directory database다. 파일 확보만으로 hash가 복호화되지는 않으며, 대응 SYSTEM hive로 분석해 실제 계정의 NTLM hash와 Kerberos key 출력까지 확인한다.
-
 ## 전제 조건
 
 | 확인할 것 | 필요한 상태 | 확인 방법 | 미충족 시 다음 확인 |
-|---|---|---|
+|---|---|---|---|
 | 대상과 실행 위치 | 대상이 DC이고 원격 관리 또는 로컬 shell의 경로가 구분됨 | hostname, SMB domain, LDAP와 현재 네트워크 위치 | DC 역할, SMB/RPC 도달성 또는 로컬 shell 확인 |
 | 현재 인증 수단 | 원격 방식이면 요청자 AD 계정의 비밀번호·NT hash·Kerberos ticket, 로컬 방식이면 현재 Windows token | `netexec`, `klist`, `whoami /all` | 도메인·계정명, 인증 형식과 상승 토큰 확인 |
 | 높은 권한 | DC 파일·VSS 또는 원격 dump에 필요한 실제 권한 | `whoami /groups`, `netexec`와 선택한 방법의 접근 결과 | DC 로컬 관리자, Backup Operators, Domain Admin과 복제 권한을 구분 |
-| NTDS와 SYSTEM 쌍 | 같은 DC·시점의 `NTDS.dit`와 SYSTEM hive를 읽거나 저장 가능 | `reg save`, 파일 크기·경로, secretsdump 입력 확인 | SYSTEM hive 누락, 파일 ACL과 VSS snapshot 경로 확인 |
+| NTDS와 SYSTEM 쌍 | 같은 DC·시점의 `NTDS.dit`와 SYSTEM hive를 읽거나 저장 가능 | `reg save`, 경로와 secretsdump 입력 확인 | SYSTEM hive 누락, 파일 ACL과 VSS snapshot 경로 확인 |
 
 ## 실행
+
+> VSS·원격 서비스·DC database 접근은 서비스 상태와 민감한 인증 자료에 영향을 줄 수 있다. 같은 DC·시점의 NTDS/SYSTEM 쌍, shadow ID와 exact path를 기록하고 복구되지 않은 영향을 완료로 표현하지 않는다.
+
+`<DC>`·`<DC_IP>`는 대상 DC, `<REQUESTER>`는 원격 요청자, NTDS·SYSTEM·shadow 경로는 DC 또는 분석 호스트 중 어느 쪽 기준인지 명시한다. 분석에 쓰는 파일은 같은 DC·시점의 쌍이어야 하며 요청자 인증 자료와 추출 계정 자료는 별개다.
 
 1. 현재 권한이 단순 도메인 사용자, 로컬 관리자, Domain Admin 중 무엇인지 구분한다.
 2. 원격 실행만 가능하면 DRSUAPI 기본 방식과 VSS 파일 추출 방식을 구분하고, 이 문서에서는 `-use-vss`를 선택한다.
@@ -98,6 +95,8 @@ impacket-secretsdump -use-vss -k -no-pass -dc-ip <DC_IP> '<DOMAIN>/<REQUESTER>@<
 
 #### DC에서 파일 확보 흐름
 
+`<NTDS_VOLUME>`는 DC에서 NTDS.dit가 있는 drive 문자(예: `C:`)이고, `<NTDS_COPY_PATH>`·`<SYSTEM_HIVE_PATH>`는 같은 DC에서 작업 전 없던 절대 임시 파일 경로다. `<NTDS_SHADOW_ID>`·`<NTDS_SHADOW_VOLUME>`는 바로 다음 `vssadmin create shadow` 출력의 ID·volume field에서 기록하며, `<NTDS_SHADOW_NTDS_PATH>`는 그 volume과 registry의 NTDS 경로를 결합한 DC 기준 경로다.
+
 기본 `C:\Windows\NTDS\NTDS.dit`를 가정하지 말고 먼저 실제 database 경로와 그 volume을 확인한다. 실행 전 해당 volume의 shadow 목록을 기록하고, 임시 복사 경로가 없음을 확인한다.
 
 ```cmd
@@ -123,7 +122,7 @@ dir "<NTDS_COPY_PATH>" "<SYSTEM_HIVE_PATH>"
 
 ### 이미 확보한 NTDS.dit와 SYSTEM hive 오프라인 분석
 
-Hyper-V export, 승인된 backup 또는 다른 파일 접근 경로에서 같은 DC·시점의 `NTDS.dit`와 `SYSTEM` hive를 이미 확보했다면 새로운 VSS·원격 service 작업을 만들지 않고 Linux 분석 호스트에서 기존 파일만 처리한다.
+Hyper-V export, backup 또는 다른 파일 접근 경로에서 같은 DC·시점의 `NTDS.dit`와 `SYSTEM` hive를 이미 확보했다면 새로운 VSS·원격 service 작업을 만들지 않고 Linux 분석 호스트에서 기존 파일만 처리한다.
 
 ```bash
 impacket-secretsdump -ntds '<NTDS_FILE>' -system '<SYSTEM_HIVE>' LOCAL

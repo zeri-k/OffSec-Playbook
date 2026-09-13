@@ -3,7 +3,7 @@ tags:
   - 기능/열거
 실행환경: ["Linux", "Windows", "macOS"]
 필요권한: ["Shodan API 계정과 현재 plan에서 허용된 조회 권한"]
-필요조건: ["승인 범위와 연결된 public IP 또는 도메인", "API key가 별도 local profile에 구성된 Shodan CLI"]
+필요조건: ["현재 관계를 확인할 public IP 또는 도메인", "API key가 별도 local profile에 구성된 Shodan CLI"]
 결과: ["제3자 관측 시점의 IP·port·service banner 후보", "공개 도메인의 subdomain·DNS 후보"]
 ---
 
@@ -17,7 +17,7 @@ tags:
 
 - 실행 위치와 경로: Shodan API에 HTTPS로 연결할 수 있는 분석 호스트
 - 계정·권한: local profile에 API key가 이미 구성되어 있고 `host` 또는 `domain` 조회를 허용하는 현재 account plan
-- 대상 입력: 승인 범위와 연결된 public `<IP>` 또는 `<DOMAIN>`
+- 대상 입력: 현재 관계를 확인할 public `<IP>` 또는 `<DOMAIN>`; `<PUBLIC_IP>`는 DNS·등록 정보와 대조할 공개 IP(예: `198.51.100.20`), `<DOMAIN>`은 공개 FQDN(예: `www.example.test`)이다.
 - 사전 확인: 현재 DNS 해석·등록 정보와 범위 자료로 IP·domain의 대상 관계를 확인
 
 API key를 command line, shell history나 Vault에 넣지 않는다. `shodan init`은 local 설정 파일에 credential을 기록하므로 이 문서의 조회 절차에 포함하지 않는다.
@@ -70,8 +70,8 @@ shodan domain <DOMAIN>
 
 | 출력·상태 | 의미 | 다음 확인 |
 |---|---|---|
-| `Last Update` 또는 관측 시각과 port·banner | 해당 시점에 Shodan이 수집한 서비스 후보 | 현재 DNS 관계와 승인된 직접 서비스 확인 |
-| organization·ASN | IP 등록·관측 metadata 후보 | WHOIS·RIR와 계약 범위 교차 확인 |
+| `Last Update` 또는 관측 시각과 port·banner | 해당 시점에 Shodan이 수집한 서비스 후보 | 현재 DNS 관계와 직접 서비스 확인 |
+| organization·ASN | IP 등록·관측 metadata 후보 | WHOIS·RIR의 현재 등록 정보와 교차 확인 |
 | 결과 없음 | Shodan dataset에 현재 표시할 관측 자료가 없음 | 현재 서비스 부재로 단정하지 말고 DNS·직접 확인 |
 | 인증·membership·credit 오류 | API profile 또는 account plan 조건 미충족 | local profile·plan·quota 확인 후 이 분기 생략 |
 

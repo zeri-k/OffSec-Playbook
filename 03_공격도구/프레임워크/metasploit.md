@@ -18,6 +18,7 @@ Metasploit Framework는 대상 서비스에 맞는 module과 payload를 검색·
 - 필요한 입력: 식별한 서비스/제품/버전과 대응 module, `RHOSTS` 등 module의 필수 option
 - reverse payload 입력: 대상 platform/architecture에 맞는 payload와 대상에서 접근 가능한 `LHOST`/`LPORT`
 - 선택 환경: `msfdb`를 초기화하면 host, service, vulnerability와 loot를 workspace 단위로 관리할 수 있다.
+- `RHOSTS`는 module이 연결할 host·CIDR·파일 목록이고 `LHOST`/`LPORT`는 reverse payload가 도달할 listener다. `<WORKSPACE>`·session·job ID는 console 출력에서 얻어 재사용하며 database import가 module 성공이나 exploit 결과를 뜻하지 않는다.
 
 
 ## 표준 사용법
@@ -62,7 +63,7 @@ msf6 exploit(...) > set LHOST <ATTACK_INTERFACE_OR_IP>
 
 `RHOSTS`는 대상, `LHOST`는 리버스 연결을 받을 인터페이스/IP다. 옵션명은 모듈마다 다르므로 `show options`를 기준으로 맞춘다.
 
-비밀번호·token 같은 민감 값은 console history·DB·session metadata에 남을 수 있으므로 실제 값을 Vault에 기록하지 않는다. 현재 module에만 필요한 값은 `set`을 사용하고, `setg`는 이후 다른 module에도 적용되는 전역 상태이므로 필요한 범위를 확인하지 않았다면 사용하지 않는다.
+비밀번호·API bearer token·web session token 같은 민감 값은 console history·DB·session metadata에 남을 수 있으므로 실제 값을 Vault에 기록하지 않는다. 현재 module에만 필요한 값은 `set`을 사용하고, `setg`는 이후 다른 module에도 적용되는 전역 상태이므로 필요한 범위를 확인하지 않았다면 사용하지 않는다.
 
 ### 취약 여부 확인
 
@@ -188,7 +189,6 @@ MSF_PRIVATE_MODULE_DIR="${HOME}/.msf4/modules/exploits/review_<BATCH_ID>"
 test ! -e "$MSF_PRIVATE_MODULE_DIR"
 mkdir -p -- "$MSF_PRIVATE_MODULE_DIR"
 install -m 0600 -- <REVIEWED_RB_PATH> "$MSF_PRIVATE_MODULE_DIR/<MODULE_NAME>.rb"
-sha256sum "$MSF_PRIVATE_MODULE_DIR/<MODULE_NAME>.rb"
 ```
 
 실행 중인 console에서는 `reload_all` 후 전체 경로로 검색·선택하고 `info`·`show options`를 다시 확인한다. load 성공은 대상 취약성이나 module 실행 성공이 아니다.
@@ -211,7 +211,6 @@ msf6 > exit
 ```shell
 rm -- "$MSF_PRIVATE_MODULE_DIR/<MODULE_NAME>.rb"
 rmdir -- "$MSF_PRIVATE_MODULE_DIR"
-test ! -e "$MSF_PRIVATE_MODULE_DIR"
 ```
 
 새 console에서 같은 전체 module 경로가 검색되지 않아야 향후 load 경로 정리가 확인된다. module을 실제 실행했다면 local module 파일 제거와 대상 복구는 별개이며, module이 만든 원격 자원은 해당 module의 확인된 복구 절차가 없으면 완료로 표시하지 않는다.

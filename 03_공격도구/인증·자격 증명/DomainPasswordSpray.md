@@ -20,12 +20,14 @@ tags:
 - 실행 환경: `DomainPasswordSpray.ps1`을 불러올 수 있고 DC에 접근 가능한 Windows PowerShell
 - 도메인 인증 상태: 사용자 목록 생성, Fine-Grained Password Policy 확인, 잠금 임박 계정 제외를 자동으로 수행할 수 있음
 - 비도메인 인증 상태: `-UserList`로 검증할 사용자 목록을 직접 제공해야 함
-- 필수 입력: 한 번의 spray에 사용할 단일 비밀번호와 선택적인 결과 파일. 결과 파일은 Vault 밖의 승인된 경로를 사용한다.
+- 필수 입력: 한 번의 spray에 사용할 단일 비밀번호와 선택적인 결과 파일. `<USER_LIST>`는 Windows newline 사용자 목록, `<PASSWORD>`는 단일 평문 값, `<SPRAY_RESULT_FILE>`은 Windows 실행 호스트의 새 절대 출력 파일(예: `C:\\Temp\\spray-result.txt`)이다.
 
 > [!danger] 계정 잠금 위험
 > 실행 전에 잠금 임계값, observation window, 이전 실패 횟수를 확인한다. 구현상 사용자 목록을 자동 생성할 때만 `-RemoveDisabled -RemovePotentialLockouts`를 적용한다. `-UserList`를 직접 전달하면 잠금 임계값 검사를 건너뛰므로, 잠금 정책과 각 계정의 현재 실패 횟수로 계산한 간격과 횟수를 직접 지켜야 한다. 짧은 시간에 반복 실행하면 다수 계정을 잠가 서비스 거부를 일으킬 수 있다.
 
 ## 표준 사용법
+
+`<USER_LIST>`는 `-UserList` 모드에서만 쓰는 Windows newline 사용자 파일이고, `<PASSWORD>`는 한 round에 쓰는 단일 평문 값이다. `<SPRAY_RESULT_FILE>`은 같은 Windows 호스트의 새 출력 경로이며 이후 정리에서도 같은 값을 재사용한다.
 
 ```powershell
 Import-Module .\DomainPasswordSpray.ps1
@@ -84,8 +86,8 @@ Invoke-DomainPasswordSpray -UserList '<USER_LIST>' -Password '<PASSWORD>' -OutFi
 
 ## 생성 파일과 잔여 영향
 
-- 실행 실패도 계정 실패 카운터와 DC 감사 기록을 남길 수 있다. 로컬 파일 삭제는 이 원격 영향을 복원하지 않으며, 잠금 해제나 비밀번호 변경은 별도 승인 없이는 수행하지 않는다.
-- `<SPRAY_RESULT_FILE>`의 인계가 끝나면 이번 실행이 만든 정확한 파일만 삭제한다. 기존 파일을 덮어쓰지 않도록 실행 전 `Test-Path` 기준선을 남긴다.
+- 실행 실패도 계정 실패 카운터와 DC 감사 기록을 남길 수 있다. 로컬 파일 삭제는 이 원격 영향을 복원하지 않으며, 잠금 해제나 비밀번호 변경은 별도 상태 변경이다.
+- 필요한 분석이 끝나면 `<SPRAY_RESULT_FILE>`의 이번 실행이 만든 정확한 파일만 삭제한다. 기존 파일을 덮어쓰지 않도록 실행 전 `Test-Path` 기준선을 남긴다.
 
 ```powershell
 if (Test-Path -LiteralPath '<SPRAY_RESULT_FILE>') { Remove-Item -LiteralPath '<SPRAY_RESULT_FILE>' }

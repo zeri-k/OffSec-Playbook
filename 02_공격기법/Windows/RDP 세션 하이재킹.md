@@ -14,11 +14,7 @@ tags:
 
 대상 Windows 호스트에서 SYSTEM 명령 실행·세션 Connect 권한을 가지고 다른 사용자의 RDP session ID가 확인된 후, 해당 Windows·RDS 구성이 SYSTEM `tscon` 무암호 연결을 허용하는 경우에만 그 세션을 현재 RDP session에 연결하여 대상 사용자의 기존 desktop과 현재 권한을 확인한다.
 
-## 사용할 때
-
-- 현재 RDP 세션이 있고 `query user`에서 다른 사용자의 `Active` 또는 `Disc` 세션이 보일 때.
-- 대상 사용자의 비밀번호 없이 이미 열린 RDP desktop에 연결하려 할 때.
-- 로컬 관리자 token은 있지만 `tscon`을 SYSTEM으로 실행할 별도 경로가 필요할 때.
+> 세션 연결은 다른 사용자의 desktop 작업과 연결 상태에 영향을 줄 수 있다. 임시 서비스를 사용한 경우 이번에 만든 정확한 서비스만 제거하며, 기존 세션·서비스는 종료하지 않는다.
 
 Microsoft의 현재 `tscon` 문서는 다른 사용자 소유 세션을 연결할 때 소유자 암호와 Full Control 또는 Connect 권한을 요구한다. SYSTEM 서비스로 암호 없이 연결하는 경로는 교육 원천의 특정 환경에서 확인된 구현 의존 기법이며, 최신 Windows의 보장된 계약으로 표현하지 않는다.
 
@@ -99,7 +95,7 @@ sc.exe query sessionhijack
 ```
 
 - 기존에 같은 이름의 서비스가 있었다면 생성하지 않는다.
-- 세션 연결은 대상 사용자의 작업 desktop을 전환하거나 연결 상태에 영향을 줄 수 있다. 실행 전후 `query user`로 상태를 비교한다.
+- 실행 전후 `query user`로 상태를 비교한다.
 
 ## 관련 서비스
 

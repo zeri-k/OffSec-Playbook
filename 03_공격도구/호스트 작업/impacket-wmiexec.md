@@ -20,9 +20,12 @@ tags:
 - 실행 위치: 대상 WMI/DCOM/RPC와 SMB에 접근 가능한 Linux 호스트
 - 필요한 입력: 대상 주소와 관리자 credential 또는 NTLM hash
 - 대상 조건: WMI/DCOM 원격 접근, TCP/135와 동적 RPC/SMB 경로, 원격 관리 권한이 필요하다.
+- `<TARGET>`은 Kerberos일 때 SPN과 일치하는 FQDN, `<DOMAIN>/<USER>` 또는 `LM:NT`는 credential namespace다. WMI process 생성과 stdout 회수는 다른 결과이며 인증 성공만으로 명령 실행을 단정하지 않는다.
 
 
 ## 표준 사용법
+
+`<TARGET_FQDN>`은 Kerberos SPN과 맞는 WMI/DCOM endpoint, `<DOMAIN>/<USER>`·password 또는 `LM:NT`는 requester credential이다. remote process creation, command stdout, SMB output-file retrieval은 separate outputs이며 credential authentication만으로 실행 결과를 확정하지 않는다.
 
 ```bash
 impacket-wmiexec <domain>/<user>:<password>@<target> [command]

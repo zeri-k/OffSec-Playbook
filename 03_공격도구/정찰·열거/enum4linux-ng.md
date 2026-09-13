@@ -17,7 +17,7 @@ tags:
 ## 필요한 입력과 실행 환경
 
 - 실행 위치: 대상 SMB/RPC/NetBIOS에 접근 가능한 Linux 호스트
-- 필요한 입력: 대상 주소와 필요하면 도메인·사용자·비밀번호
+- 필요한 입력: 대상 SMB 호스트 IP/FQDN(예: `smb.example.test`)과 필요하면 도메인·사용자·비밀번호. `<TARGET>`은 SMB 호스트, `<USER>`는 SMB에 전달할 계정명, `<PASSWORD>`는 그 계정의 평문 값이며, `-oA enum4linux-ng-policy`는 Linux 실행 호스트의 새 출력 접두사다.
 - 인증 조건: null session이 차단된 대상은 share와 RPC를 읽을 수 있는 유효 credential이 필요하다.
 
 
@@ -38,7 +38,7 @@ enum4linux-ng.py [options] <target>
 ### credential을 사용한 SMB 열거
 
 ```bash
-./enum4linux-ng.py <TARGET> -A -u user -p '<PASSWORD>'
+./enum4linux-ng.py <TARGET> -A -u '<USER>' -p '<PASSWORD>'
 ```
 
 ### 비밀번호 정책만 조회하고 결과 저장

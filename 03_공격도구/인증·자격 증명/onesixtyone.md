@@ -30,6 +30,8 @@ onesixtyone -c <community_wordlist> <target>
 
 ### 단일 대상 community string 추측
 
+`<TARGET>`은 SNMP agent IP/FQDN(예: `snmp.example.test`)이며 `-c` 파일은 Linux 실행 호스트의 community string wordlist다.
+
 ```bash
 onesixtyone -c /usr/share/seclists/Discovery/SNMP/snmp.txt <TARGET>
 ```

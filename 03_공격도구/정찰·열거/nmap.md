@@ -22,6 +22,8 @@ tags:
 
 ## 표준 사용법
 
+`<TARGET_CIDR>`은 Linux 실행 호스트에서 도달 가능한 대역(예: `192.0.2.0/24`)이고, `<TARGET>`은 그 결과 또는 다른 관찰에서 선택한 단일 IP/FQDN이다. `<OPEN_TCP_PORTS>`는 앞 `-p-` 출력의 open TCP 포트를 쉼표로 연결한 값(예: `80,443`)이며 `$NMAP_OUT_DIR`은 이번 실행의 새 출력 디렉터리다.
+
 ```shell
 nmap [스캔 방식] [옵션] <target>
 ```
@@ -35,7 +37,7 @@ sudo nmap -p- -n -Pn <TARGET> -oA "$NMAP_OUT_DIR/all-tcp"
 sudo nmap -sC -sV -p <OPEN_TCP_PORTS> <TARGET> -oA "$NMAP_OUT_DIR/service"
 ```
 
-`--min-rate`와 높은 timing template은 손실·오탐·대상 부하를 늘릴 수 있으므로 대표 흐름에 고정하지 않는다. 승인된 속도와 대상 안정성을 확인한 경우에만 별도 값을 적용한다.
+`--min-rate`와 높은 timing template은 손실·오탐·대상 부하를 늘릴 수 있으므로 대표 흐름에 고정하지 않는다. 손실과 대상 안정성을 확인한 뒤에만 별도 값을 적용한다.
 
 ## 대표 예시
 

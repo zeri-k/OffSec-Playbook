@@ -20,8 +20,11 @@ tags:
 - daemon 입력: rsync 호스트와 module 이름
 - SSH transport 입력: SSH 계정과 원격 경로
 - 전송 입력: 로컬 source/destination 경로와 필요한 인증 정보
+- daemon의 `<MODULE>`은 원격 export 이름(예: `backups`)이고 SSH 경로는 `<USER>@<HOST>:/path` 형식이다. 로컬 source/destination은 Linux 실행 호스트 기준이며 `--delete`는 원격과 로컬 중 어느 쪽을 기준으로 동기화하는지 먼저 구분한다.
 
 ## 표준 사용법
+
+daemon block의 `<TARGET>`·`<MODULE>`은 rsync daemon host와 export 이름이고, SSH block의 `<USER>@<HOST>`·remote path는 SSH server 기준이다. `<LOCAL_PATH>`는 Linux client path이며 download/upload의 방향과 `--delete` 기준은 각 block에서 별도로 해석한다.
 
 ```bash
 rsync [options] <source> <destination>

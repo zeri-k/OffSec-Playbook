@@ -23,6 +23,8 @@ Password Safe의 master password는 암호화된 데이터베이스를 여는 �
 - 후속 도구: John the Ripper
 - 구분할 식별자: 원본·backup 파일의 고유 경로와 각 hash line의 label. 백업마다 별도 파싱·복구 대상으로 취급한다.
 
+`<PWSAFE_FILE>`은 Linux 호스트에서 읽는 원본 또는 backup `.psafe3` 경로, `<PWSAFE_FILE_1>`·`<PWSAFE_FILE_2>`는 서로 다른 backup 입력, `<PWSAFE_HASH_FILE>`은 새 파생 hash 파일(예: `./pwsafe.hash`), `<WORDLIST>`는 cracking 후보 파일이다.
+
 
 ## 표준 사용법
 

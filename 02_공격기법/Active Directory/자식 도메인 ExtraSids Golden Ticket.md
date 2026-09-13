@@ -14,12 +14,6 @@ tags:
 
 같은 포리스트의 자식 도메인 `krbtgt` key와 자식·부모 도메인 SID를 알고 양쪽 KDC와 부모 서비스에 도달할 수 있으면 부모 `Enterprise Admins` SID를 `ExtraSids`에 넣은 Golden TGT를 생성·주입하고 부모 리소스 권한 평가를 확인한다.
 
-## 사용할 때
-
-- 현재 보유 정보: 자식 도메인의 `krbtgt` NT hash 또는 AES key, 자식·부모 도메인 SID, 부모 `Enterprise Admins` SID와 실제 자식 사용자·RID를 알고 있다.
-- 명령 실행 위치: Mimikatz·Rubeus를 실행하고 부모 DC SMB에 접근할 수 있는 Windows 세션, 또는 자식·부모 KDC와 부모 SMB에 접근할 수 있는 Linux 호스트다.
-- 현재 가능한 행동과 결과: 부모 권한 SID가 포함된 자식 사용자 TGT를 만들고 부모 서비스 접근을 검증할 수 있다. 부모 계정 DCSync와 추출 hash 사용은 각각 [[DCSync]], [[Pass the Hash]], [[Pass the Ticket]]에서 수행한다.
-
 ## 전제 조건
 
 | 확인할 것 | 필요한 상태 | 확인 방법 | 미충족 시 다음 확인 |
@@ -40,6 +34,8 @@ tags:
 | 후속 자격 증명 대상 | 부모 도메인의 지정 계정 | [[DCSync]]에서 별도로 지정할 복제 대상 |
 
 ## 실행
+
+`<CHILD_DOMAIN>`·`<ROOT_DOMAIN>`과 각 DC는 child/root 역할을 유지한다. `<CHILD_DOMAIN_SID>`·`<ROOT_DOMAIN_SID>`·실제 자식 사용자 RID·`krbtgt` key는 ticket 입력이고, ticket path·PID·LUID는 생성 출력 또는 실행 호스트의 새 경로다. ExtraSids ticket이 서비스 접근을 보장하지 않음을 유지한다.
 
 ### Linux 공격 호스트에서 실행
 

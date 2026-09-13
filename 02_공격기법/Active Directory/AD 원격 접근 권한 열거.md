@@ -14,13 +14,6 @@ tags:
 
 유효한 AD Identity와 대상 Windows 호스트 목록이 있으면, 대상 관리 경로에 닿는 PowerView 실행 호스트 또는 최신 BloodHound 자료에서 로컬 그룹·관계 edge를 조회해 RDP·WinRM·MSSQL 관리 후보를 좁히고 실제 서비스 세션으로 최종 확정한다.
 
-## 사용할 때
-
-- 현재 보유 정보: 유효한 도메인 자격 증명·ticket·Windows 세션 중 하나와 확인할 Windows 호스트 목록이 있다.
-- 명령 실행 위치와 도달 대상: PowerView 조회 호스트에서 대상 Windows의 로컬 그룹 조회 경로에 닿거나, 대상과 관계가 포함된 BloodHound 수집 결과를 열 수 있다. 실제 판정 때는 RDP·WinRM·MSSQL 서비스에도 별도로 도달해야 한다.
-- 현재 계정과 권한: 조회에 사용하는 AD Identity가 원격 로컬 그룹 정보를 읽을 수 있거나 BloodHound 자료가 있어야 한다. 조회 권한은 원격 로그온 권한과 별개다.
-- 지금 가능한 행동과 결과: RDP나 WinRM 인증을 반복하기 전에 `CanRDP`, `CanPSRemote`, `SQLAdmin` 후보 호스트를 줄이고, 직접·중첩 멤버십과 실제 세션 성공을 구분할 수 있다.
-
 ## 전제 조건
 
 | 확인할 것 | 필요한 상태 | 확인 방법 | 미충족 시 다음 확인 |
@@ -36,6 +29,8 @@ tags:
 ### 1. 확인할 AD 계정과 그룹 SID 집합 생성
 
 원격 로컬 그룹의 도메인 계정·그룹 SID와 대조할 확인 대상을 먼저 고정한다. 이 명령을 실행하는 현재 PowerShell 계정과 `<CHECKED_ACCOUNT>`는 서로 다를 수 있다.
+
+`<DOMAIN>\\<CHECKED_ACCOUNT>`는 권한 후보를 확인할 AD 계정(예: `CORP\\operator`)이고, 대상 `<HOST>`는 FQDN 또는 NetBIOS 이름을 문서 안에서 하나로 통일한다. 조회 계정·checked account·대상 서비스의 실제 로그온 주체는 별도로 판정한다.
 
 ```powershell
 Import-Module .\PowerView.ps1

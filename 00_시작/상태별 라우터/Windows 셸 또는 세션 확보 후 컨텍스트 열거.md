@@ -45,12 +45,12 @@ Windows에서 명령 실행이나 세션을 확보하면 로컬·도메인 계�
 | 현재 보유 상태·입력 | 선택할 공격기법 또는 수동 확인 | 성공하면 얻는 상태 | 다음 상태 라우터 | 선택 기준·미충족 시 확인 |
 |---|---|---|---|---|
 | `whoami /priv`에서 `SeBackupPrivilege`가 현재 token에 할당되고 일반 읽기가 거부된 보호 파일과 쓰기 경로가 확인됨 | [[SeBackupPrivilege로 보호된 파일과 hive 복사]] | backup semantics로 만든 보호 파일 사본 | 자격 증명이면 [[확보한 자격 증명으로 원격 접근 경로 선택]], 그 외에는 이 라우터 | privilege 활성 상태, 원본·출력 경로 ACL과 사본 내용이 실제 자격 증명인지 확인 |
-| `SeBackupPrivilege`가 활성화되고 SAM·SECURITY·SYSTEM hive의 저장 경로를 확인함 | [[SeBackupPrivilege로 보호된 파일과 hive 복사]] | 같은 시점의 오프라인 hive 세트 | 이 라우터에서 [[Windows SAM SECURITY SYSTEM 덤프]]로 분석 | 세 파일의 생성·크기·hash와 동일 호스트·시점의 세트인지 확인 |
-| DC에서 `SeBackupPrivilege`가 활성화되고 섀도 복사본의 NTDS.dit와 같은 시점의 SYSTEM hive를 확보할 수 있음 | [[SeBackupPrivilege로 보호된 파일과 hive 복사]] | NTDS.dit·SYSTEM 오프라인 분석 입력 | [[impacket-secretsdump]] 결과에서 계정별 hash를 확인한 뒤 [[확보한 자격 증명으로 원격 접근 경로 선택]] | 실제 DC인지, 두 파일의 시점·무결성과 사본만으로 Domain Admin 세션이나 DCSync 권한을 얻은 것은 아님을 확인 |
+| `SeBackupPrivilege`가 활성화되고 SAM·SECURITY·SYSTEM hive의 저장 경로를 확인함 | [[SeBackupPrivilege로 보호된 파일과 hive 복사]] | 같은 시점의 오프라인 hive 세트 | 이 라우터에서 [[Windows SAM SECURITY SYSTEM 덤프]]로 분석 | 세 파일이 같은 호스트·시점의 분석 세트인지 확인 |
+| DC에서 `SeBackupPrivilege`가 활성화되고 섀도 복사본의 NTDS.dit와 같은 시점의 SYSTEM hive를 확보할 수 있음 | [[SeBackupPrivilege로 보호된 파일과 hive 복사]] | NTDS.dit·SYSTEM 오프라인 분석 입력 | [[impacket-secretsdump]] 결과에서 계정별 hash를 확인한 뒤 [[확보한 자격 증명으로 원격 접근 경로 선택]] | 실제 DC인지, 두 파일이 같은 시점의 분석 세트인지와 사본만으로 Domain Admin 세션이나 DCSync 권한을 얻은 것은 아님을 확인 |
 | `whoami /priv`에서 `SeTakeOwnershipPrivilege`가 현재 token에 할당되고 원래 owner·ACL을 기록할 수 있는 보호 파일이 확인됨 | [[SeTakeOwnershipPrivilege로 보호 파일 ACL 변경]] | 최소 ACL로 읽은 파일 내용 또는 자격 증명 후보 | 자격 증명이면 [[확보한 자격 증명으로 원격 접근 경로 선택]], 그 외에는 이 라우터 | 파일의 업무 영향, privilege 활성 가능 여부와 원래 owner·ACL 복구 가능 여부를 확인 |
-| SQL Server·IIS 같은 서비스 계정 셸의 `whoami /priv`에서 `SeImpersonatePrivilege Enabled`가 확인됨 | [[PrintSpoofer로 SeImpersonatePrivilege 권한 상승]] | 검증에 성공하면 SYSTEM 명령 실행 | SYSTEM 확인 시 [[고권한 세션 확보 후 후속 판단]], 실패 시 이 라우터 | `Enabled`는 후보 조건일 뿐 성공이 아니다. 대상 build·arch에 맞는 실행 파일과 무결성, 쓰기·실행 경로, AppLocker·AV를 확인하고 `CreateProcessAsUser() OK`와 자식 명령의 `nt authority\system` 출력을 함께 검증 |
+| SQL Server·IIS 같은 서비스 계정 셸의 `whoami /priv`에서 `SeImpersonatePrivilege Enabled`가 확인됨 | [[PrintSpoofer로 SeImpersonatePrivilege 권한 상승]] | 검증에 성공하면 SYSTEM 명령 실행 | SYSTEM 확인 시 [[고권한 세션 확보 후 후속 판단]], 실패 시 이 라우터 | `Enabled`는 후보 조건일 뿐 성공이 아니다. 대상 build·arch에 맞는 실행 파일, 쓰기·실행 경로, AppLocker·AV를 확인하고 `CreateProcessAsUser() OK`와 자식 명령의 `nt authority\system` 출력을 함께 검증 |
 | `whoami /priv`에서 `SeAssignPrimaryTokenPrivilege`가 확인되고 classic JuicyPotato가 동작하는 legacy Windows build·edition임 | [[JuicyPotato로 SeAssignPrimaryTokenPrivilege 권한 상승]] | 검증에 성공하면 SYSTEM 명령 실행 | SYSTEM 확인 시 [[고권한 세션 확보 후 후속 판단]], 실패 시 이 라우터 | `Disabled`를 미보유로 보지 않되 성공으로도 보지 않는다. `SeIncreaseQuotaPrivilege`, exact OS별 CLSID, 빈 로컬 COM 포트와 `CreateProcessAsUser OK`·자식 명령의 `nt authority\system`을 확인한다. Windows 10 1809+·Server 2019+에는 이 classic 경로를 일반 적용하지 않는다. |
-| 현재 token에 `SeLoadDriverPrivilege`가 있고 승인된 취약 driver·loader·driver별 exploit가 있음 | [[SeLoadDriverPrivilege로 취약 드라이버 권한 상승]] | 실제 child Identity로 검증한 SYSTEM 명령 실행 또는 driver load만 된 중간 상태 | SYSTEM 확인 시 [[고권한 세션 확보 후 후속 판단]], 실패·차단 시 이 라우터 | `Disabled`를 미보유로 보지 않되 driver load 성공으로도 보지 않는다. signature·architecture, Code Integrity·HVCI·blocklist, actual loaded driver와 child `nt authority\system`을 각각 확인한다. |
+| 현재 token에 `SeLoadDriverPrivilege`가 있고 취약 driver·loader·driver별 exploit가 있음 | [[SeLoadDriverPrivilege로 취약 드라이버 권한 상승]] | 실제 child Identity로 검증한 SYSTEM 명령 실행 또는 driver load만 된 중간 상태 | SYSTEM 확인 시 [[고권한 세션 확보 후 후속 판단]], 실패·차단 시 이 라우터 | `Disabled`를 미보유로 보지 않되 driver load 성공으로도 보지 않는다. signature·architecture, Code Integrity·HVCI·blocklist, actual loaded driver와 child `nt authority\system`을 각각 확인한다. |
 | 현재 token에 Event Log Readers·DnsAdmins·Hyper-V Administrators·Print Operators 중 하나가 반영됐지만 그룹별 실제 대상 권한과 목표를 아직 고르지 않음 | 수동 확인: 현재 token SID와 대상 channel·DNS server·VM·`SeLoadDriverPrivilege`를 그룹별로 확인 | 위임 그룹과 실제 대상 권한의 대응 관계 | [[Windows 위임 운영 그룹 확인 후 권한 경로 선택]] | 그룹 디렉터리 상태와 현재 token, 읽기·설정·service control·VM 관리·driver load 권한을 서로 분리 |
 
 ### 셸 제약과 세션 기능
@@ -75,9 +75,9 @@ Windows에서 명령 실행이나 세션을 확보하면 로컬·도메인 계�
 
 | 현재 보유 상태·입력 | 선택할 공격기법 또는 수동 확인 | 성공하면 얻는 상태 | 다음 상태 라우터 | 선택 기준·미충족 시 확인 |
 |---|---|---|---|---|
-| Windows 대상에서 공격 호스트의 SMB 445/TCP에 연결할 수 있고 파일 반입이 필요함 | [[SMB 공유로 Windows 파일 반입]] | Windows 대상의 파일과 무결성 확인 결과 | 이 상태 라우터에서 파일 실행 조건과 현재 권한 재평가 | 통신 방향, Guest 차단, SMB 공유명과 대상 저장 경로 ACL 확인 |
-| Windows 대상에서 공격 호스트의 HTTP 포트에 연결할 수 있고 `certutil.exe`를 사용할 수 있음 | [[Certutil로 Windows HTTP 파일 반입]] | Windows 대상의 파일과 무결성 확인 결과 | 이 상태 라우터에서 파일을 사용할 기법 재선택 | HTTP listener 주소·포트, 대상 저장 경로 ACL과 송수신 SHA-256 확인 |
-| Windows 대상에서 파일을 읽을 수 있고 공격 호스트의 HTTP 수신 포트에 연결 가능함 | [[Windows HTTP 파일 회수]] | 공격 호스트로 회수한 파일과 무결성 확인 결과 | 이 상태 라우터에서 확보한 파일의 후속 분석 선택 | 대상 파일 ACL, HTTP 요청 수신과 multipart·raw POST 형식 확인 |
+| Windows 대상에서 공격 호스트의 SMB 445/TCP에 연결할 수 있고 파일 반입이 필요함 | [[SMB 공유로 Windows 파일 반입]] | Windows 대상의 파일 | 이 상태 라우터에서 파일 실행 조건과 현재 권한 재평가 | 통신 방향, Guest 차단, SMB 공유명과 대상 저장 경로 ACL 확인 |
+| Windows 대상에서 공격 호스트의 HTTP 포트에 연결할 수 있고 `certutil.exe`를 사용할 수 있음 | [[Certutil로 Windows HTTP 파일 반입]] | Windows 대상의 파일 | 이 상태 라우터에서 파일을 사용할 기법 재선택 | HTTP listener 주소·포트, 대상 저장 경로 ACL과 다운로드 결과를 확인 |
+| Windows 대상에서 파일을 읽을 수 있고 공격 호스트의 HTTP 수신 포트에 연결 가능함 | [[Windows HTTP 파일 회수]] | 공격 호스트로 회수한 파일 | 이 상태 라우터에서 확보한 파일의 후속 분석 선택 | 대상 파일 ACL, HTTP 요청 수신과 multipart·raw POST 형식을 확인 |
 
 ### AD와 Kerberos 작업
 

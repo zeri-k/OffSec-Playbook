@@ -14,13 +14,6 @@ tags:
 
 확인할 AD 사용자와 대상 도메인 DN을 알고 PowerView를 실행하는 Windows PowerShell에서 DC LDAP에 접근할 수 있으면, 사용자와 유효 그룹 SID 후보를 도메인 루트 ACL의 복제 확장 권한과 대조하여 DCSync 실행 전제를 판정한다.
 
-## 사용할 때
-
-- 현재 보유 정보: 새로 확보한 AD 계정의 이름, 또는 ACL·BloodHound에서 복제 권한 후보로 확인한 사용자와 그 사용자의 유효 그룹이 있다.
-- 명령 실행 위치와 접근 대상: PowerView를 불러올 수 있는 Windows PowerShell에서 대상 도메인의 DC LDAP 서비스에 접근할 수 있다.
-- 현재 계정과 확인 대상: ACL을 읽는 현재 PowerShell 계정과 복제 권한을 확인할 계정은 서로 달라도 된다. 이 명령은 확인 대상 계정으로 로그인하는 절차가 아니라 그 계정 SID에 설정된 ACE를 읽는 절차다.
-- 지금 가능한 행동과 결과: 확인 대상의 사용자 SID와 유효 그룹 SID 집합에 `DS-Replication-Get-Changes`와 `DS-Replication-Get-Changes-All`이 허용됐는지 확인하여 [[DCSync]] 실행 후보 여부를 결정한다. 적용되는 deny ACE와 실제 DRSUAPI 요청 성공은 별도로 확인한다.
-
 ## 전제 조건
 
 | 확인할 것 | 필요한 상태 | 확인 방법 | 미충족 시 다음 확인 |
@@ -34,6 +27,8 @@ tags:
 ## 실행
 
 ### 1. PowerView 함수 확인
+
+`<POWERVIEW_PATH>`는 ACL을 읽는 Windows PowerShell 실행 호스트의 PowerView 파일 경로다. 다음 단계의 `<DOMAIN>\\<CONTROLLED_USER>`는 권한을 확인할 계정(예: `corp.example\\operator`)이고, `<DOMAIN_DN>`은 같은 도메인의 RootDSE에서 얻은 DN(예: `DC=corp,DC=example`)이다. 이 계정은 ACL을 읽는 현재 세션 계정과 다를 수 있다.
 
 ```powershell
 Import-Module '<POWERVIEW_PATH>'
@@ -63,7 +58,7 @@ $effectiveSids
 - `$userSid`가 권한을 확인하려는 사용자와 일치하고, `$effectiveSids`에 그 SID와 직접·중첩 보안 그룹 SID 후보가 포함된다.
 - PowerView의 `Get-DomainGroup -MemberIdentity`는 사용자의 유효 그룹 관계를 위로 조회한다. 불러온 배포본이 이 매개변수를 제공하지 않으면 `Get-Command Get-DomainGroup -Syntax`를 확인하고 [[AD 고권한 그룹과 중첩 구성원 열거]]에서 그룹 목록을 얻어 각 이름을 `Convert-NameToSid`로 변환한다.
 - 사용자 SID나 그룹 목록이 비어 있으면 ACL 권한 부재로 판단하지 않는다. 이름 형식, 대상 도메인, DC LDAP 접근과 그룹 조회 범위를 먼저 확인한다.
-- 이 목록은 LDAP에서 계산한 후보이며 기존 로컬 로그온 token의 즉시 갱신을 보장하지 않는다. 디렉터리 그룹 관계와 현재 token의 차이는 [[Windows 액세스 토큰과 특권 활성화]]를 따르며, 현재 token을 사용하는 실행이면 `whoami /groups`로 활성·deny-only 상태를 대조한다.
+- 이 목록은 LDAP에서 계산한 후보이며 기존 로컬 Windows 로그온 access token의 즉시 갱신을 보장하지 않는다. LDAP·Impacket·ticket 요청은 각각의 요청 인증 컨텍스트와 유효 사용자·그룹 SID 집합으로 평가되며, 실제 DRSUAPI 허용 여부는 대상 DC의 인가 결과다. 현재 Windows 통합 인증을 사용하는 실행이면 [[Windows 액세스 토큰과 특권 활성화]]에 따라 `whoami /groups`로 활성·deny-only 상태를 대조한다.
 
 ### 3. 도메인 루트에서 요청자 SID 집합의 복제 권한만 조회
 
@@ -93,7 +88,7 @@ Get-DomainObjectACL -Identity $domainDN -ResolveGUIDs |
 - `ObjectDN`이 확인하려는 도메인 루트 DN과 일치한다.
 - `AceQualifier`가 `AccessAllowed`, `ActiveDirectoryRights`가 `ExtendedRight`다.
 - 요청자 사용자 또는 유효 그룹 `SecurityIdentifier` 전체에서 `DS-Replication-Get-Changes`와 `DS-Replication-Get-Changes-All`이 모두 허용된다. 두 권한은 서로 다른 적용 SID의 allow ACE로 충족될 수 있다.
-- 같은 SID 집합에 적용되는 `AccessDenied` ACE와 현재 token의 disabled·deny-only 그룹이 없는지 별도로 확인한다.
+- 같은 SID 집합에 적용되는 `AccessDenied` ACE와, 현재 Windows 통합 인증을 쓰는 경우의 access token disabled·deny-only 그룹을 별도로 확인한다. 비밀번호·NT hash·ccache 요청은 해당 요청 인증 컨텍스트와 대상 DC의 인가 결과를 따로 확인한다.
 - `DS-Replication-Get-Changes-In-Filtered-Set`은 추가 권한이며, 이 항목 하나만으로 두 필수 권한을 대신하지 않는다.
 
 ## 관찰과 상태 전환

@@ -39,7 +39,7 @@ RDP, WinRM, Web Shell 또는 Meterpreter로 Windows 호스트에서 명령을 �
 | 확인할 것 | 필요한 상태 | 확인 방법 | 미충족 시 다음 확인 |
 |---|---|---|---|
 | 명령 실행 위치 | Windows 대상 호스트 | `hostname`, `whoami` | 세션 유형과 대상 호스트를 다시 확인 |
-| 현재 계정 | 로컬 또는 도메인 사용자 | `whoami /all` | 토큰과 세션 계정을 먼저 식별 |
+| 현재 계정 | 로컬 또는 도메인 사용자 | `whoami /all` | 현재 프로세스의 액세스 토큰과 로그온 계정을 먼저 식별 |
 | 현재 가능한 행위 | CMD 또는 PowerShell 명령 실행 | `echo %COMSPEC%`, `$PSVersionTable` | 사용할 수 있는 셸 문법으로 변경 |
 | 네트워크 경로 | 대상 호스트에서 로컬·내부 주소 확인 가능 | `ipconfig /all`, `route print -4` | 인터페이스와 라우팅 테이블부터 확인 |
 
@@ -47,7 +47,7 @@ RDP, WinRM, Web Shell 또는 Meterpreter로 Windows 호스트에서 명령을 �
 
 | 단계 | 실행 위치 | 수행할 행동 | 확인할 출력·상태 | 다음 단계 |
 |---|---|---|---|---|
-| 1 | Windows 대상 호스트 | 현재 계정과 토큰 확인 | 계정 유형, 그룹, 특권 | 로컬 또는 도메인 분기 |
+| 1 | Windows 대상 호스트 | 현재 계정과 프로세스 액세스 토큰 확인 | 계정 유형, 그룹 SID·속성, privilege·무결성 수준 | 로컬 또는 도메인 분기 |
 | 2 | Windows 대상 호스트 | 호스트와 네트워크 열거 | 인터페이스, route, 연결 중인 원격 주소 | 내부망·DC 접근 확인 |
 | 3 | Windows 대상 호스트 | 도메인 조인과 DC 확인 | 도메인명, 로그온 서버, DC 주소 | AD 객체 열거 |
 | 4 | Windows 대상 호스트 | 저장 자격 증명과 파일 단서 확인 | `cmdkey`, ticket, history, 구성 파일 | 자격 증명 검증 |
@@ -55,7 +55,7 @@ RDP, WinRM, Web Shell 또는 Meterpreter로 Windows 호스트에서 명령을 �
 
 ## 1. 현재 계정과 권한 확인
 
-Windows 대상 호스트에서 현재 토큰의 계정, 그룹과 특권을 확인한다.
+Windows 대상 호스트에서 현재 프로세스의 primary 액세스 토큰에 연결된 계정, 그룹 SID·속성과 privilege를 확인한다.
 
 ```cmd
 hostname
@@ -67,7 +67,7 @@ net user %USERNAME%
 net localgroup administrators
 ```
 
-PowerShell을 사용할 수 있으면 현재 토큰의 SID도 함께 확인한다.
+PowerShell을 사용할 수 있으면 현재 Windows Identity의 이름과 그룹 SID를 함께 확인한다. 아래 출력은 단일한 “토큰 SID”가 아니라 현재 Identity와 그룹 SID 집합이다.
 
 ```powershell
 $me = [Security.Principal.WindowsIdentity]::GetCurrent()
@@ -78,9 +78,9 @@ $me.Groups | Select-Object Value
 | 관찰 | 판단 | 다음 행동 |
 |---|---|---|
 | `HOSTNAME\user` | 로컬 계정으로 실행 중 | [[Windows 권한 상승 열거]]와 로컬 자격 증명 검색 |
-| `DOMAIN\user` | 도메인 계정 토큰으로 실행 중 | 도메인명과 DC 연결 확인 |
+| `DOMAIN\user` | 도메인 계정에 연결된 primary 액세스 토큰으로 현재 프로세스 실행 중 | 도메인명과 DC 연결 확인 |
 | 로컬 Administrators SID 포함 | 이 호스트의 관리자 가능성 | [[Windows SAM 로컬 계정 해시 추출]], [[Windows LSA Secrets 추출]] |
-| `SeImpersonatePrivilege` 등 위험 특권 활성화 가능 | 토큰 기반 권한 상승 후보 | 현재 OS·서비스 조건과 맞는 권한 상승 기법 선택 |
+| `SeImpersonatePrivilege` 등 위험 privilege가 액세스 토큰에 존재 | impersonation 액세스 토큰을 이용할 수 있는 권한 상승 후보 | 현재 OS·서비스 조건과 맞는 권한 상승 기법 선택 |
 | Domain Admins 등 도메인 고권한 그룹 포함 | 도메인 권한 후보 | 실제 DC 접근과 DCSync·원격 관리 권한을 별도 검증 |
 
 로컬 관리자 그룹과 도메인 전체 권한은 같은 상태가 아니다. 그룹 이름만 보고 결론 내리지 않고 해당 호스트와 DC에서 가능한 실제 작업을 확인한다.
@@ -107,6 +107,8 @@ Get-NetTCPConnection | Select-Object LocalAddress,LocalPort,RemoteAddress,Remote
 ## 3. 도메인 조인과 DC 연결 확인
 
 Windows 대상 호스트에서 장비의 도메인 조인 상태와 현재 세션의 도메인 정보를 구분한다.
+
+`<DOMAIN>`은 `USERDNSDOMAIN` 또는 `Win32_ComputerSystem.Domain`에서 확인한 DNS 도메인(예: `corp.example.test`)이고, `<DC_HOST>`·`<DC_IP>`는 `nltest /dsgetdc` 출력의 DC 이름·IPv4 주소다. `<TARGETS>`는 Linux 공격 호스트에서 도달 가능한 대상 IP 또는 FQDN 목록(예: `192.0.2.53,192.0.2.60`)이며, `<USER>`·`<PASSWORD>`는 확보한 동일 계정의 사용자명·비밀번호다. Windows 명령은 대상 셸에서, `nxc` 명령은 Linux 공격 호스트에서 실행한다.
 
 ```powershell
 Get-CimInstance Win32_ComputerSystem | Select-Object Name,Domain,PartOfDomain
@@ -144,7 +146,7 @@ Test-NetConnection <DC_IP> -Port 445
 
 | 출력·상황 | 판단 | 다음 행동 |
 |---|---|---|
-| `PartOfDomain : True` | 호스트가 도메인에 조인됨 | 현재 토큰이 로컬 계정이어도 도메인명과 DC 확인 가능 |
+| `PartOfDomain : True` | 호스트가 도메인에 조인됨 | 현재 프로세스 액세스 토큰이 로컬 계정에 연결돼 있어도 호스트의 도메인명과 DC 확인 가능 |
 | `$env:USERDNSDOMAIN`이 비어 있음 | 로컬 계정 세션일 가능성 | 장비의 `Domain` 값과 저장 자격 증명 확인 |
 | `$env:LOGONSERVER`가 `\\<DC_HOST>` | 로그온을 처리한 DC 단서 | 이름 해석과 88·389·445 연결 확인 |
 | `nltest /dsgetdc` 성공 | DC 이름·주소·사이트 확인 | [[AD 도메인 컨텍스트 기본 확인]]과 AD 객체 열거 |
@@ -172,14 +174,14 @@ Get-ChildItem C:\Users -Recurse -Force -ErrorAction SilentlyContinue -Include *.
 |---|---|
 | `cmdkey /list`에 저장 대상 존재 | [[Windows 저장 자격증명 수집]] |
 | Kerberos ticket 존재 | ticket의 사용자·서비스·만료를 확인한 뒤 [[Pass the Ticket]] |
-| history·구성 파일에 비밀번호·token·key 후보 | [[Windows 파일 자격증명 검색]] |
+| history·구성 파일에 비밀번호·API token·key 후보 | [[Windows 파일 자격증명 검색]] |
 | 관리자 권한과 SAM·SYSTEM 접근 | [[Windows SAM 로컬 계정 해시 추출]] |
 | 관리자 권한과 LSA secret 접근 | [[Windows LSA Secrets 추출]] |
 | 계정명이 연결된 자격 증명 확보 | [[확보한 자격 증명으로 원격 접근 경로 선택]] |
 
 ## 5. DC 객체와 원격 접근 경로 확인
 
-도메인 계정 토큰과 DC 연결이 있으면 Windows 대상 호스트에서 AD 객체를 열거한다.
+현재 Windows 로그온 계정으로 DC에 인증할 수 있고 LDAP 경로가 있으면 대상 호스트에서 AD 객체를 열거한다. 로컬 프로세스 액세스 토큰의 계정 표시만으로 원격 LDAP 인증·인가를 확정하지 않는다.
 
 ```cmd
 net user /domain

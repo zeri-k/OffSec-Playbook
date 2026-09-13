@@ -14,12 +14,6 @@ tags:
 
 현재 AD 계정으로 도메인의 trust 객체를 읽을 수 있으면 Source·Target, 방향, 전이성, 포리스트 내부 여부와 선택적 인증·SID filtering 단서를 확인하고, 대상 도메인의 SPN·그룹·관계 수집은 각각의 열거 문서로 넘긴다.
 
-## 사용할 때
-
-- 현재 도메인에서 다른 도메인 또는 포리스트를 가리키는 trust가 있는지 확인할 때.
-- 자식·부모, forest, external trust를 구분할 때.
-- trust 방향 이름과 실제 대상 도메인 인증 가능 범위를 혼동하지 않으려 할 때.
-
 ## 전제 조건
 
 | 확인할 것 | 필요한 상태 | 확인 방법 | 미충족 시 다음 확인 |
@@ -31,6 +25,8 @@ tags:
 ## 실행
 
 ### Windows 공격 호스트에서 실행
+
+`<CURRENT_FQDN>`은 trust object의 `Source`인 현재 도메인의 DNS FQDN(예: `corp.example`)이다. 대상 도메인 FQDN이나 NetBIOS 이름으로 바꾸지 않으며, `Direction`은 이 Source 관점에서 해석한다.
 
 ```powershell
 Import-Module ActiveDirectory

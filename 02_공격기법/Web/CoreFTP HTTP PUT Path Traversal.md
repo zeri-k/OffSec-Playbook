@@ -13,12 +13,7 @@ tags:
 
 현재 명령 실행 위치에서 취약한 CoreFTP HTTP 서비스에 연결할 수 있고 유효한 CoreFTP 계정이 있다면, 인증된 `PUT` 요청의 경로 이동 처리로 기본 업로드 디렉터리 밖에 시험 파일을 쓸 수 있는지 확인한다. 파일 쓰기 성공과 웹 실행은 별도로 검증한다.
 
-## 시작 조건 해석
-
-
-- FTP/CoreFTP 서비스에서 HTTP/HTTPS 기반 파일 업로드 인터페이스가 보일 때.
-- CoreFTP 버전이 `before build 727` 취약 범위로 의심될 때.
-- 유효한 FTP/CoreFTP 계정을 확보했고 파일 쓰기 영향도를 확인해야 할 때.
+HTTP/HTTPS 기반 CoreFTP 업로드 인터페이스, `before build 727` 취약 범위 후보와 유효한 FTP/CoreFTP 계정이 모두 필요하다. 파일 쓰기 성공과 웹 실행은 별도 결과로 유지한다.
 
 ## 전제 조건
 
@@ -42,6 +37,8 @@ tags:
 
 PUT 대상은 기존 파일과 겹치지 않는 `<UNIQUE_PROOF>`·`<UNIQUE_WEB_PROOF>`를 사용한다. CoreFTP 목록·관리 경로나 이미 확보한 서버 파일 접근으로 기존 파일 부재와 사후 삭제 가능성을 확인할 수 없으면 제한 디렉터리 밖 쓰기를 시작하지 않는다.
 
+아래 PUT 요청은 공격 호스트에서 실행한다. `<TARGET>`은 CoreFTP 서버의 IP 또는 FQDN(가상 예: `192.0.2.20`), `<USER>`·`<PASSWORD>`는 실제 CoreFTP 인증 계정과 비밀번호, `<UNIQUE_PROOF>`는 기존 파일과 겹치지 않는 짧은 파일명(가상 예: `proof-20260914a`)이다. `-k`는 자체 서명 인증서 때문에 TLS 검증이 실패할 때만 사용한다.
+
 ## 실행
 
 1. CoreFTP 버전과 HTTP 업로드 경로를 확인한다.
@@ -55,6 +52,8 @@ PUT 대상은 기존 파일과 겹치지 않는 `<UNIQUE_PROOF>`·`<UNIQUE_WEB_P
 
 #### HTTP PUT path traversal 검증
 
+웹 루트 후보를 검증하는 이 블록도 공격 호스트에서 실행한다. `<UNIQUE_WEB_PROOF>`는 위 일반 proof와 다른 새 파일명(가상 예: `web-proof-20260914a`)이며, `<TARGET>`·`<USER>`·`<PASSWORD>`는 앞 단계 값을 재사용한다. PUT 응답만으로 PHP 실행을 뜻하지 않는다.
+
 ```bash
 curl -k -X PUT -H "Host: <TARGET>" --basic -u <USER>:<PASSWORD> --data-binary "coreftp-path-proof" --path-as-is https://<TARGET>/../../../../../../<UNIQUE_PROOF>.txt
 ```
@@ -63,7 +62,7 @@ curl -k -X PUT -H "Host: <TARGET>" --basic -u <USER>:<PASSWORD> --data-binary "c
 
 - HTTP 상태 코드
 - 에러 없이 요청이 처리되는지 확인
-- `-k`는 승인된 환경의 자체 서명 인증서 때문에 검증이 실패할 때만 사용한다. 신뢰할 수 있는 인증서이면 제거한다.
+- `-k`는 자체 서명 인증서 때문에 검증이 실패할 때만 사용한다. 신뢰할 수 있는 인증서이면 제거한다.
 
 #### 응답 헤더 확인
 

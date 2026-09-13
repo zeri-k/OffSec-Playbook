@@ -18,9 +18,12 @@ tags:
 - 실행 환경: `sqsh`가 설치된 Linux 호스트
 - 입력: MSSQL 또는 Sybase 서버와 계정
 - 선택 입력: 기본 데이터베이스와 interfaces 파일
+- `<SERVER>`는 interfaces 별칭 또는 MSSQL/Sybase listener 주소(예: `database.example.invalid`)다. 사용자·비밀번호는 DB 인증 입력이며, Linux의 interfaces 파일 경로가 설정된 경우 해당 별칭의 실제 host·port를 먼저 확인한다.
 
 
 ## 표준 사용법
+
+`<SERVER>`는 interfaces alias 또는 MSSQL/Sybase TDS listener, `<USER>`·`<PASSWORD>`는 DB authentication input이며 `<DATABASE>`는 optional default namespace다. query output은 현재 DB login의 query permission을 보여 줄 뿐 host OS command execution을 뜻하지 않는다.
 
 ```bash
 sqsh -S <server> -U <user> -P <password>

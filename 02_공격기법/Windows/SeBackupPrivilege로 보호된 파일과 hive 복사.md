@@ -13,13 +13,6 @@ tags:
 
 현재 token에 `SeBackupPrivilege`가 있고 대상 Windows 호스트에서 backup semantics로 파일을 복사할 수 있으면, 일반 읽기가 거부된 파일과 registry hive의 사본을 확보하여 필요한 자격 증명·정보 추출 경로로 넘긴다.
 
-## 사용할 때
-
-- `whoami /priv`에 `SeBackupPrivilege`가 표시되고, 서비스 계정 또는 `Backup Operators` 멤버십처럼 해당 권한의 출처를 확인했을 때.
-- 명령은 공격 호스트가 아니라 파일·hive가 있는 대상 Windows 호스트에서 실행한다.
-- 일반 `type`, `Get-Content`, `copy`가 접근 거부되지만 파일의 경로와 필요한 산출물이 확인됐을 때.
-- 도메인 컨트롤러에서는 `NTDS.dit`이 잠겨 있으므로 VSS 섀도 복사본에서 수집해야 한다.
-
 ## 전제 조건
 
 | 확인할 것 | 필요한 상태 | 확인 방법 | 미충족 시 다음 확인 |
@@ -36,7 +29,7 @@ tags:
 
 대상 Windows 호스트에서 `SeBackupPrivilegeUtils` 모듈을 불러온 뒤 privilege를 활성화하고, 일반 읽기가 거부된 파일을 별도 경로로 복사한다. 현재 token의 privilege 할당·활성화는 [[Windows 액세스 토큰과 특권 활성화]]를, backup 읽기와 원본 DACL·출력 경로 권한의 관계는 [[Windows 파일 소유권과 ACL]]을 따른다.
 
-모듈을 새로 반입한다면 반입 전에 두 `<SEBACKUP_MODULE_PATH>`가 없었는지 확인한다. `<COPIED_FILE_PATH>`도 복사 전에 존재하지 않는 고유 경로여야 한다.
+모듈을 새로 반입한다면 반입 전에 `<SEBACKUP_UTILS_MODULE_PATH>`와 `<SEBACKUP_CMDLETS_MODULE_PATH>`가 없었는지 확인한다. `<COPIED_FILE_PATH>`도 복사 전에 존재하지 않는 고유 경로여야 한다.
 
 ```powershell
 Test-Path -LiteralPath '<SEBACKUP_UTILS_MODULE_PATH>'
@@ -44,11 +37,9 @@ Test-Path -LiteralPath '<SEBACKUP_CMDLETS_MODULE_PATH>'
 Test-Path -LiteralPath '<COPIED_FILE_PATH>'
 ```
 
-세 출력이 `False`인 경로를 정하고 [[상황별 파일 전송]]으로 module을 반입한 뒤 exact 경로와 SHA-256을 기록한다.
+세 출력이 `False`인 경로를 정한다. `<SEBACKUP_UTILS_MODULE_PATH>`는 `SeBackupPrivilegeUtils.dll`, `<SEBACKUP_CMDLETS_MODULE_PATH>`는 `SeBackupPrivilegeCmdLets.dll`의 대상 Windows 절대 경로(예: 각각 `C:\\Temp\\SeBackupPrivilegeUtils.dll`, `C:\\Temp\\SeBackupPrivilegeCmdLets.dll`)이며, `<COPIED_FILE_PATH>`는 보호 파일의 새 사본 절대 경로다. [[상황별 파일 전송]]으로 module을 반입한 뒤 exact 경로를 확인한다.
 
 ```powershell
-Get-FileHash -Algorithm SHA256 -LiteralPath '<SEBACKUP_UTILS_MODULE_PATH>'
-Get-FileHash -Algorithm SHA256 -LiteralPath '<SEBACKUP_CMDLETS_MODULE_PATH>'
 Import-Module '<SEBACKUP_UTILS_MODULE_PATH>'
 Import-Module '<SEBACKUP_CMDLETS_MODULE_PATH>'
 Set-SeBackupPrivilege
@@ -59,8 +50,8 @@ Copy-FileSeBackupPrivilege '<PROTECTED_FILE>' '<COPIED_FILE_PATH>'
 확인할 출력:
 
 - `Get-SeBackupPrivilege`의 `enabled`와 `Copy-FileSeBackupPrivilege`의 `Copied <SIZE> bytes`.
-- 사본의 hash·크기와 내용을 확인한다. 복사 성공은 파일 내용의 유용성이나 관리자 권한을 뜻하지 않는다.
-- `Opening input file` 또는 원본 open 단계의 access denied이면 현재 PowerShell process에 privilege가 존재·활성화됐는지, 불러온 DLL이 process architecture·.NET runtime과 맞는지, 실제 명령이 backup semantics 구현인지, 원본 경로·EFS 상태와 공유 위반 여부를 확인한다. 현재 upstream 모듈은 원본을 `GENERIC_READ`와 `FILE_FLAG_BACKUP_SEMANTICS`로 열므로 명시적 deny ACE를 일반 실패 원인으로 보지 않는다.
+- 사본의 경로·크기와 필요한 내용을 확인한다. 복사 성공은 파일 내용의 유용성이나 관리자 권한을 뜻하지 않는다.
+- `Opening input file` 또는 원본 open 단계의 access denied이면 현재 PowerShell process에서 `SeBackupPrivilege`가 활성화됐는지, 불러온 DLL이 process architecture·.NET runtime과 맞는지, 실제 명령이 backup semantics로 open했는지, 원본 경로·EFS 상태와 공유 위반 여부를 확인한다. 이 조건이 충족된 backup read에서는 명시적 deny ACE를 일반 실패 원인으로 취급하지 않는다.
 - `Error creating output file`이면 원본 ACL 대신 `<COPIED_FILE_PATH>`의 사전 존재, parent directory 쓰기 권한과 모듈의 overwrite 선택을 확인한다. 출력 handle은 일반 `GENERIC_WRITE`로 열리므로 이 경로의 ACL은 별도로 적용된다.
 
 ### registry hive 저장과 오프라인 분석 연결
@@ -123,12 +114,12 @@ reg save HKLM\SYSTEM "<NTDS_SYSTEM_SAVE_PATH>"
 
 | 변경 대상 | 예상 영향 | 검증 방법 | 복구 절차 |
 |---|---|---|---|
-| 대상에 만든 보호 파일·hive·NTDS 사본 | 민감 데이터가 대상 디스크와 회수 경로에 남음 | 작업 전 부재를 확인한 exact 경로·hash·전송 완료 기록 | 연결이 살아 있을 때 이번 작업으로 만든 exact 사본만 삭제 |
-| 새로 반입한 SeBackupPrivilegeUtils module | 대상 디스크에 DLL이 남음 | 반입 전 부재, exact 경로와 SHA-256 기록 | 이번 작업에서 반입한 두 exact module 파일만 삭제 |
+| 대상에 만든 보호 파일·hive·NTDS 사본 | 민감 데이터가 대상 디스크와 회수 경로에 남음 | 작업 전 부재를 확인한 exact 경로·전송 완료 기록 | 연결이 살아 있을 때 이번 작업으로 만든 exact 사본만 삭제 |
+| 새로 반입한 SeBackupPrivilegeUtils module | 대상 디스크에 DLL이 남음 | 반입 전 부재와 exact 경로 기록 | 이번 작업에서 반입한 두 exact module 파일만 삭제 |
 | `<SHADOW_DRIVE>:` 노출 | shadow 내용이 drive letter로 계속 노출됨 | `Get-PSDrive -Name '<SHADOW_DRIVE>'`와 DiskShadow 목록 | exact drive letter를 `unexpose` |
 | persistent VSS `<SHADOW_ID>` | 디스크 공간과 shadow가 종료 뒤에도 남음 | 생성 때 기록한 ID를 `vssadmin list shadows`에서 대조 | exact shadow ID 하나만 `delete shadows id`로 제거 |
 
-분석 입력의 회수와 hash 확인이 끝난 뒤, 원격 연결이 살아 있을 때 대상 Windows 호스트에서 파일 → 노출 경로 → shadow 순서로 정리한다. 기존 shadow를 이름·시간만 보고 삭제하거나 `delete shadows all`을 사용하지 않는다.
+분석 입력의 회수와 경로 확인이 끝난 뒤, 원격 연결이 살아 있을 때 대상 Windows 호스트에서 파일 → 노출 경로 → shadow 순서로 정리한다. 기존 shadow를 이름·시간만 보고 삭제하거나 `delete shadows all`을 사용하지 않는다.
 
 ```powershell
 Remove-Item -LiteralPath '<COPIED_FILE_PATH>' -Force

@@ -15,12 +15,6 @@ tags:
 
 유효한 AD 계정 또는 도메인 사용자 세션이 있으면 현재 도메인이나 조회 가능한 신뢰 대상 도메인에서 Service Principal Name(SPN)이 설정된 객체를 열거하고, 사용자 기반 서비스 계정과 컴퓨터·관리형 계정을 구분하여 Kerberoasting 대상 후보를 만든다.
 
-## 사용할 때
-
-- [[Kerberoasting]] 전에 실제 SPN 계정과 서비스 이름을 먼저 확인할 때.
-- MSSQL·HTTP·백업·ADFS 같은 서비스 단서가 어느 AD 계정의 SPN에 연결되는지 확인할 때.
-- trust를 확인한 뒤 대상 도메인의 SPN 계정을 별도로 조회할 때.
-
 ## 전제 조건
 
 | 확인할 것 | 필요한 상태 | 확인 방법 | 미충족 시 다음 확인 |
@@ -36,6 +30,8 @@ tags:
 #### Linux 공격 호스트에서 실행
 
 TGS를 요청하지 않고 SPN 계정만 나열한다. `-request`는 이 단계에서 사용하지 않는다.
+
+`<DC_IP>`는 조회 DC IP, `<DOMAIN>`은 현재 또는 trust 대상 DNS 도메인, `<REQUESTER>`는 LDAP/Kerberos 조회 요청자다. SPN 출력의 서비스 계정은 요청자와 별개이며, 이 단계는 TGS hash를 생성하지 않는다.
 
 ```bash
 impacket-GetUserSPNs -dc-ip <DC_IP> '<DOMAIN>/<REQUESTER>'
@@ -78,6 +74,8 @@ setspn.exe -Q */*
 `setspn` 결과에는 컴퓨터 객체의 SPN도 섞일 수 있으므로 계정 유형을 다시 확인한다.
 
 ### 신뢰 대상 도메인 대상
+
+`<SOURCE_DOMAIN>`은 `<REQUESTER>`가 속한 현재 DNS 도메인, `<TARGET_TRUST_DOMAIN>`은 SPN을 조회할 신뢰 대상 DNS 도메인이다. `<TARGET_TRUST_DOMAIN>`을 요청자 realm으로 바꾸지 않으며, 아래 Linux 명령은 source-domain credential으로 target LDAP 조회가 허용되는지 별도로 확인한다.
 
 #### Linux 공격 호스트에서 실행
 

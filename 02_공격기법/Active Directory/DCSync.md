@@ -13,14 +13,6 @@ tags:
 
 제어 중인 AD 계정의 인증 수단과 실제 디렉터리 복제 권한이 있고 현재 명령 실행 위치에서 DC의 Directory Replication Service Remote Protocol(DRSUAPI)에 연결할 수 있다면, 특정 대상 계정의 NT hash·Kerberos key와 비밀번호 이력을 요청한다.
 
-## 사용할 때
-
-- 현재 보유 인증 수단: 제어 중인 요청자 AD 계정의 평문 비밀번호, NT hash, Kerberos key 또는 유효한 ticket 중 도구가 사용할 수 있는 값.
-- 명령 실행 위치: DC의 RPC Endpoint Mapper TCP/135와 DRS 동적 RPC 포트에 접근할 수 있는 호스트. Impacket `secretsdump` 경로는 초기 SMB 연결을 위해 DC TCP/445도 필요하다.
-- 현재 권한: 요청자 계정의 활성 사용자·그룹 SID 집합에 필요한 두 복제 확장 권한이 실제로 적용된 상태. 두 allow 권한은 서로 다른 적용 SID에 있을 수 있으며, 적용 deny ACE가 없어야 한다. 단순 인증 성공이나 관리자 표시는 충분하지 않다.
-- 공격 대상과 결과: 요청자와 별개로 지정한 사용자, `krbtgt` 또는 제한한 도메인 범위의 NTLM hash와 Kerberos key를 얻는다. 요청자 세션이 자동으로 관리자 세션으로 바뀌지는 않는다.
-- 수집 결과 경계: DRSUAPI 출력은 디렉터리에 저장된 NTLM hash·Kerberos key·비밀번호 이력이며, 평문 비밀번호 복구나 대상 서비스 로그인 성공은 별도 검증 단계다.
-
 ## 전제 조건
 
 | 확인할 것 | 필요한 상태 | 확인 방법 | 미충족 시 다음 확인 |
@@ -39,6 +31,8 @@ tags:
 | 복제 대상 계정 | 요청에서 지정한 사용자, 서비스 계정 또는 `krbtgt` | 해당 대상에 대해 AD에 저장된 NTLM hash와 Kerberos key |
 
 ## 실행
+
+`<DOMAIN>`·`<DC>`·`<DC_IP>`는 대상 도메인과 DC, `<REQUESTER>`는 복제 요청자, `<TARGET_USER>`는 hash·key를 요청할 별도 계정이다. ccache·출력 prefix·기록 파일명은 명령 출력에서 받은 exact 경로를 사용하며, 요청자 인증 자료와 추출 대상 자료를 혼동하지 않는다.
 
 1. [[AD 계정의 디렉터리 복제 권한 확인]]에서 Domain Admin 멤버십과 실제 DCSync 권한을 구분한다.
 2. 특정 사용자부터 최소 범위로 dump한다.
@@ -214,7 +208,7 @@ sudo python3 noPac.py '<DOMAIN>/<USER>:<PASSWORD>' -dc-ip <DC_IP> -dc-host <DC_H
 
 DCSync의 DRSUAPI 요청은 AD 객체 값을 바꾸지 않으므로 복원할 디렉터리 값은 없다. 그러나 요청·인증 감사 흔적은 되돌릴 수 없고, `-outputfile`을 사용하면 공격 호스트에 민감 파일이 남는다.
 
-승인된 증적으로 보존하지 않는 경우, 위에서 기록한 이번 실행의 exact 파일만 제거한 뒤 전용 디렉터리가 비었을 때 삭제한다.
+보존하지 않는 경우, 위에서 기록한 이번 실행의 exact 파일만 제거한 뒤 전용 디렉터리가 비었을 때 삭제한다.
 
 ```bash
 rm -- '<OUTPUT_DIRECTORY>/<RECORDED_OUTPUT_FILE_1>' '<OUTPUT_DIRECTORY>/<RECORDED_OUTPUT_FILE_2>'
@@ -225,7 +219,7 @@ test ! -e '<OUTPUT_DIRECTORY>'
 
 - 생성 파일 수가 다르면 실제 기록한 목록에 맞춰 `rm --` 인수를 조정한다. 접두부 wildcard나 다른 작업의 출력까지 일괄 삭제하지 않는다.
 - `find`에 파일이 남으면 소유자·보존 필요성을 확인하며, 남은 파일이 있는데 디렉터리 삭제를 완료로 기록하지 않는다.
-- 증적으로 보존하면 삭제 대신 Vault 밖의 승인된 위치·담당자·보존 기한을 기록한다. DCSync 성공과 산출물 처분 완료를 별도로 판정한다.
+- 보존이 필요한 경우에도 Vault 밖에서 처리한다. DCSync 성공과 산출물 처분 완료를 별도로 판정한다.
 - 인증·복제 요청과 DC 감사 기록은 클라이언트 정리로 제거되지 않는다. 이를 원상복구했다고 표현하지 않는다.
 
 ## 확인할 출력과 권한

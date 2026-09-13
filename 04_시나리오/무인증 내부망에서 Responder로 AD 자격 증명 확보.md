@@ -47,6 +47,8 @@ Linux 공격 호스트
 | 대상까지의 네트워크 경로 | 복구한 비밀번호를 확인할 SMB·LDAP·WinRM 등 인증 서비스에 도달 가능 | 대상별 TCP 연결 또는 기존 서비스 스캔 결과 확인 | route, VLAN과 서비스 포트를 다시 확인 |
 | 보유 정보 | 실행 인터페이스, 요청 출발지, wordlist와 캡처 로그 저장 위치 | 분석 모드 출력과 Responder 실행 위치 확인 | 인터페이스와 로그 경로를 먼저 확정 |
 
+`<INTERFACE>`는 공격 호스트에서 대상 broadcast 대역을 직접 보는 인터페이스 이름(예: `eth0`)이다. `<RESPONDER_LOG>`는 실행 뒤 생성되거나 갱신된 `*NTLMv2*.txt` 절대 경로이고, `<FIRST_NEW_BYTE>`는 실행 전 기록한 그 로그의 byte 크기보다 1 큰 정수 또는 새 파일의 `1`이다. `<RESPONDER_HASH_INPUT>`·`<RESPONDER_POTFILE>`은 Linux 분석 호스트에서 작업 전 없었던 새 파일 경로, `<WORDLIST>`는 해당 호스트의 후보 목록 경로다. `<SMB_TARGETS>`·`<DOMAIN>`·`<USER>`·`<PASSWORD>`는 capture 출력 또는 복구 결과에 연결된 실제 서비스 입력이며, `nxc`는 Linux 분석 호스트에서 실행한다.
+
 ## 공격 경로 요약
 
 | 단계 | 실행 위치 | 수행할 행동 | 확인할 출력·상태 | 다음 단계 |
@@ -77,6 +79,8 @@ sudo ss -luntp
 
 Linux 공격 호스트에서 `-A` Analyze 모드로 응답을 보내지 않고 LLMNR·NBT-NS 요청을 관찰한다.
 
+`<INTERFACE>`는 1단계에서 대상 broadcast 주소를 확인한 같은 Linux 인터페이스 이름(예: `eth0`)을 재사용한다.
+
 ```bash
 sudo responder -I <INTERFACE> -A
 ```
@@ -92,6 +96,8 @@ sudo responder -I <INTERFACE> -A
 ## 3. Responder로 NetNTLMv2 수집
 
 요청이 확인된 동일한 Linux 공격 호스트에서 활성 포이즈닝을 시작한다. 실행 중 `response sent`와 `NTLMv1` 또는 `NTLMv2` capture를 서로 다른 상태로 확인한다.
+
+`<INTERFACE>`는 Analyze 모드에서 요청을 보인 동일 인터페이스다. 다른 인터페이스 이름으로 바꾸지 않으며, 실행 위치는 Linux 공격 호스트다.
 
 Kali 패키지 기본 경로를 사용한다면 실행 전에 기존 NTLMv2 로그의 경로·byte 크기·수정 시각을 기록한다. 설치 방식이 다르면 Responder 실행 디렉터리의 `logs`로 바꾼다.
 
@@ -121,6 +127,8 @@ ls -lt /usr/share/responder/logs
 
 Linux 분석 호스트에서 이번 실행의 전체 NetNTLMv2 라인만 `<RESPONDER_HASH_INPUT>`에 분리하고 Hashcat mode `5600`으로 처리한다. Responder 원본 로그는 여러 실행이 누적될 수 있으므로 직접 potfile처럼 사용하지 않는다.
 
+`<RESPONDER_LOG>`는 3단계에서 새로 생기거나 갱신된 절대 로그 경로, `<FIRST_NEW_BYTE>`는 그 실행 전 byte 크기에서 계산한 정수다. `<RESPONDER_HASH_INPUT>`·`<RESPONDER_POTFILE>`은 Linux 분석 호스트의 새 상대 또는 절대 파일 경로(예: `./responder-p03.hash`, `./responder-p03.pot`)이고, `<WORDLIST>`는 같은 호스트의 기존 후보 목록 경로(예: `/usr/share/wordlists/rockyou.txt`)다.
+
 ```bash
 test ! -e '<RESPONDER_HASH_INPUT>'
 test ! -e '<RESPONDER_POTFILE>'
@@ -142,6 +150,8 @@ hashcat --show -m 5600 '<RESPONDER_HASH_INPUT>' --potfile-path '<RESPONDER_POTFI
 ## 5. 복구한 비밀번호의 계정 범위와 서비스 권한 확인
 
 대상 인증 서비스에 도달하는 Linux 호스트에서 먼저 SMB처럼 식별된 서비스 하나에 비밀번호를 적용한다. 캡처에 표시된 도메인과 사용자 이름을 그대로 분리해 입력한다.
+
+`<SMB_TARGETS>`는 445/TCP가 확인된 대상 IP 또는 FQDN 목록(예: `198.51.100.20`)이고, `<DOMAIN>`·`<USER>`는 capture 줄의 도메인·계정명이다. `<PASSWORD>`는 4단계에서 그 계정에 연결되어 복구된 평문 후보이며, 이 명령은 Linux 분석 호스트에서 실행한다.
 
 ```bash
 nxc smb <SMB_TARGETS> -d <DOMAIN> -u <USER> -p '<PASSWORD>' --continue-on-success
@@ -171,8 +181,8 @@ nxc smb <SMB_TARGETS> -d <DOMAIN> -u <USER> -p '<PASSWORD>' --continue-on-succes
 |---|---|---|---|
 | 공격 호스트의 SMB·HTTP·WPAD 등 listener | 실행 전 `sudo ss -luntp` 출력 | 기존 서비스와 포트 충돌 또는 의도하지 않은 인증 수신 | Responder에서 `Ctrl+C` 후 아래 확인 명령 실행 |
 | 링크 로컬 이름 해석 응답 | 실행 시간, 인터페이스와 요청 출발지 | 잘못된 이름 요청이 공격 호스트로 향해 연결 지연·실패 또는 인증 프롬프트 발생 | Responder에서 `Ctrl+C`로 포이즈닝 즉시 중지 |
-| 이번 실행의 hash 입력과 Hashcat potfile | 작업 전 존재하지 않은 `<RESPONDER_HASH_INPUT>`·`<RESPONDER_POTFILE>` exact 경로 | 결과 인계 후 `rm -- '<RESPONDER_HASH_INPUT>' '<RESPONDER_POTFILE>'` | `test ! -e`로 두 경로가 모두 없음 |
-| 서비스 인증 client와 계정 잠금 영향 | client PID·대상·계정·시도 시간, AD라면 시도 전 계정 상태 | 인증 client를 먼저 종료하고 [[원격 비밀번호 공격]]의 계정 잠금 확인·승인된 복구 절차 수행 | 새 인증 시도가 멈추고 client가 종료됨. 잠겼던 계정은 권한 있는 관리자가 접근 복구를 확인 |
+| 이번 실행의 hash 입력과 Hashcat potfile | 작업 전 존재하지 않은 `<RESPONDER_HASH_INPUT>`·`<RESPONDER_POTFILE>` exact 경로 | NetNTLMv2 입력과 복구 결과가 분석 호스트에 남음 | `rm -- '<RESPONDER_HASH_INPUT>' '<RESPONDER_POTFILE>'` 후 `test ! -e`로 두 경로 부재 확인 |
+| 서비스 인증 client와 계정 잠금 영향 | client PID·대상·계정·시도 시간, AD라면 시도 전 계정 상태 | 추가 인증 시도가 계정 잠금 상태를 바꿀 수 있음 | 인증 client를 먼저 종료하고 [[원격 비밀번호 공격]]의 계정 잠금 확인 절차를 따른다 |
 
 ```bash
 pgrep -af responder
@@ -194,7 +204,7 @@ sudo ss -luntp
 
 - 인증 client와 Responder가 종료되고 listener가 실행 전 기준으로 돌아왔는지 확인한다.
 - 작업용 hash·potfile의 exact 경로가 제거됐고, 원본 Responder 로그의 보존·폐기 상태를 별도로 기록한다.
-- 계정 잠금이 발생했다면 승인된 복구와 확인이 끝나야 한다. 인증 실패·포이즈닝·서비스 감사 기록은 남으므로 이를 포함해 “완전 원상복구”라고 표현하지 않는다.
+- 계정 잠금이 발생했다면 실제 계정 상태가 복구됐는지 확인해야 한다. 인증 실패·포이즈닝·서비스 감사 기록은 남으므로 이를 포함해 “완전 원상복구”라고 표현하지 않는다.
 
 ## 관련 노트
 

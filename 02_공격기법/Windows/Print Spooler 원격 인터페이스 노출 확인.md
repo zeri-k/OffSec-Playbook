@@ -14,13 +14,6 @@ tags:
 
 도메인 사용자 세션이 있는 Windows PowerShell 호스트에서 RPC로 도달 가능한 대상 FQDN에 `Get-SpoolStatus`를 실행하여 Print Spooler 원격 인터페이스 응답 여부와 Printer Bug 인증 강제 후보를 확인한다.
 
-## 사용할 때
-
-- 현재 보유 정보: Domain Controller나 서버의 FQDN을 식별했고 MS-RPRN Printer Bug 가능성을 확인해야 한다.
-- 명령 실행 위치와 도달성: `SecurityAssessment.ps1`를 불러올 수 있는 Windows PowerShell 호스트에서 대상의 RPC 원격 인터페이스까지 도달할 수 있다.
-- 현재 계정과 권한: 도구를 실행할 수 있는 Windows 사용자 세션과 원격 조회에 사용할 도메인 사용자 컨텍스트가 있다.
-- 지금 가능한 행동과 결과: NTLM relay 경로를 검토하기 전에 인증을 강제할 수 있는 후보를 줄인다. `Status True`는 후보 선별 결과이며 `PrintNightmare` exploit, 실제 인증 강제 또는 relay 성공과는 별개다.
-
 ## 전제 조건
 
 | 확인할 것 | 필요한 상태 | 확인 방법 | 미충족 시 다음 확인 |
@@ -39,6 +32,8 @@ tags:
 Import-Module .\SecurityAssessment.ps1
 Get-SpoolStatus -ComputerName <TARGET_FQDN>
 ```
+
+`<TARGET_FQDN>`은 DNS·AD 열거에서 확인한 대상의 FQDN(예: `server01.example.test`)이며, 짧은 이름이나 다른 DNS 별칭으로 바꾸지 않는다.
 
 확인할 출력:
 

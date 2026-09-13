@@ -14,14 +14,6 @@ tags:
 
 Windows RDP client의 `mstsc.exe`에서 `<PIVOT_IP>:3389`로 로그인할 수 있고 피벗 호스트에서 `<INTERNAL_IP>:<PORT>`에 연결할 수 있으면, RDP Dynamic Virtual Channel을 통해 client 측 `127.0.0.1:1080` SOCKS 프록시와 내부 TCP 경로를 만든다.
 
-## 사용할 때
-
-- 현재 네트워크 위치: 운영 호스트에서 `<PIVOT_IP>:3389/TCP`에는 연결할 수 있지만 `<INTERNAL_IP>:<PORT>`에는 직접 연결할 수 없고, 피벗 호스트에서는 해당 내부 포트에 연결할 수 있다.
-- 명령 실행 위치: plugin은 `mstsc.exe`를 실행하는 RDP client 측 Windows 환경에 등록하고, server 구성 요소는 `<PIVOT_IP>`의 RDP 세션에서 실행한다. Linux에서 첫 Windows 작업 호스트로 RDP 접속한 경우에는 그 Windows 작업 호스트가 다음 RDP 연결의 client가 된다. 최종 서비스 클라이언트도 `127.0.0.1:1080` listener가 생긴 같은 Windows client에서 실행한다.
-- 현재 계정·권한: 첫 RDP 계정은 피벗 세션을 여는 용도다. 공식 구현의 기본 DLL 등록은 client에서 상승된 관리자가 필요하지만 server 실행은 피벗 호스트의 일반 사용자도 가능하다. 관리자 권한이 없는 client의 사용자별 registry import 분기는 별도 설정 백업·복원이 필요하므로 이 대표 절차에서는 사용하지 않는다.
-- 보유 인증 자료: `<PIVOT_IP>` RDP 인증 성공은 `<INTERNAL_IP>`의 RDP 또는 다른 서비스 인증을 보장하지 않는다. 최종 대상에는 그 호스트·서비스에서 유효한 별도 계정이나 인증 수단이 필요하다.
-- 성공 범위: 운영 호스트의 `127.0.0.1:1080`에서 `<INTERNAL_IP>:<PORT>`까지 TCP가 전달된다. 로그인 화면이나 서비스 배너는 서비스 접근이며, 인증 성공·원격 세션·관리자 권한은 각각 별도로 확인한다.
-
 ## 전제 조건
 
 | 확인할 것 | 필요한 상태 | 확인 방법 | 미충족 시 다음 확인 |
@@ -33,6 +25,8 @@ Windows RDP client의 `mstsc.exe`에서 `<PIVOT_IP>:3389`로 로그인할 수 �
 | 필요한 파일·목록·주소 | client/server 구성 요소와 `<PIVOT_IP>`, `<INTERNAL_IP>`, `<PORT>` | RDP drive redirection 또는 기존 전송 경로로 파일 존재 확인 | 파일 전송 방식과 구성 요소 버전 재확인 |
 
 ## 실행
+
+`<PIVOT_IP>`는 첫 RDP 세션의 피벗 Windows 주소, `<INTERNAL_IP>:<PORT>`는 피벗에서만 도달하는 최종 TCP 서비스다. client plugin 경로·server 경로·PID는 각 실행 단계의 출력에서 얻는다. 첫 RDP 계정과 최종 서비스 계정은 역할상 별도 입력이며, 같은 계정을 쓰려면 두 호스트·서비스에서 각각 유효함을 따로 확인한다.
 
 ### 선택 기준
 | 단서 | 의미 | 다음 행동 |

@@ -13,14 +13,6 @@ tags:
 
 공격 호스트에서 `<PIVOT_IP>`로의 TCP가 제한되지만 ICMP가 왕복하고 피벗 호스트에서 raw socket을 열 수 있으면, 피벗에서 ptunnel-ng server를 실행해 공격 호스트의 `127.0.0.1:2222`를 피벗의 `22/TCP` SSH로 전달하고 필요하면 SOCKS로 확장한다.
 
-## 사용할 때
-
-- 현재 네트워크 위치: 공격 호스트에서 `<PIVOT_IP>`로 직접 SSH/TCP 접속은 막히지만 `ping <PIVOT_IP>` 응답 또는 패킷 관찰로 ICMP 왕복이 확인된다.
-- 명령 실행 위치: ptunnel-ng server는 셀을 보유한 피벗 호스트에서, client와 후속 `ssh`·ProxyChains는 공격 호스트에서 실행한다.
-- 현재 계정·권한: 양쪽의 ptunnel-ng 프로세스가 raw ICMP socket을 사용할 sudo 또는 capability가 필요하고, SSH 세션은 별도의 `<USER>` 비밀번호·키와 로그인 권한이 필요하다.
-- 도달해야 하는 대상: 1차 대상은 피벗 호스트의 `<PIVOT_IP>:22`, SOCKS 확장 후 최종 대상은 피벗에서 도달 가능한 `<INTERNAL_IP>:<PORT>`다.
-- 성공 범위: ptunnel-ng 연결은 ICMP 위의 TCP 전달, SSH 로그인은 피벗 호스트의 `<USER>` 셀, `ssh -D` 후 `proxychains nc` 성공은 내부 TCP 경로를 각각 의미한다. 내부 서비스 인증과 관리자 권한은 포함되지 않는다.
-
 ## 전제 조건
 
 | 확인할 것 | 필요한 상태 | 확인 방법 | 미충족 시 다음 확인 |
@@ -32,6 +24,8 @@ tags:
 | 필요한 파일·목록·주소 | 양쪽의 ptunnel-ng, `<PIVOT_IP>`, `<USER>`, SSH 인증 수단 | 바이너리 실행과 placeholder 대응 확인 | OS·아키텍처에 맞는 바이너리와 올바른 주소 사용 |
 
 ## 실행
+
+`<PIVOT_IP>`는 ICMP를 주고받는 피벗 주소(가상 예시 `192.0.2.70`)이고, `<ATTACKER_IP>`는 client를 실행하는 공격 호스트 주소다. `<USER>`·`<PASSWORD>`는 ptunnel과 분리된 SSH 인증 자료이며 `<PTUNNEL_SERVER_PID>`·`<PTUNNEL_CLIENT_PID>`는 양쪽 시작 출력의 PID다. server는 피벗 호스트에서, client와 후속 SSH·SOCKS 확인은 공격 호스트에서 실행해 ICMP 전달·SSH 인증·내부 TCP 도달성을 구분한다.
 
 ### 선택 기준
 | 단서 | 의미 | 다음 행동 |

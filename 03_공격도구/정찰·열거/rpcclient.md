@@ -30,6 +30,8 @@ rpcclient -U '<user>%<password>' <target>
 
 ## 대표 예시
 
+`<TARGET>`은 SMB/RPC 호스트(예: `smb.example.test`)이고, `<DC>`는 도메인 정책을 조회할 DC(예: `dc.example.test`)다. RID cycling의 범위는 반환된 RID와 실제 도메인 범위를 보고 정한다.
+
 ### null session 접속 확인
 
 ```bash

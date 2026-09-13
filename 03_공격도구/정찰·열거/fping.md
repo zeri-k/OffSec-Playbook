@@ -21,6 +21,8 @@ tags:
 
 ## 표준 사용법
 
+`<TARGET_CIDR>`은 실행 호스트에서 도달 가능한 IPv4/IPv6 CIDR(예: `192.0.2.0/24`)이다. ICMP 응답이 없다고 호스트나 서비스가 없다고 결론 내리지 않는다.
+
 ```bash
 fping -asgq <TARGET_CIDR>
 ```

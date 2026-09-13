@@ -28,6 +28,8 @@ medusa -h <target> -U <user_list> -P <password_list> -M <module>
 
 ## 대표 예시
 
+`<TARGET>`은 SSH 서비스 IP/FQDN(예: `ssh.example.test`)이며 사용자 목록과 모듈 입력은 실행 호스트의 파일·값이다.
+
 ### SSH 로그인 브루트포스
 
 ```bash

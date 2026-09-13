@@ -22,6 +22,8 @@ tags:
 
 ## 표준 사용법
 
+`<DOMAIN>`은 열거할 루트 DNS suffix(예: `corp.example.test`)이며, 단일 호스트명이나 URL이 아니다.
+
 ```bash
 fierce --domain <DOMAIN>
 ```

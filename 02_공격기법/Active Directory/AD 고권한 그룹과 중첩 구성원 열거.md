@@ -14,13 +14,6 @@ tags:
 
 도메인·DC와 인증된 AD 계정이 있으면 고권한·업무 그룹의 직접 구성원과 중첩 그룹을 재귀 조회하여 권한 후보 계정을 식별하고, 실제 객체 권한·로컬 관리자·원격 로그온 가능성은 후속 기법에서 따로 검증한다.
 
-## 사용할 때
-
-- 사용자·그룹 목록에서 `Domain Admins`, `Backup Operators`, 운영·백업·보안 관련 그룹 등 확인할 그룹을 골랐을 때.
-- 특정 사용자가 어느 중첩 경로로 권한을 얻는지 확인해야 할 때.
-- 그룹 이름이나 `admincount`만 있고 실제 구성원 관계는 확인하지 못했을 때.
-- 온프레미스 Exchange가 보일 때 `Organization Management`, `Exchange Windows Permissions`, `Exchange Trusted Subsystem`의 현재 구성원과 실제 AD ACL을 확인해야 할 때.
-
 ## 전제 조건
 
 | 확인할 것 | 필요한 상태 | 확인 방법 | 미충족 시 다음 확인 |
@@ -32,6 +25,8 @@ tags:
 ## 실행
 
 ### Linux 공격 호스트에서 실행
+
+`<DC>`와 `<DC_IP>`는 같은 도메인 컨트롤러의 DNS 이름 또는 문서 예약 IP(예: `directory.example.test`, `192.0.2.10`)다. `<USER>@<DOMAIN>`과 `<PASSWORD>`는 LDAP/SMB 조회 요청자 자격 증명(예: `alice@directory.example.test`)이며, 출력에서 찾는 구성원 계정과 혼동하지 않는다. `<GROUP>`은 도메인 그룹의 이름·DN·SID 중 현재 cmdlet이 받는 식별자(예: `Domain Admins`)다.
 
 ```bash
 crackmapexec smb <DC> -u <USER> -p '<PASSWORD>' --groups
@@ -45,6 +40,8 @@ python3 windapsearch.py --dc-ip <DC_IP> -u '<USER>@<DOMAIN>' -p '<PASSWORD>' -PU
 - bind 성공과 구성원 반환을 분리하고, 그룹 이름만으로 현재 권한을 확정하지 않는다.
 
 ### Windows 공격 호스트에서 실행
+
+`<GROUP>`은 앞 Linux 조회에서 선택한 동일 도메인 그룹의 이름·DN·SID 중 cmdlet이 받는 값(예: `Domain Admins`)이며, `Import-Module` 경로는 Windows 실행 호스트의 실제 PowerView 파일 경로다.
 
 ```powershell
 Import-Module ActiveDirectory

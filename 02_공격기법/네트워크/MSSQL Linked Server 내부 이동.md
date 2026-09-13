@@ -13,14 +13,6 @@ tags:
 
 명령 실행 호스트에서 `<SQL_SERVER>:1433`에 인증한 SQL login이 linked server query를 실행할 수 있으면, 현재 SQL 세션에서 `<LINKED_SERVER>`로 query를 전달해 원격 mapped login·DB 권한을 확인하고 sysadmin·xp_cmdshell 권한이 있을 때만 실제 linked server OS 호스트의 원격 명령 실행으로 확장한다.
 
-## 사용할 때
-
-- 현재 보유 접근: 도구를 실행하는 호스트에서 `<SQL_SERVER>:1433` MSSQL에 로그인해 query를 실행할 수 있고 linked server 구성이 보인다.
-- 현재 계정·권한: 현재 SQL login, `EXECUTE AS LOGIN` 후 impersonated login, linked server에서 사용되는 remote mapped login을 서로 다른 주체로 본다.
-- 도달해야 하는 대상: 공격 호스트가 linked server에 직접 도달할 필요는 없지만, `<SQL_SERVER>` DB 엔진이 linked server data source와 query·RPC를 주고받을 수 있어야 한다.
-- 지금 가능한 행동: `sys.servers`·login mapping을 조회하고 원격 `@@SERVERNAME`·`SYSTEM_USER`·`IS_SRVROLEMEMBER`를 확인한다. 현재 login으로 실패하면 IMPERSONATE 권한이 있는 login으로 mapping 변화를 재검증한다.
-- 성공 범위: 원격 query 응답은 linked DB 접근, `sysadmin = 1`은 원격 SQL sysadmin, `hostname & whoami`의 원격 출력은 해당 OS 호스트에서의 명령 실행을 의미한다. SQL 인증 성공만으로 OS 명령 실행·SYSTEM 권한을 추정하지 않는다.
-
 ## 전제 조건
 
 | 확인할 것 | 필요한 상태 | 확인 방법 | 미충족 시 다음 확인 |
@@ -32,6 +24,8 @@ tags:
 | 필요한 파일·목록·주소 | `<SQL_SERVER>`, `<LINKED_SERVER>`, 선택적 `<IMPERSONATE_TARGET>` | `sys.servers`와 login mapping의 이름·data source 대조 | 실제 linked server 이름과 실행 컨텍스트 수정 |
 
 ## 실행
+
+`<SQL_SERVER>`은 현재 SQL client가 인증한 서버 주소, `<LINKED_SERVER>`는 `sys.servers`에서 얻은 이름(가상 예시 `REPORTING01`)이며 `<IMPERSONATE_TARGET>`은 현재 login이 가장할 수 있는 SQL login이다. 아래 T-SQL은 현재 MSSQL SQL prompt에서 실행하고, 대괄호의 linked server 이름과 `EXECUTE AS`·`REVERT`는 같은 query 컨텍스트에서 재사용한다.
 
 ### 선택 기준
 | 단서 | 의미 | 다음 행동 |

@@ -31,6 +31,8 @@ tags:
 
 먼저 object의 서버 경로와 현 계정의 권한을 확인한다.
 
+`<DIRECTORY_OBJECT>`는 현재 로그인 계정이 `READ`·`WRITE` 권한을 가진 Oracle DIRECTORY 이름(예: `APP_EXPORT_DIR`)이고, `<UNIQUE_FILE>`은 그 서버 경로에 새로 만들 파일명(예: `oracle-proof-20260914.txt`)이다. `<UNIQUE_ID>`는 파일 본문에서 재조회할 고유 문자열(예: `oracle-proof-20260914`)이며, `<WEB_HOST>`는 그 DIRECTORY 경로를 제공한다고 별도로 확인한 웹 호스트 FQDN(예: `files.example.test`)이다. SQL·PL/SQL은 Oracle DB 세션에서, `curl`은 현재 명령 실행 호스트에서 수행한다.
+
 ```sql
 SELECT directory_name, directory_path
 FROM all_directories

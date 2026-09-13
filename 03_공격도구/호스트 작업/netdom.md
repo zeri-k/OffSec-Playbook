@@ -19,8 +19,11 @@ tags:
 - 실행 위치: `netdom.exe`를 사용할 수 있고 대상 도메인에 연결할 수 있는 Windows CMD 또는 PowerShell.
 - 입력: 조회할 도메인의 FQDN.
 - 확인 범위: `trust`는 직접 신뢰 관계, `dc`는 DC 계정, `workstation`은 워크스테이션과 서버 계정 목록을 반환한다.
+- `<DOMAIN_FQDN>`은 현재 또는 trusted domain의 DNS 이름(예: `directory.example.invalid`)이며 `trust /d:`의 방향은 현재 domain 기준으로 해석한다. domain name만으로 AD trust나 현재 token의 권한을 확정하지 않는다.
 
 ## 표준 사용법
+
+`<DOMAIN_FQDN>`은 query할 current/trusted AD DNS domain이고 `/d:`에 준 trust direction은 current domain 관점이다. `trust`·`dc`·`workstation` output은 서로 다른 object sets이며 domain name만으로 trust access 또는 current Windows client process access token rights를 단정하지 않는다.
 
 ```cmd
 netdom query /domain:<DOMAIN_FQDN> <QUERY_TYPE>

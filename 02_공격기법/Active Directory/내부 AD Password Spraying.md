@@ -15,12 +15,6 @@ tags:
 
 실행 호스트에서 DC의 Kerberos·SMB/RPC에 접근할 수 있고 유효한 공격 대상 사용자 목록과 잠금 정책을 확보했으면 단일 평문 비밀번호를 계정마다 한 번씩 검증해 일치하는 도메인 credential을 찾고 첫 성공 또는 잠금 징후에서 멈춘다.
 
-## 사용할 때
-
-- 현재 보유 정보: 내부 AD의 도메인명·DC, 유효한 공격 대상 사용자 목록, 단일 평문 비밀번호 후보와 계정별 적용 잠금 정책을 확보했다.
-- 명령 실행 위치와 도달성: Linux 또는 Windows 공격 호스트에서 DC의 Kerberos에 접근해 Kerbrute를 실행할 수 있다. DomainPasswordSpray는 요청자 도메인 사용자로 로그인한 Windows 호스트에서 실행한다.
-- 현재 가능한 행동과 결과: 잠금 임계값에 여유를 둔 한 라운드만 실행해 사용자명·비밀번호 일치 여부를 확인하고, 인증 성공을 원격 세션·로컬 관리자·도메인 고권한으로 확대 해석하지 않는다.
-
 ## 전제 조건
 
 | 확인할 것 | 필요한 상태 | 확인 방법 | 미충족 시 다음 확인 |
@@ -37,9 +31,9 @@ tags:
 
 1. 설정 파일·스크립트·문서·메일 등에서 이미 확인한 비밀번호가 있으면 그 값을 우선한다.
 2. 신규 계정이나 비밀번호 재설정에 사용하는 조직의 초기·기본 비밀번호를 확인했으면 그 값을 사용한다.
-3. 환경에서 확인한 후보가 없으면 일반적인 초기 비밀번호 패턴인 `Welcome1`을 첫 공통 후보로 한 번 시도할 수 있다.
+3. 환경에서 확인한 후보가 없으면 새 일반 패턴을 실행 후보로 만들지 않는다.
 
-`Welcome1`이 실패했다고 `Welcome1!`, `Welcome123`, 계절·연도 변형을 같은 라운드에서 연속으로 시도하지 않는다. 다음 후보는 적용 정책의 observation window와 계정별 실패 횟수를 다시 확인한 뒤 별도 라운드로 판단한다.
+확인한 후보가 실패해도 변형을 같은 라운드에서 연속으로 시도하지 않는다. 다음 후보는 적용 정책의 observation window와 계정별 실패 횟수를 다시 확인한 뒤 별도 라운드로 판단한다.
 
 ## 계정 잠금 위험과 중지 조건
 
@@ -56,7 +50,11 @@ tags:
 
 ## 실행
 
+> 인증 실패는 계정 잠금 카운터와 감사 이벤트에 남을 수 있으며, 잠금 해제나 비밀번호 변경은 이 절차와 별개의 상태 변경이다. 첫 성공·잠금·rate limit 신호에서 즉시 중지한다.
+
 ### Linux 공격 호스트에서 실행
+
+`<DOMAIN>`은 Kerberos realm에 대응하는 DNS 도메인(예: `corp.example`)이고 `<DC>`는 해당 DC의 FQDN 또는 IP다. `<SPRAY_USER_LIST>`는 Linux 공격 호스트의 한 줄당 사용자명 파일이며 `<PASSWORD>`는 이번 라운드의 이미 확인한 단일 후보다. `<USER>`와 `<COUNT>`는 명령 입력이 아니라 도구 출력이다.
 
 #### 1. Kerbrute로 Kerberos Password Spraying
 
@@ -70,6 +68,8 @@ kerbrute passwordspray --safe -d <DOMAIN> --dc <DC> '<SPRAY_USER_LIST>' '<PASSWO
 - 중지 신호: lockout·disabled 메시지, KDC 오류 또는 예상하지 못한 realm 응답. 성공한 대상 계정은 요청자 계정과 별도로 기록한다.
 
 #### 2. rpcclient로 SMB/RPC 인증 확인
+
+`$u`는 `<SPRAY_USER_LIST>`에서 한 줄씩 읽은 사용자명이고, `<PASSWORD>`와 `<DC>`는 이번 라운드에서 Kerbrute에 사용한 같은 비밀번호 후보와 DC를 재사용한다. 이 Bash loop는 Linux 공격 호스트에서 실행한다.
 
 ```bash
 while IFS= read -r u; do
@@ -143,13 +143,13 @@ Invoke-DomainPasswordSpray -Password '<PASSWORD>' -OutFile '<SPRAY_RESULT_FILE>'
 
 - 실패한 인증은 대상 계정의 실패 카운터에 반영되고 DC·대상 서비스에 감사 이벤트를 남길 수 있다. 클라이언트 도구를 종료하거나 결과 파일을 지워도 이 영향은 되돌아가지 않는다.
 - 잠금 또는 예상보다 빠른 실패 카운터 증가가 보이면 즉시 모든 도구를 중지하고 영향받은 계정, 사용한 DC, 시도 시각과 적용 정책을 확인한다. observation window가 지났다는 사실과 계정의 현재 상태를 다시 확인하기 전에는 재시도하지 않는다.
-- 잠긴 계정의 잠금 해제나 비밀번호 변경은 새로운 대상 상태 변경이다. 별도 승인과 계정 소유자의 복구 절차 없이 임의로 수행하지 않으며, 확인하지 못한 상태를 원상복구 완료로 기록하지 않는다.
+- 잠긴 계정의 잠금 해제나 비밀번호 변경은 새로운 대상 상태 변경이다. 이 절차에 포함하지 않으며, 확인하지 못한 상태를 원상복구 완료로 기록하지 않는다.
 - 인증 성공은 기존 비밀번호의 유효성을 확인한 결과이지 대상 비밀번호를 변경한 것이 아니다. 다만 노출된 credential과 서버 감사 기록은 잔여 영향으로 남는다.
 - NetExec 경로는 입력·발견 credential과 호스트 정보를 선택된 로컬 workspace database에 저장한다. 실행 전 `nxcdb`에서 현재 workspace를 확인하고 이 작업 전용 workspace를 선택할 수 없으면 공유 `default` workspace에 민감 자료가 남는 점을 별도 잔여 영향으로 기록한다.
 
 ### 로컬 결과 파일 정리
 
-DomainPasswordSpray의 `<SPRAY_RESULT_FILE>`에는 성공한 사용자명과 평문 비밀번호가 기록된다. Vault 밖의 승인된 민감 자료 경로를 사용하고, 필요한 인계가 끝나면 이번 실행 전에 존재하지 않았음을 확인한 정확한 파일만 삭제한다.
+DomainPasswordSpray의 `<SPRAY_RESULT_FILE>`에는 성공한 사용자명과 평문 비밀번호가 기록된다. Vault 밖의 민감 자료 경로를 사용하고, 사용 후 이번 실행 전에 존재하지 않았음을 확인한 정확한 파일만 삭제한다.
 
 ```powershell
 if (Test-Path -LiteralPath '<SPRAY_RESULT_FILE>') { Remove-Item -LiteralPath '<SPRAY_RESULT_FILE>' }

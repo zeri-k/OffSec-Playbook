@@ -21,8 +21,11 @@ ODAT는 Oracle TNS의 SID·Service Name과 계정을 열거하고 Oracle 기능�
 - 열거 입력: SID 또는 Service Name 후보
 - 인증·기능 점검 입력: Oracle 계정, 비밀번호 또는 계정 목록
 - 버전 조건: 설치된 `odat --version` 또는 package 버전과 `odat <module> --help`를 먼저 확인한다. 현재 upstream `master-python3`의 `utlfile` 행동은 아래 상태 변경 주의 사항을 따른다.
+- `<HOST>`는 Oracle TNS listener 주소(예: `ora01.corp.example`), `<SID>`와 Service Name은 listener/인증 오류 또는 앞 단계 열거 결과에서 얻은 서로 다른 후보이며, 계정 목록은 Linux 실행 호스트의 한 줄 한 계정 파일이다.
 
 ## 표준 사용법
+
+`<MODULE>`은 설치된 ODAT module 이름이고 `<HOST>`·`<PORT>`는 Oracle TNS listener(예: `oracle.example.invalid:1521`)다. `<SID>`와 Service Name은 listener·error 또는 앞 단계 enumeration에서 얻은 별도 접속 identifier이며 `<ACCOUNTS_FILE>`은 Linux 실행 host의 한 줄 한 계정 목록이다.
 
 ```bash
 odat <module> -s <host> -p <port> [options]
@@ -46,9 +49,11 @@ odat snguesser -s <TARGET> -p 1521
 odat passwordguesser -s <TARGET> -p 1521 -d <SID> --accounts-file <ACCOUNTS_FILE>
 ```
 
-실행 전에 Oracle profile의 `FAILED_LOGIN_ATTEMPTS`·`PASSWORD_LOCK_TIME`과 승인된 시도 범위를 확인한다. `valid credential`은 Oracle 인증 성공이지 DBA·SYSDBA·파일 기능 권한을 의미하지 않는다.
+실행 전에 Oracle profile의 `FAILED_LOGIN_ATTEMPTS`·`PASSWORD_LOCK_TIME`을 확인하고, 시도 횟수는 그 임계값과 관찰된 실패 결과로 제한한다. `valid credential`은 Oracle 인증 성공이지 DBA·SYSDBA·파일 기능 권한을 의미하지 않는다.
 
 ### TNS 응답 확인
+
+이 block의 `<HOST>`·`<PORT>`는 위 listener enumeration과 같은 TNS endpoint를 재사용한다. listener 응답은 SID·Service Name 또는 Oracle account authentication 결과가 아니므로 앞 block의 후보와 중복해 확정하지 않는다.
 
 ```bash
 odat tnscmd -s <TARGET> -p 1521 --ping
@@ -75,7 +80,7 @@ odat tnscmd -s <TARGET> -p 1521 --ping
 |---|---|---|
 | SID/service 또는 listener 정보 확인 | Oracle 접속 대상 식별 성공 | 유효 계정 확인과 권한/기능 열거로 진행 |
 | valid credential 출력 | Oracle 계정 확인 | `sqlplus`로 직접 접속해 권한과 schema 확인 |
-| SID·Service Name 후보 출력 | Oracle 접속 식별자 후보 확인 | `passwordguesser` 또는 승인된 계정으로 인증을 별도 확인 |
+| SID·Service Name 후보 출력 | Oracle 접속 식별자 후보 확인 | `passwordguesser` 또는 보유 계정으로 인증을 별도 확인 |
 | `ORA-*` 오류 | 인증, SID/service, 권한, 기능 제한 문제 | 오류 코드 기준으로 접속 정보와 권한 재확인 |
 | SID/service 탐지 실패 | listener 응답 제한 또는 이름 불일치 | 수동 `tnsping`, 서비스명 후보, 포트 확인 |
 | 기능 모듈 실패 | package 권한 부족 또는 기능 비활성화 | 모듈별 요구 권한과 Oracle 버전 확인 |

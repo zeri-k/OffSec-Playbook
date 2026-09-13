@@ -14,12 +14,6 @@ tags:
 
 대상 Windows 호스트의 로컬 관리자·SYSTEM 세션이나 hive 읽기 권한이 있으면 같은 설치와 시점의 SAM·SECURITY·SYSTEM을 확보하고 필요한 자격 증명 종류별 추출 기법으로 넘긴다.
 
-## 사용할 때
-
-- 현재 보유 정보: 대상 Windows 호스트의 상승된 세션, 원격 관리자급 SMB 작업 권한 또는 디스크·백업·VSS의 hive 접근을 확보했다.
-- 명령 실행 위치와 도달성: 대상 호스트의 상승된 `cmd`에서 hive를 저장하거나 분석 호스트에서 오프라인 hive 세트를 읽을 수 있다.
-- 현재 가능한 행동과 결과: hive 파일을 확보할 수 있으며, 로컬 SAM hash·LSA secret·cached domain credential은 각각 별도 문서에서 추출하고 해석한다.
-
 ## 전제 조건
 
 | 확인할 것 | 필요한 상태 | 확인 방법 | 미충족 시 다음 확인 |
@@ -34,6 +28,8 @@ tags:
 ### Windows 대상 호스트에서 hive 저장
 
 기존 파일을 덮어쓰지 않도록 세 경로가 모두 없는 것을 먼저 확인한다. 하나라도 `EXISTS`가 출력되면 기존 파일을 지우거나 `/y`로 덮어쓰지 말고 이번 실행에만 사용할 다른 경로를 정한다.
+
+`<SAM_HIVE_PATH>`, `<SYSTEM_HIVE_PATH>`, `<SECURITY_HIVE_PATH>`는 대상 Windows 호스트에 이번 `reg save`가 만들 서로 다른 새 절대 경로다(예: `C:\\Temp\\sam.hive`, `C:\\Temp\\system.hive`, `C:\\Temp\\security.hive`). `<LOCAL_SAM_HIVE>` 등은 회수 뒤 분석 호스트에서 같은 세 파일을 가리키는 경로이며, requester 계정이나 Meterpreter 세션이 아닌 분석 입력이다.
 
 ```cmd
 if exist "<SAM_HIVE_PATH>" echo EXISTS
@@ -57,6 +53,8 @@ impacket-secretsdump -sam '<LOCAL_SAM_HIVE>' -security '<LOCAL_SECURITY_HIVE>' -
 ```
 
 이 명령은 세 종류의 결과를 한 번에 출력한다. `Dumping local SAM hashes`, `Dumping LSA Secrets`, cached domain logon을 각각 아래 세부 기법으로 나눠 해석한다.
+
+세 로컬 경로는 같은 대상 Windows 설치와 같은 획득 시점의 세트여야 한다. SAM만으로 LSA secret이나 DCC2를, SECURITY만으로 로컬 SAM hash를 해석하지 않는다.
 
 ### Windows Meterpreter 세션에서 직접 추출
 
@@ -113,7 +111,7 @@ meterpreter > hashdump
 
 ## 변경 영향과 복구
 
-이 로컬 저장 방식이 만드는 상태는 대상 Windows의 `<SAM_HIVE_PATH>`·`<SYSTEM_HIVE_PATH>`·`<SECURITY_HIVE_PATH>`와 회수한 분석 호스트의 세 사본뿐이다. 생성 전에 부재를 확인한 exact 경로와 크기를 기록하고, 전송·추출이 끝나면 이번 실행이 만든 대상 사본만 제거한다.
+이 로컬 저장 방식이 만드는 상태는 대상 Windows의 `<SAM_HIVE_PATH>`·`<SYSTEM_HIVE_PATH>`·`<SECURITY_HIVE_PATH>`와 회수한 분석 호스트의 세 사본뿐이다. 생성 전에 부재를 확인한 exact 경로를 기록하고, 전송·추출이 끝나면 이번 실행이 만든 대상 사본만 제거한다.
 
 ```cmd
 del /f "<SAM_HIVE_PATH>"
@@ -124,7 +122,7 @@ if exist "<SYSTEM_HIVE_PATH>" echo SYSTEM_REMAINS
 if exist "<SECURITY_HIVE_PATH>" echo SECURITY_REMAINS
 ```
 
-마지막 세 명령이 아무것도 출력하지 않아야 대상 임시 파일 정리가 확인된다. 삭제 실패 시 먼저 파일을 연 process, 현재 token의 삭제 권한과 방어 제품의 격리·잠금 상태를 확인한다. 분석 호스트 사본은 추출 결과와 함께 민감 자료 보존·폐기 정책에 따라 exact 경로만 처리한다. `reg save`는 registry 값을 변경하지 않으므로 hive를 `reg restore`할 대상이 아니다.
+마지막 세 명령이 아무것도 출력하지 않아야 대상 임시 파일 정리가 확인된다. 삭제 실패 시 먼저 파일을 연 process, 현재 token의 삭제 권한과 방어 제품의 격리·잠금 상태를 확인한다. 분석 호스트 사본은 추출 결과와 함께 exact 경로만 처리한다. `reg save`는 registry 값을 변경하지 않으므로 hive를 `reg restore`할 대상이 아니다.
 
 ## 관련 도구
 

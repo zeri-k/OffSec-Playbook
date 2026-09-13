@@ -6,20 +6,14 @@ tags:
 시작조건: ["피해자 사용자 또는 머신 계정의 NTLM 인증을 수신할 수 있음", "relay 대상 서비스 식별"]
 필요권한: ["인증 수신 도구 실행 권한", "relay된 사용자 또는 머신 계정이 대상 서비스에 가진 권한"]
 필요조건: ["수신 호스트에서 relay 대상 서비스까지 접근 가능", "대상 서비스의 SMB signing, EPA 또는 CBT 방어 미흡"]
-결과: ["대상 서비스 인증 세션", "relay된 계정 권한으로 수행한 명령·LDAP 작업·정보 접근", "AD CS certificate"]
+결과: ["relay 대상 서비스의 방어·권한 조건", "실시간 relay 가능성"]
 ---
 
 # NTLM Relay 조건 검토
 
 ## 한 줄 판단
 
-피해자 NTLM 인증을 받을 수 있는 호스트에서 SMB·LDAP·HTTP 대상에 접근할 수 있으면 SMB signing, EPA/CBT와 relay된 사용자 또는 머신 계정의 권한을 확인해 서비스 세션, LDAP 작업, 명령 실행 또는 AD CS certificate를 얻을 수 있는지 판단한다.
-
-## 사용할 때
-
-- 현재 보유 정보: SMB signing이 required가 아닌 호스트나 HTTP·LDAP·AD CS relay 후보와 피해자 사용자 또는 머신 계정의 NTLM 인증을 수신할 경로가 식별된 상태다.
-- 명령 실행 위치와 도달성: Responder, coercion 또는 MSSQL hash capture를 실행하는 수신 호스트에서 피해자 인증을 받고 relay 대상의 SMB·LDAP·HTTP 서비스에 접근할 수 있다.
-- 현재 가능한 행동과 결과: [[LLMNR NBT-NS 포이즈닝으로 NTLM 인증 수집]] 등에서 새로 들어오는 NTLM 메시지를 중계하고, relay된 계정의 기존 권한으로 서비스 접근·객체 변경·명령 실행·certificate 발급 중 가능한 영향을 확인한다. 저장한 response와 live relay의 차이는 [[NTLM 인증 자료, 실시간 Relay와 서비스 권한 경계]]를 따른다.
+피해자 NTLM 인증을 받을 수 있는 호스트에서 SMB·LDAP·HTTP 대상에 접근할 수 있으면 SMB signing, EPA/CBT와 relay된 사용자 또는 머신 계정의 권한을 확인해 실시간 relay의 기술 조건을 판단한다.
 
 ## 전제 조건
 
@@ -35,8 +29,7 @@ tags:
 
 1. 수신 호스트에서 피해자 인증 경로와 relay 대상 서비스까지의 도달성을 확인한다.
 2. 대상별 SMB signing, EPA/CBT와 relay된 계정에 기대하는 작업 권한을 확인한다.
-3. ntlmrelayx에서 인증 relay 성공과 후속 dump·LDAP action·명령 실행을 별도 출력으로 판정한다.
-4. 인증만 수신했거나 relay 후 작업이 실패하면 challenge-response 형식, 대상 방어와 relay된 주체의 ACL을 차례로 확인한다.
+3. 이 문서는 relay 후 dump·LDAP 변경·명령 실행을 수행하지 않고, 해당 작업은 복구 절차를 갖춘 별도 공격기법으로 분리한다.
 
 ### SMB signing 확인
 
@@ -49,48 +42,32 @@ netexec smb <TARGET>
 
 - `Message signing enabled but not required`는 해당 SMB 서비스가 relay 대상 후보임을 뜻하며, 피해자 인증 수신이나 relay된 계정의 작업 권한까지 증명하지는 않는다.
 
-### ntlmrelayx 기본 흐름
-
-```bash
-impacket-ntlmrelayx -tf targets.txt -smb2support
-impacket-ntlmrelayx -t ldap://<DC> -smb2support
-```
-
-확인할 출력:
-
-- relay된 사용자 또는 머신 계정, 대상 서비스의 인증 성공, 이어진 dump·LDAP action·command execution 결과.
-- `Signing is required`, EPA/CBT 관련 거부 또는 LDAP 작업의 `insufficientAccessRights`가 나오면 대상 방어와 relay된 계정의 권한을 분리해 확인한다.
-
 ## 관찰과 상태 전환
 
 | 관찰 | 판단 | 결과 상태 | 다음 행동 |
 |---|---|---|---|
 | `Message signing enabled but not required` | 해당 SMB 대상이 relay 후보 | relay 가능성 확인 | relay 수신 주체와 대상 권한 확인 |
-| ntlmrelayx에 대상 서비스 인증 성공과 relay된 주체가 표시됨 | 피해자 사용자 또는 머신 계정의 NTLM 인증이 해당 서비스에 relay됨 | relay된 계정의 서비스 인증 세션 확보 | share, LDAP, HTTP 등 서비스별 허용 작업 확인 |
-| dump, LDAP action 또는 command execution 출력 | relay된 계정 권한으로 작업 성공 | 정보 접근, 객체 변경 또는 명령 실행 상태 | 실제 Identity와 대상 권한 확인 |
-| AD CS에서 `.pfx` 발급 | certificate enrollment 성공 | 인증 certificate 확보 | [[AD CS ESC8 NTLM Relay]]에서 TGT 전환 |
-| relay 실패 | signing required, EPA 또는 CBT 등 방어 조건 | 인증 relay 미성립 | 다른 프로토콜과 대상의 보호 조건 확인 |
-| 인증만 수신되고 relay 대상 없음 | 인증 흐름은 확보했으나 사용할 대상 부재 | NetNTLM challenge-response만 확보 | [[오프라인 해시 크래킹]] 가능성과 대상 inventory 검토 |
-| relay 성공이나 영향 없음 | relay된 계정에 대상 권한 없음 | 인증 세션만 확보 | relay된 주체와 대상 ACL 확인 |
+| SMB signing required 또는 HTTP·LDAP의 EPA/CBT 적용 확인 | 확인한 서비스에서 relay 방어 조건 충족 | 해당 대상 제외 | 다른 프로토콜·대상의 보호 조건을 같은 방식으로 확인 |
+| signing·EPA·CBT 조건은 후보지만 action별 복구 절차가 없음 | 후속 작업의 영향과 복구 경계 미확정 | 실제 relay 실행 보류 | 복구를 갖춘 연결 기법이 있는 AD CS ESC8만 선택하고 일반 SMB·LDAP action은 `미확인`으로 유지 |
 
 ## 확인할 출력과 권한
 
-- NTLM 인증 수신, relay 성공, relay 후 작업 성공은 각각 별도 상태다.
-- relay는 피해자 계정의 기존 권한을 전달할 뿐 새 관리자 권한을 만들지 않는다.
-- SMB 인증 성공, 원격 명령 실행, LDAP 쓰기, certificate enrollment 권한을 서비스별로 구분한다.
+- NTLM 인증 수신과 relay 가능성은 별도 상태다.
+- relay는 피해자 계정의 기존 권한을 전달할 뿐 새 관리자 권한을 만들지 않는다. 실제 대상 작업은 해당 작업의 조건·복구 절차를 가진 별도 문서에서만 판정한다.
 - 수신한 NetNTLM challenge-response는 Windows 계정의 NT hash가 아니며, 그대로 [[Pass the Hash]]에 사용하는 값도 아니다.
 
 ## 후속 공격 연결
 
 - 인증 수집 조건 확인: [[LLMNR NBT-NS 포이즈닝으로 NTLM 인증 수집]]
-- [[AD CS ESC8 NTLM Relay]]
+- AD CS HTTP enrollment 조건과 복구가 충족될 때: [[AD CS ESC8 NTLM Relay]]
 - [[MSSQL 서비스 Hash 캡처]]
 - [[오프라인 해시 크래킹]]
+
+일반 SMB dump·명령 실행이나 LDAP 객체 변경은 이 Vault에 각 action과 복구를 함께 다루는 별도 공격기법이 없으므로 실제 relay 실행 경로로 연결하지 않고 `미확인`으로 남긴다.
 
 ## 관련 상태 라우터
 
 - Windows 명령 실행이나 세션을 확보했으면: [[Windows 셸 또는 세션 확보 후 컨텍스트 열거]]
-- AD certificate 또는 객체 변경 결과를 확보했으면: [[AD Identity 확인 후 도메인 컨텍스트 열거]]
 
 ## 관련 서비스
 

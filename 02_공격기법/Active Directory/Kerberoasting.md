@@ -14,15 +14,11 @@ tags:
 
 요청자 도메인 계정의 비밀번호·NT hash 또는 Kerberos Ticket-Granting Ticket(TGT)으로 현재 도메인이나 인증 가능한 신뢰 대상 도메인의 SPN 계정 TGS를 요청해 `$krb5tgs$` hash를 얻고 대상 SPN 계정의 비밀번호를 오프라인으로 크래킹한다.
 
-## 사용할 때
-
-- [[SPN 계정 열거]]에서 SPN이 설정된 사용자 기반 서비스 계정이 확인됐을 때.
-- 유효한 도메인 credential 또는 Kerberos ticket을 확보했을 때.
-- 서비스 계정 비밀번호 재사용, 고권한 서비스 계정, 오래된 RC4 암호화 사용 가능성을 확인할 때.
-
 ## 전제 조건
 
 먼저 **명령을 실행할 위치에서 DC의 88번 포트에 접근할 수 있는지** 확인한다. `GetUserSPNs`로 SPN을 열거한다면 LDAP 389/636 도달성도 함께 필요하다.
+
+`<REQUESTER>`는 TGS 요청 인증 주체, `<SPN_USER>`는 SPN을 가진 비밀번호 복구 대상이다. `<DC_IP>`·`<DOMAIN>`은 요청 도메인의 DC와 DNS 도메인이고, `<KERBEROAST_HASH_FILE>`·wordlist·potfile은 분석 호스트의 새 파일이다. hash etype별 파일은 서로 섞지 않는다.
 
 ```bash
 nc -vz <DC_IP> 88
@@ -117,15 +113,17 @@ Impacket의 `-outputfile`은 JtR/Hashcat 형식 cipher를 지정 파일에 쓰�
 
 ##### Rubeus로 Kerberoast
 
-`/outfile`을 지정하기 전에 `Test-Path -LiteralPath '<KERBEROAST_HASH_FILE>'`가 `False`인지 확인한다. 기존 파일이 있으면 덮어쓰지 않고 새 작업 경로를 정한다.
+`/outfile`을 지정하기 전에 `Test-Path -LiteralPath '<KERBEROAST_HASH_FILE>'`가 `False`인지 확인한다. 이 확인은 overwrite guard일 뿐 요청 성공을 뜻하지 않으며, 성공 여부는 Rubeus 출력과 생성된 hash 행으로 판단한다.
 
 ```cmd
+Test-Path -LiteralPath '<KERBEROAST_HASH_FILE>'
 .\Rubeus.exe kerberoast /stats
 .\Rubeus.exe kerberoast /nowrap /outfile:<KERBEROAST_HASH_FILE>
 .\Rubeus.exe kerberoast /user:<SPN_USER> /nowrap /outfile:<KERBEROAST_HASH_FILE>
+Test-Path -LiteralPath '<KERBEROAST_HASH_FILE>'
 ```
 
-`/stats`로 계정 수와 지원 암호화 유형을 먼저 확인하고, 고가치 계정이나 약한 암호화 후보로 요청 범위를 줄인다.
+첫 `Test-Path`는 `False`, `/outfile`를 사용한 요청 뒤 두 번째는 `True`여야 한다. `/stats`로 계정 수와 지원 암호화 유형을 먼저 확인하고, 고가치 계정이나 약한 암호화 후보로 요청 범위를 줄인다.
 
 ### 신뢰 대상 도메인의 SPN 계정 대상
 
@@ -191,7 +189,7 @@ Hashcat mode `13100`은 Kerberos 5 TGS-REP etype 23, mode `19600`은 etype 17, m
 
 | 생성·변경 항목 | 기존 상태와 식별값 | 정리 | 완료 확인 |
 |---|---|---|---|
-| Impacket·Rubeus TGS hash 파일 | 선택한 `<KERBEROAST_HASH_FILE>`·`<TRUST_KERBEROAST_HASH_FILE>` 등 작업 전 존재하지 않은 exact 경로 | 필요한 결과를 승인된 보관 위치로 인계한 뒤 생성한 호스트에서 Linux는 `rm -- '<KERBEROAST_HASH_FILE>'`, Windows는 `Remove-Item -LiteralPath '<KERBEROAST_HASH_FILE>' -Force`처럼 선택한 exact 파일만 제거 | 선택한 모든 출력 경로가 존재하지 않음 |
+| Impacket·Rubeus TGS hash 파일 | 선택한 `<KERBEROAST_HASH_FILE>`·`<TRUST_KERBEROAST_HASH_FILE>` 등 작업 전 존재하지 않은 exact 경로 | 사용 후 생성한 호스트에서 Linux는 `rm -- '<KERBEROAST_HASH_FILE>'`, Windows는 `Remove-Item -LiteralPath '<KERBEROAST_HASH_FILE>' -Force`처럼 선택한 exact 파일만 제거 | 선택한 모든 출력 경로가 존재하지 않음 |
 | Hashcat·John 전용 potfile | 작업 전 존재하지 않은 `<KERBEROAST_POTFILE>` 또는 `<KERBEROAST_JOHN_POT>` | 분석이 끝난 Linux 호스트에서 선택해 만든 파일만 `rm -- '<KERBEROAST_POTFILE>'` 또는 `rm -- '<KERBEROAST_JOHN_POT>'` | 선택한 exact potfile이 존재하지 않음 |
 | Windows 로그온 세션의 TGS | 실행 전·후 `klist`와 실행한 로그온 세션 ID | 다른 업무 ticket이 없는 격리된 테스트 로그온 세션에서만 `klist purge` 후 로그오프 | 해당 격리 세션 종료와 `klist` 재조회. 공유 세션에서 실행했다면 개별 ticket만 안전하게 되돌렸다고 판정하지 않음 |
 

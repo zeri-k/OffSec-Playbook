@@ -13,13 +13,6 @@ tags:
 
 현재 MSSQL 로그인에 다른 SQL login을 가장하는 `IMPERSONATE` 권한이 있다면, `EXECUTE AS LOGIN`으로 데이터베이스 실행 주체를 바꾼 뒤 현재 서버와 linked server에서 `sysadmin`인지 확인한다. 이 결과는 데이터베이스 권한이며, 호스트 관리자 권한은 `xp_cmdshell`의 `hostname`과 `whoami`로 별도 확인한다.
 
-## 사용할 때
-
-- MSSQL 로그인에는 성공했지만 현재 계정이 sysadmin이 아닐 때.
-- `IMPERSONATE` 권한으로 `sa` 또는 더 높은 권한의 login을 가장할 수 있을 때.
-- `xp_cmdshell`, 파일 접근, linked server 확인 전에 DB 권한 상승 가능성을 먼저 판단해야 할 때.
-- 현재 login은 낮은 권한이지만 impersonate한 login으로 linked server에 접근하면 더 높은 원격 login으로 매핑될 가능성이 있을 때.
-
 ## 전제 조건
 
 | 조건 | 확인 방법 | 충족 기준 |
@@ -30,6 +23,8 @@ tags:
 | 원래 login 확인 | `ORIGINAL_LOGIN()` | SQL impersonation과 최초 접속 계정 구분 |
 
 ## 실행
+
+`<IMPERSONATE_TARGET>`은 `sys.server_permissions` 결과에서 현재 login이 가장할 수 있는 SQL login 이름(가상 예시 `sql_operator`)이고, `<LINKED_SERVER>`는 `sys.servers`에 표시된 linked server 이름이다. 아래 T-SQL은 현재 MSSQL 인증 세션의 SQL prompt에서 실행하며, 같은 block 안의 `REVERT`는 해당 `EXECUTE AS LOGIN` 컨텍스트를 원래 login으로 되돌린다.
 
 ### 선택 기준
 | 단서 | 의미 | 다음 행동 |

@@ -16,13 +16,6 @@ tags:
 
 도메인 자격 증명이 없는 명령 실행 호스트에서 DC의 445/TCP, 389/TCP 또는 88/TCP 중 도달 가능한 서비스에 SMB NULL Session, LDAP Anonymous Bind 또는 Kerberos 사용자 존재 요청을 보내 사용자 객체·사용자명 후보와 제외 계정 단서를 수집한다.
 
-## 사용할 때
-
-- 현재 보유 정보: DC, 도메인 DNS 이름과 Kerberos realm을 식별했지만 유효한 도메인 password·hash·ticket은 없다.
-- 명령 실행 위치와 도달성: 열거 도구가 있는 호스트에서 DC의 SMB 445/TCP, LDAP 389/TCP 또는 Kerberos 88/TCP 중 사용할 경로에 도달할 수 있다. 세 서비스가 모두 열려 있을 필요는 없다.
-- 현재 계정과 권한: 대상 도메인 계정은 사용하지 않는다. 로컬에서 도구를 실행할 권한만 필요하며, 실제 반환 범위는 DC가 허용한 익명 조회와 사용자 존재 응답에 제한된다.
-- 지금 가능한 행동과 결과: Password Spraying 전에 추측 목록을 디렉터리가 반환한 객체 또는 Kerberos가 구분한 사용자명 후보로 좁힌다. 사용자 존재 확인은 비밀번호, 로그인 권한, 계정 활성 상태 또는 잠금 안전성을 확정하지 않는다.
-
 ## 전제 조건
 
 | 확인할 것 | 필요한 상태 | 확인 방법 | 미충족 시 다음 확인 |
@@ -35,6 +28,8 @@ tags:
 | 필요한 목록 | Kerbrute 경로에만 한 줄당 하나의 사용자명 후보 파일 필요 | `users.txt` 형식과 후보 생성 근거 확인 | 후보 파일이 없으면 SMB·LDAP 반환 경로를 우선하고 무작위 요청을 만들지 않음 |
 
 ## 실행
+
+`<DC>`는 선택한 SMB·LDAP·Kerberos 서비스의 DC FQDN 또는 IP, `<DOMAIN>`은 DNS 도메인, `<BASE_DN>`은 RootDSE에서 얻은 DN이다. `<USER_CANDIDATES>`는 Linux 실행 호스트의 한 줄당 사용자명 파일이며 `<USER_ENUM_LOG>`와 `<SPRAY_USER_LIST>`는 이 단계가 새로 만드는 exact 경로다. `<COUNT>`는 출력값이다.
 
 ### 열거 경로 선택
 
@@ -92,7 +87,7 @@ ldapsearch -x -H ldap://<DC> -b '<BASE_DN>' -s sub '(&(objectCategory=person)(ob
 
 SMB·LDAP에서 목록을 받지 못했거나 별도 후보가 있으면 KDC 응답 차이로 후보를 검증한다.
 
-`<USER_ENUM_LOG>`와 `<SPRAY_USER_LIST>`는 Vault 밖의 승인된 작업 디렉터리에 새 경로로 정하고, 기존 파일이 없음을 먼저 확인한다.
+`<USER_ENUM_LOG>`와 `<SPRAY_USER_LIST>`는 Vault 밖의 작업 디렉터리에 새 경로로 정하고, 기존 파일이 없음을 먼저 확인한다.
 
 ```bash
 test ! -e '<USER_ENUM_LOG>' && test ! -e '<SPRAY_USER_LIST>'
@@ -124,7 +119,7 @@ awk '/VALID USERNAME:/ {print $NF}' '<USER_ENUM_LOG>' | sort -u > '<SPRAY_USER_L
 ## 변경 영향과 로컬 파일 정리
 
 - SMB·LDAP 조회는 디렉터리 객체를 변경하지 않는다. Kerbrute `userenum`도 비밀번호를 제출하지 않지만 DC에 TGT 요청과 이벤트 ID 4768 흔적을 남길 수 있으며, 이 원격 감사 기록은 클라이언트에서 되돌릴 수 없다.
-- 이 절차가 새로 만든 파일은 정확히 기록한 `<USER_ENUM_LOG>`와 `<SPRAY_USER_LIST>`뿐이다. 검토·인계가 끝난 뒤 해당 경로만 삭제하고, 후보 원본이나 같은 이름의 다른 파일은 제거하지 않는다.
+- 이 절차가 새로 만든 파일은 정확히 기록한 `<USER_ENUM_LOG>`와 `<SPRAY_USER_LIST>`뿐이다. 사용 후 해당 경로만 삭제하고, 후보 원본이나 같은 이름의 다른 파일은 제거하지 않는다.
 
 ```bash
 rm -- '<USER_ENUM_LOG>' '<SPRAY_USER_LIST>'

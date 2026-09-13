@@ -40,7 +40,7 @@ test -r /etc/passwd && test -r /etc/shadow
 
 - 두 파일의 절대 경로·소유자·mode·수정 시간과 실행 호스트.
 - `test` 성공은 현재 프로세스가 두 파일을 읽을 수 있다는 뜻이며 root 세션 획득이나 비밀번호 복구 성공을 의미하지 않는다.
-- 수집은 원본을 수정하지 않는 인증된 경로를 사용한다. 분석 호스트로 사본을 옮겨야 하면 [[상황별 파일 전송]]에서 암호화·접근 제어·무결성을 만족하는 방식을 고른다.
+- 수집은 원본을 수정하지 않는 경로를 사용한다. 분석 호스트로 사본을 옮겨야 하면 [[상황별 파일 전송]]에서 암호화·접근 제어·무결성을 만족하는 방식을 고른다.
 
 ### 2. Linux 분석 호스트에서 `unshadow` 입력 생성
 
@@ -52,6 +52,8 @@ test ! -e '<LINUX_HASH_WORKDIR>/unshadowed.hashes' || exit 1
 unshadow '<PASSWD_COPY>' '<SHADOW_COPY>' > '<LINUX_HASH_WORKDIR>/unshadowed.hashes'
 stat -c '%n %a %s' '<LINUX_HASH_WORKDIR>/unshadowed.hashes'
 ```
+
+`<LINUX_HASH_WORKDIR>`은 분석 호스트의 작업 전 존재하지 않는 절대 디렉터리(가상 예: `/tmp/linux-hash-20260914a`)다. `<PASSWD_COPY>`와 `<SHADOW_COPY>`는 같은 Linux 호스트·수집 시점에서 얻은 읽기 전용 사본 경로를 사용한다.
 
 확인할 출력:
 
@@ -73,13 +75,13 @@ test -r /etc/security/opasswd && stat -c '%n %U:%G %a %s %y' /etc/security/opass
 |---|---|---|---|
 | `unshadow` 입력에 유효한 hash·계정 label이 대응 | 현재 로컬 password hash 후보 확보 | 오프라인 cracking 입력 준비 | [[오프라인 해시 크래킹]] |
 | password 필드가 `!`·`*` 또는 잠금 prefix | UNIX password 로그인은 잠금 후보 | 다른 인증 수단 미확인 | key·Kerberos·service-specific 인증을 별도 확인 |
-| password 필드가 비어 있음 | passwordless 로그인 후보지만 PAM·service 정책 미확인 | 인증 결과 미확정 | 승인된 정상 client로 해당 서비스의 수락 여부를 최소 검증 |
+| password 필드가 비어 있음 | passwordless 로그인 후보지만 PAM·service 정책 미확인 | 인증 결과 미확정 | 정상 client로 해당 서비스의 수락 여부를 최소 검증 |
 | `/etc/security/opasswd`만 읽힘 | 과거 로컬 password history 후보 | 현재 credential 미확인 | 현재 계정·서비스와 분리해 후보 패턴만 평가 |
 | shadow 읽기 거부 | 현재 권한으로 hash 수집 불가 | 일반 Linux shell 유지 | [[Linux 셸 확보 후 초기 열거와 권한 상승]]에서 다른 읽기·권한 경로 선택 |
 
 ## 변경 영향과 복구
 
-`passwd`·`shadow`·`opasswd`는 읽기 입력이며 수정하지 않는다. 이 문서에서 새로 만드는 항목은 분석 호스트의 `<LINUX_HASH_WORKDIR>`과 `unshadowed.hashes`다. 검토·인계가 끝나면 이번 작업이 생성한 정확한 파일과 빈 디렉터리만 정리한다.
+`passwd`·`shadow`·`opasswd`는 읽기 입력이며 수정하지 않는다. 이 문서에서 새로 만드는 항목은 분석 호스트의 `<LINUX_HASH_WORKDIR>`과 `unshadowed.hashes`다. 검토가 끝나면 이번 작업이 생성한 정확한 파일과 빈 디렉터리만 정리한다.
 
 ```bash
 rm -- '<LINUX_HASH_WORKDIR>/unshadowed.hashes'

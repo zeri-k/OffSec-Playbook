@@ -20,6 +20,7 @@ tags:
 - 필요한 파일·값: 필요하면 크롤링 깊이, 최소 단어 길이, 숫자 포함 여부, wordlist·이메일·metadata 출력과 임시 파일 경로. metadata 수집에는 ExifTool 필요
 - 인증 정보: 아래 예시는 익명으로 읽을 수 있는 콘텐츠만 수집한다. 로그인 뒤 페이지가 필요하면 대상 인증 방식과 현재 CeWL 실행이 해당 인증 상태를 전달할 수 있는지 별도로 확인한다.
 - 대상에서 필요한 서비스와 권한: HTTP 응답 본문을 읽을 수 있어야 한다. 연결 성공이나 로그인 페이지 수신만으로 인증된 콘텐츠 접근을 의미하지 않는다.
+- `<TARGET_URL>`은 scheme·vhost·port·start path를 포함한 URL(예: `https://site.example.invalid/docs/`)이고, `<TARGET>`은 단순 HTTP 예시의 host명이다. `<PUBLIC_HOST>`는 공개 문서 수집에 쓰는 FQDN, `<CRAWL_DEPTH>`·`<MIN_WORD_LENGTH>`는 양의 정수다. `<WORDLIST_FILE>`·`<EMAIL_FILE>`·`<METADATA_FILE>`은 `$CEWL_OUTPUT_DIR` 아래에 이번 실행이 만든 파일명이며, wordlist·email·metadata 출력과 `--meta-temp-dir`은 CeWL 실행 host의 새 경로다. public content 후보는 credential이나 인증 결과가 아니다.
 
 
 ## 표준 사용법
@@ -125,7 +126,6 @@ rm -f -- "$CEWL_OUTPUT_DIR/<WORDLIST_FILE>" "$CEWL_OUTPUT_DIR/<EMAIL_FILE>" "$CE
 find "$CEWL_OUTPUT_DIR/meta-temp" -xdev -depth -type f -delete
 find "$CEWL_OUTPUT_DIR/meta-temp" -xdev -depth -type d -empty -delete
 rmdir -- "$CEWL_OUTPUT_DIR"
-test ! -e "$CEWL_OUTPUT_DIR"
 ```
 
 디렉터리가 비지 않으면 재귀 삭제하지 말고 예상하지 않은 산출물을 확인한다. 수집한 email·조직 단어는 계정 또는 비밀번호가 아니지만 민감한 후보 자료로 취급하며 Vault에 실제 값을 저장하지 않는다.

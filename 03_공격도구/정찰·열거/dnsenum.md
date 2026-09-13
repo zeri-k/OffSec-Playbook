@@ -36,6 +36,8 @@ dnsenum example.com
 
 ### 특정 DNS 서버를 지정해 열거
 
+`--dnsserver <TARGET>`의 `<TARGET>`은 질의할 DNS 서버 IP/FQDN(예: `dns.example.test`)이며, 뒤의 `example.com`은 열거할 도메인이다. 출력 파일은 Linux 실행 호스트에서 새로 만든다.
+
 ```bash
 dnsenum --dnsserver <TARGET> --enum example.com
 ```

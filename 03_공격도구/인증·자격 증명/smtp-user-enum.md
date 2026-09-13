@@ -19,6 +19,8 @@ tags:
 - 입력: SMTP 서버와 사용자 목록
 - 선택 입력: `VRFY`, `EXPN`, `RCPT` 방식, 포트와 도메인
 
+`<TARGET>`은 SMTP 서버 IP/FQDN(예: `smtp.example.test`), `<DOMAIN>`은 RCPT 주소에 붙일 mail domain(예: `example.test`)이다. 목록 파일은 Linux 실행 호스트의 newline 사용자명 목록이다.
+
 
 ## 표준 사용법
 
@@ -37,7 +39,7 @@ smtp-user-enum -M VRFY -U users.txt -t <TARGET> -m 1
 확인할 출력:
 
 - 명백히 존재하지 않는 기준 사용자와 후보 사용자별 valid/invalid 응답 차이.
-- 먼저 단일 process로 응답과 rate limit을 확인하고, 병렬 수는 허가 범위와 서버 제한을 확인한 뒤에만 조정한다.
+- 먼저 단일 process로 응답과 rate limit을 확인하고, 병렬 수는 서버 제한을 확인한 뒤에만 조정한다.
 
 ### RCPT 모드로 도메인 포함 열거
 

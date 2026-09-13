@@ -22,6 +22,8 @@ PowerHuntShares는 Windows PowerShell에서 여러 SMB 공유를 탐색하고 �
 
 ## 표준 문법
 
+`<POWERSHARES_PARENT>`는 Windows collector host에서 이번 실행 전에 없던 절대 output directory, `<THREAD_COUNT>`는 관찰한 대상 수·SMB 제한에 맞는 양의 정수다. `<POWERSHARES_RUN_DIR>`은 command가 출력한 정확한 child path를 재사용하며, parent를 추정해 재귀 삭제하지 않는다.
+
 ```powershell
 if (Test-Path -LiteralPath '<POWERSHARES_PARENT>') { throw 'Output parent already exists' }
 New-Item -ItemType Directory -Path '<POWERSHARES_PARENT>'
@@ -29,7 +31,7 @@ Import-Module .\PowerHuntShares.psm1
 Invoke-HuntSMBShares -Threads <THREAD_COUNT> -OutputDirectory '<POWERSHARES_PARENT>'
 ```
 
-경로 부재 guard가 통과한 고유 parent만 생성한다. `<THREAD_COUNT>`는 승인된 호스트 수·SMB 제한·관찰 조건에서 작게 시작하고, 교육 예시의 `100`을 기본값으로 가정하지 않는다.
+경로 부재 guard가 통과한 고유 parent만 생성한다. `<THREAD_COUNT>`는 대상 수·SMB 제한·관찰 조건에서 작게 시작하고, 교육 예시의 `100`을 기본값으로 가정하지 않는다. `<POWERSHARES_PARENT>`는 Windows 실행 host의 새 절대 경로다.
 
 ## 대표 예시
 
@@ -59,7 +61,7 @@ Invoke-HuntSMBShares -Threads <THREAD_COUNT> -OutputDirectory '<POWERSHARES_PARE
 
 ## 변경 영향과 정리
 
-PowerHuntShares는 원격 SMB·LDAP 조회를 수행하고 `<POWERSHARES_RUN_DIR>`에 HTML·CSV·log를 생성한다. 공유 파일을 수정하지는 않지만 서버 감사 흔적은 로컬 report 삭제로 되돌려지지 않는다. 검토·인계 후 출력에서 기록한 정확한 run directory를 먼저 제거하고, 이번 작업이 만든 parent가 빈 후에만 parent를 제거한다.
+PowerHuntShares는 원격 SMB·LDAP 조회를 수행하고 `<POWERSHARES_RUN_DIR>`에 HTML·CSV·log를 생성한다. 공유 파일을 수정하지는 않지만 서버 감사 흔적은 로컬 report 삭제로 되돌려지지 않는다. 필요한 결과를 별도 기록한 뒤 출력에서 기록한 정확한 run directory를 먼저 제거하고, 이번 작업이 만든 parent가 빈 후에만 parent를 제거한다.
 
 ```powershell
 Remove-Item -LiteralPath '<POWERSHARES_RUN_DIR>' -Recurse -Force

@@ -19,8 +19,11 @@ tags:
 - 실행 위치: Impacket 예제 명령을 실행할 수 있고 대상 SMB 445/TCP에 도달하는 호스트
 - 필요한 입력: 대상 주소와 필요한 경우 `[domain/]username[:password]` 인증 정보
 - 반환 범위: 대상의 SAMR 정책과 요청자 권한에 따라 달라짐
+- `<TARGET>`은 DC 또는 일반 Windows host의 SMB address이고 `<DOMAIN>/<USER>:<PASSWORD>`는 선택적 authenticated requester다. DC를 지정한 결과와 member host 결과의 SID·계정 범위를 같은 domain enumeration으로 단정하지 않는다.
 
 ## 표준 문법
+
+`<TARGET>`은 SMB/RPC endpoint이고 `<DOMAIN>/<USER>:<PASSWORD>`는 optional authenticated requester credential이다. null query와 authenticated query는 별도 block으로 해석하며 returned account/RID는 SAMR policy와 requester rights 결과다.
 
 ```bash
 impacket-samrdump <TARGET>

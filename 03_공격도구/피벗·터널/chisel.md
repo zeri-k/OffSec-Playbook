@@ -18,6 +18,7 @@ Chisel은 서버와 클라이언트 사이에 지정 TCP 포트 또는 SOCKS 프
 - 실행 위치: 정방향은 피벗 호스트의 `server`와 공격 호스트의 `client`, 역방향은 공격 호스트의 `server`와 피벗 호스트의 `client`; 양쪽에서 호환되는 버전의 실행 파일을 준비한다.
 - 필요한 입력: 양단이 연결할 수 있는 수신 주소와 포트, 정방향 `socks` 또는 역방향 `R:socks`
 - 후속 환경: SOCKS를 사용할 때는 로컬 SOCKS 포트와 `proxychains` 설정이 일치해야 한다.
+- `<PIVOT_IP>`와 `<SERVER_IP>`는 tunnel peer가 실제로 도달할 주소이며, 정방향 `socks`의 listener와 역방향 `R:socks` listener는 서로 다른 host에 생긴다. 예시 포트는 `1234`·`1080`처럼 역할별로 기록한다.
 
 
 ## 표준 사용법

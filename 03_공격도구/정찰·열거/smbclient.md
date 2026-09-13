@@ -30,6 +30,8 @@ smbclient //<target>/<share> [options]
 
 ## 대표 예시
 
+`<TARGET>`은 SMB 서버 IP/FQDN(예: `smb.example.test`)이고, `<DOMAIN>`은 도메인 계정에만 쓰는 workgroup/DNS 도메인 값(예: `CORP`)이다. `<USER>`·`<PASSWORD>`는 도메인 계정 인증 입력, `notes`는 접속할 share 이름이며, 로컬 계정에는 대상 호스트명 또는 `WORKGROUP`을 사용한다.
+
 ### anonymous/null session으로 share 목록 확인
 
 ```bash
@@ -39,7 +41,7 @@ smbclient -N -L //<TARGET>
 ### 사용자 credential로 share 접속
 
 ```bash
-smbclient //<TARGET>/notes -U user
+smbclient //<TARGET>/notes -U '<USER>'
 ```
 
 ### 도메인 계정으로 share 목록 확인

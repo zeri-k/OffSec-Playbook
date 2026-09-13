@@ -26,7 +26,7 @@ tags:
 | 대상 OS | classic JuicyPotato가 동작하는 legacy build·edition | `winver`, `systeminfo`와 upstream CLSID 디렉터리 대조 | Windows 10 1809+·Server 2019+이면 이 경로를 사용하지 않고 별도 최신 구현의 실제 privilege 요구사항 확인 |
 | COM class | exact build·edition 목록에 있고 현재 host에서 SYSTEM token을 반환하는 `<CLSID>` | upstream의 OS별 CLSID 목록과 실행 출력의 `<CLSID>;NT AUTHORITY\SYSTEM` | 기본 BITS CLSID를 추측하지 말고 같은 build·edition의 다른 후보 검토 |
 | transient listener | 대상 localhost의 `<JUICY_COM_PORT>`가 사용 중이지 않음 | `Get-NetTCPConnection -LocalPort <JUICY_COM_PORT>` 또는 `netstat -ano` | 다른 process가 사용하면 그 process를 종료하지 말고 다른 빈 포트 선택 |
-| 실행 파일·proof | 작업 전 없던 exact `<JUICYPOTATO_PATH>`와 `<SYSTEM_PROOF_PATH>` | 두 경로의 `Test-Path`가 반입·생성 전에 `False` | 기존 파일과 충돌하지 않는 공백 없는 고유 경로 선택 |
+| 실행 파일·Identity 확인 파일 | 작업 전 없던 exact `<JUICYPOTATO_PATH>`와 `<SYSTEM_PROOF_PATH>` | 두 경로의 `Test-Path`가 반입·생성 전에 `False` | 기존 파일과 충돌하지 않는 공백 없는 고유 경로 선택 |
 
 ## 실행
 
@@ -44,13 +44,14 @@ Test-Path -LiteralPath '<SYSTEM_PROOF_PATH>'
 
 listener 조회 결과가 없고 두 `Test-Path`가 `False`여야 한다. `Get-WmiObject`를 사용할 수 없으면 `systeminfo`로 같은 build·edition을 확인한다. `findstr` 결과가 없다는 사실은 그 시점에 해당 포트 문자열이 보이지 않았다는 뜻이므로 실행 직전 bind 성공을 도구 출력으로 다시 확인한다. `SeAssignPrimaryTokenPrivilege Disabled`는 미보유가 아니지만 아직 사용 성공도 아니다. `SeIncreaseQuotaPrivilege`가 없거나 build·edition에 맞는 CLSID 근거가 없으면 실행하지 않는다.
 
+`<JUICY_COM_PORT>`는 대상 Windows localhost에서 비어 있는 TCP 포트(예: `1337`), `<JUICYPOTATO_PATH>`는 대상의 새 실행 파일 절대 경로(예: `C:\\Temp\\JuicyPotato.exe`), `<SYSTEM_PROOF_PATH>`는 이번 자식 명령이 만든 `nt authority\system` Identity를 판정하는 새 확인 파일 경로다. `<CLSID>`는 대상 build·edition에 대응하는 upstream 목록의 GUID를 그대로 사용한다.
+
 ### 2. 실행 파일 반입과 무결성 확인
 
-[[상황별 파일 전송]]의 현재 Windows 경로로 JuicyPotato를 반입한 뒤 exact 파일의 arch와 SHA-256을 기록한다.
+[[상황별 파일 전송]]의 현재 Windows 경로로 JuicyPotato를 반입한 뒤 exact 파일의 arch·경로와 version을 기록한다.
 
 ```powershell
 Get-Item -LiteralPath '<JUICYPOTATO_PATH>' | Select-Object FullName,Length,LastWriteTime,VersionInfo
-certutil -hashfile '<JUICYPOTATO_PATH>' SHA256
 ```
 
 ### 3. CreateProcessAsUser 모드로 SYSTEM proof 생성

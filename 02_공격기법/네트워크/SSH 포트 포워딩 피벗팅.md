@@ -14,14 +14,7 @@ tags:
 
 공격 호스트에서 `<PIVOT_IP>:22`에 SSH 인증할 수 있고 피벗 호스트에서 `<INTERNAL_IP>:<PORT>`에 연결할 수 있으면, `-L`, `-D` 또는 `-R` 포워딩으로 단일 내부 서비스, SOCKS 프록시 또는 역방향 콜백 TCP 경로를 만든다.
 
-## 사용할 때
-
-- 현재 네트워크 위치: 공격 호스트에서는 `<INTERNAL_IP>:<PORT>`에 직접 연결할 수 없지만 `<PIVOT_IP>:22`에는 연결할 수 있고, 피벗 호스트에서는 최종 내부 포트에 연결할 수 있다.
-- 명령 실행 위치: `ssh -L`, `ssh -D`, `ssh -R`과 ProxyChains·최종 서비스 클라이언트는 공격 호스트에서 실행하며, 피벗 호스트의 SSH 서버가 내부 연결을 만든다. listener·전송 채널·피벗 egress와 최종 서비스는 [[피벗과 터널의 연결 경계]]처럼 별도 상태로 확인한다.
-- 보유 계정·인증 자료: password 또는 private key는 `<PIVOT_IP>`의 SSH 인증용이다. 이 자료가 `<INTERNAL_IP>`의 DB·RDP·웹 인증에도 유효하다고 간주하지 않는다.
-- 현재 권한: 인증된 SSH 사용자로 세션을 유지할 수 있으면 되며 관리자/root 권한은 필수가 아니다. TCP 포워딩 허용 여부는 계정 권한이 아니라 SSH 서버 정책 조건으로 따로 확인한다.
-- 지금 가능한 행동: 한 포트는 `-L`, 여러 TCP 서비스는 `-D`, 내부 대상의 reverse callback을 피벗에서 공격 호스트로 전달할 때는 `-R`을 선택한다.
-- 성공 범위: 공격 호스트에서 `<INTERNAL_IP>:<PORT>`의 배너나 로그인 단계까지 TCP로 도달하거나 reverse callback을 받을 수 있다. 최종 서비스 인증, 원격 명령 실행과 관리자 권한은 별도 결과다.
+`-L`·`-D`·`-R`의 listener 위치, SSH 채널과 피벗 egress·최종 서비스 연결은 [[피벗과 터널의 연결 경계]]처럼 각각 확인한다.
 
 ## 전제 조건
 
@@ -34,6 +27,8 @@ tags:
 | 필요한 파일·목록·주소 | `<PIVOT_IP>`, `<INTERNAL_IP>`, `<PORT>`와 필요 시 ProxyChains 설정 | 연결 방향을 도식화하고 `-L`, `-D`, `-R` 중 선택 | listener가 생길 호스트와 connect 대상의 주소·포트 재정리 |
 
 ## 실행
+
+`<PIVOT_IP>`는 SSH 서버 주소(가상 예시 `203.0.113.25`)이고 `<INTERNAL_IP>:<PORT>`는 피벗이 연결할 최종 TCP 서비스(예: `192.0.2.10:3389`)다. `<LOCAL_PORT>`·`<SOCKS_PORT>`·`<PIVOT_LISTEN_PORT>`은 각각 표시한 listener 호스트에서 비어 있는 포트이고, `<SSH_CONTROL_SOCKET>`·`<SSH_KNOWN_HOSTS_FILE>`은 공격 호스트의 새 작업 경로다. 아래 단계에서 이 값을 그대로 재사용해 listener·egress·최종 연결을 분리한다.
 
 ### 선택 기준
 | 단서 | 의미 | 다음 행동 |
@@ -51,7 +46,9 @@ tags:
 5. 최종 서비스 계정으로 인증하고, 세션이 열리면 원격 Identity와 권한을 별도로 확인한다.
 6. 실패하면 SSH 인증, 포워딩 listener, 프록시 설정과 최종 클라이언트 문제를 분리한다.
 
-아래 세 방식 중 하나만 선택한다. 전역 `known_hosts`와 기존 SSH session을 건드리지 않도록 기존에 없는 control socket과 작업용 host-key 파일을 정한다. 첫 연결의 host key fingerprint는 승인된 기준과 대조하며 `StrictHostKeyChecking`을 끄지 않는다.
+아래 세 방식 중 하나만 선택한다. 전역 `known_hosts`와 기존 SSH session을 건드리지 않도록 기존에 없는 control socket과 작업용 host-key 파일을 정한다. 첫 연결의 host key fingerprint는 신뢰할 수 있는 별도 기준과 대조하며 `StrictHostKeyChecking`을 끄지 않는다.
+
+`<PIVOT_IP>`는 SSH 서버 주소(예: `203.0.113.25`), `<INTERNAL_IP>:<INTERNAL_PORT>`는 피벗이 연결할 최종 서비스(예: `192.0.2.10:3389`)이며 `<LOCAL_PORT>`·`<SOCKS_PORT>`는 공격 호스트의 비사용 listener 포트다. 아래 Bash 블록은 공격 호스트에서 실행하고, 피벗 기준 확인은 명시한 SSH 원격 명령에서만 수행한다.
 
 ```bash
 test ! -e '<SSH_CONTROL_SOCKET>'
@@ -106,7 +103,7 @@ proxychains -f '<SSH_PROXYCHAINS_CONFIG>' nmap -sT -Pn -n -p3389 <INTERNAL_IP>
 
 ### Windows RDP client에서 Plink로 SOCKS 동적 포워딩
 
-Windows 작업 호스트에 Plink가 이미 있거나 승인된 파일 전송 경로로 준비할 수 있을 때 OpenSSH `ssh -D` 대신 사용한다. 아래 대표 절차는 SSH password를 명령행에 남기지 않고 PuTTY private key를 사용한다. 첫 연결 전에 승인된 경로로 얻은 SSH host key fingerprint를 `<SSH_HOST_KEY_FINGERPRINT>`와 대조한다.
+Windows 작업 호스트에 Plink가 이미 있거나 파일 전송 경로로 준비할 수 있을 때 OpenSSH `ssh -D` 대신 사용한다. 아래 대표 절차는 SSH password를 명령행에 남기지 않고 PuTTY private key를 사용한다. 첫 연결 전에 신뢰할 수 있는 별도 경로로 얻은 SSH host key fingerprint를 `<SSH_HOST_KEY_FINGERPRINT>`와 대조한다.
 
 Windows 작업 호스트의 PowerShell:
 
@@ -121,7 +118,7 @@ Get-NetTCPConnection -LocalAddress 127.0.0.1 -LocalPort <SOCKS_PORT> -State List
 
 `OwningProcess`가 기록한 `<PLINK_PID>`와 일치해야 이번 Plink가 만든 listener로 식별할 수 있다. Proxifier에서 같은 `127.0.0.1:<SOCKS_PORT>`를 SOCKS proxy로 지정하고, connection log와 `<INTERNAL_IP>:<PORT>`의 실제 서비스 응답을 함께 확인한다. `-N`은 원격 shell을 열지 않고 forwarding만 유지하며, `-hostkey`는 지정한 fingerprint와 다른 서버 연결을 거부한다.
 
-인증이 실패하면 새 host key를 자동 수락하거나 password를 `-pw`에 넣지 않는다. `plink.exe -v` 출력에서 host key, 사용자, key 인증과 서버의 forwarding 거부를 구분하고 승인된 fingerprint·PuTTY key 형식·SSH 서버 정책을 확인한다.
+인증이 실패하면 새 host key를 자동 수락하거나 password를 `-pw`에 넣지 않는다. `plink.exe -v` 출력에서 host key, 사용자, key 인증과 서버의 forwarding 거부를 구분하고 신뢰할 수 있는 fingerprint·PuTTY key 형식·SSH 서버 정책을 확인한다.
 
 ### ProxyChains Nmap 분리 확인
 

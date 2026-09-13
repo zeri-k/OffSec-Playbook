@@ -15,14 +15,6 @@ tags:
 
 공격 호스트에서 로컬 또는 도메인 `<USER>`의 재사용 가능한 NT hash를 보유하고 `<TARGET>`의 SMB·WinRM·WMI·RDP 포트에 도달할 수 있으면, 비밀번호 대신 hash로 인증한 뒤 서비스 접근, 원격 명령 실행, GUI·셀 세션과 대상 관리자 권한을 순서대로 구분한다.
 
-## 사용할 때
-
-- 현재 보유 정보: SAM·LSASS·NTDS에서 수집한 `<USER>`의 NT hash 또는 `LM:NTLM` 형식과 해당 계정의 로컬·도메인 범위를 알고 있다. Responder·PCAP에서 캡처한 NetNTLMv1/v2 challenge-response는 NT hash와 다르며 그대로 Pass the Hash에 사용하지 않는다. 두 자료와 relay된 서비스 연결의 관계는 [[NTLM 인증 자료, 실시간 Relay와 서비스 권한 경계]]를 따른다.
-- 명령 실행 위치: NetExec·Impacket·Evil-WinRM·xfreerdp를 실행할 공격 호스트에서 `<TARGET>`의 선택한 서비스 주소·포트까지 직접 또는 검증된 피벗 경로로 도달해야 한다.
-- 현재 계정·권한: hash 보유는 아직 `<TARGET>` 인증 성공이 아니다. 로컬 계정은 `--local-auth`, 도메인 계정은 `<DOMAIN>\\<USER>` 범위로 검증하며, 인증 성공과 대상 로컬 관리자 권한을 따로 확인한다.
-- 지금 가능한 행동: SMB `445/TCP`로 인증과 share·관리자 단서를 먼저 보고, 해당 서비스 조건과 권한이 맞을 때만 PsExec·WMI·WinRM·RDP로 확장한다.
-- 성공 범위: `[+]`는 해당 서비스 인증, `(Pwn3d!)`는 관리자급 원격 실행 가능성, shell prompt·`whoami` 출력은 원격 명령 실행, GUI 세션은 RDP 로그온 성공을 각각 의미한다. Domain Admin 멤버십은 별도로 확인한다.
-
 ## 전제 조건
 
 | 확인할 것 | 필요한 상태 | 확인 방법 | 미충족 시 다음 확인 |
@@ -34,6 +26,8 @@ tags:
 | 필요한 파일·목록·주소 | `<TARGET>`, `<USER>`, `<DOMAIN>` 필요 시, `<NTLM_HASH>` | 계정·hash·대상 쌍과 주소 확인 | 로컬·도메인 계정 표기와 대상 주소 수정 |
 
 ## 실행
+
+`<TARGET>`은 선택한 서비스 포트가 열린 Windows 호스트, `<USER>`·`<DOMAIN>`·`<NTLM_HASH>`는 동일 계정의 인증 입력이다. `<PSEXEC_SERVICE>`, `<PSEXEC_REMOTE_BINARY>`, `<INVOKE_HASH_SERVICE>`는 대상에 새로 생길 exact 식별자이므로 기존 항목과 겹치지 않아야 하며, 각 Linux 명령은 공격 호스트에서 실행한다.
 
 ### 서비스 선택
 

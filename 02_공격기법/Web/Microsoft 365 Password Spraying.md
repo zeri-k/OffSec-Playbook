@@ -51,6 +51,8 @@ install -d -m 700 '<O365_OUTPUT_DIR>'
 python3 o365spray.py --spray -U usersfound.txt -p '<PASSWORD>' --count <ATTEMPTS_PER_WINDOW> --lockout <RESET_MINUTES> --domain <DOMAIN> --output '<O365_OUTPUT_DIR>'
 ```
 
+`<DOMAIN>`은 Microsoft 365 tenant와 연결된 도메인(가상 예: `example.test`)이고, `usersfound.txt`는 앞선 사용자 열거에서 만든 이메일·UPN 한 줄 목록이다. `<ATTEMPTS_PER_WINDOW>`와 `<RESET_MINUTES>`는 확인한 잠금 정책의 계정별 시도 수와 reset 시간이며, `<O365_OUTPUT_DIR>`은 공격 호스트의 새 전용 결과 디렉터리다.
+
 확인할 출력:
 
 - `[VALID] user@<DOMAIN>:<PASSWORD>`와 valid credential 저장 경로.
@@ -79,7 +81,7 @@ python3 o365spray.py --spray -U usersfound.txt -p '<PASSWORD>' --count <ATTEMPTS
 | 변경 대상 | 예상 영향 | 검증 방법 | 복구 절차 |
 |---|---|---|---|
 | 대상 Microsoft 365 계정의 인증 실패 카운터 | 반복 실패 시 계정 잠금·경고·Conditional Access 이벤트 발생 가능 | 계정별 시도 수·간격과 인증 응답 확인 | 정한 횟수에 도달하거나 잠금·경고 신호가 보이면 즉시 중지하고 정책상 재시도 가능 시점까지 기다림 |
-| 로컬 valid credential·tested account 결과 파일 | 평문 credential과 사용자 시도 결과가 전용 디렉터리에 생성됨 | 도구가 표시한 각 결과 파일의 정확한 경로와 권한 확인 | 보존 정책에 따라 보호하고, 폐기할 때만 기록한 `<SPRAY_RESULT_FILE>` 등 정확한 파일을 `rm --`으로 제거한 뒤 빈 `<O365_OUTPUT_DIR>`을 `rmdir --`로 정리 |
+| 로컬 valid credential·tested account 결과 파일 | 평문 credential과 사용자 시도 결과가 전용 디렉터리에 생성됨 | 도구가 표시한 각 결과 파일의 정확한 경로와 권한 확인 | 접근 제한된 경로에 두고, 폐기할 때만 기록한 `<SPRAY_RESULT_FILE>` 등 정확한 파일을 `rm --`으로 제거한 뒤 빈 `<O365_OUTPUT_DIR>`을 `rmdir --`로 정리 |
 
 인증 성공·실패 이벤트와 탐지 기록은 client에서 되돌릴 수 없다. 대기 뒤 다시 시도할 수 있다는 사실을 원상복구로 기록하지 않으며, 잠긴 계정의 해제는 권한 있는 운영 절차에 맡긴다.
 

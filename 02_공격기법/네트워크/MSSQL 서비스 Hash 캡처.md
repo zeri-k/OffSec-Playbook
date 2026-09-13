@@ -14,21 +14,10 @@ tags:
 
 MSSQL에서 UNC 경로를 처리하는 stored procedure를 호출해 SQL Server 서비스 계정이 공격자 `impacket-smbserver`로 SMB 인증하도록 유도하고 NetNTLMv2 challenge-response를 캡처한다.
 
-## 사용할 때
-
-- MSSQL 로그인에는 성공했지만 `xp_cmdshell` 실행이나 활성화 권한은 부족할 때.
-- SQL Server 서비스 계정의 이름, 도메인, NetNTLMv2 hash를 cracking 또는 relay 후보로 확보하고 싶을 때.
-- 대상에서 공격자 SMB listener로 outbound 445 접근이 가능할 때.
-- DB 내부 데이터보다 Windows/AD 쪽 후속 인증 경로가 더 중요할 때.
-- 현재 보유 정보: MSSQL에 query를 실행할 수 있는 로그인 또는 통합 인증 ticket·password·hash, 공격자 listener 주소와 대상 SQL Server 후보.
-- 명령 실행 위치: SQL query를 보낼 수 있고 listener TCP/445를 열 수 있는 공격 호스트. SQL Server 호스트에서도 이 listener의 주소·TCP/445에 outbound로 도달해야 한다.
-- 현재 권한과 대상: SQL query 실행 또는 해당 procedure 실행 권한은 `sysadmin`, SQL Server Windows 서비스 계정의 로컬 관리자, 도메인 관리자 권한과 다르다.
-- 획득 결과: listener의 `USER::DOMAIN:...`은 NetNTLMv2 challenge-response다. 평문 비밀번호, NT hash, relay 성공은 후속 분기로 별도 확인하며 자료와 참여 주체의 관계는 [[NTLM 인증 자료, 실시간 Relay와 서비스 권한 경계]]를 따른다.
-
 ## 전제 조건
 
 | 확인할 것 | 필요한 상태 | 확인 방법 | 미충족 시 다음 확인 |
-|---|---|---|
+|---|---|---|---|
 | SQL 실행 위치와 인증 | 공격 호스트에서 대상 MSSQL에 접속하고 `SELECT SYSTEM_USER;`를 실행 가능 | `impacket-mssqlclient`, `sqlcmd`, `sqsh` | SQL 포트·인증 형식과 현재 SQL login 확인 |
 | SQL 대상 procedure | 현재 SQL Server build에 실제 존재하고 호출자에게 `EXECUTE`가 허용된 `xp_dirtree`, `xp_subdirs`, `xp_fileexist` 중 하나 | `sys.system_objects`와 `HAS_PERMS_BY_NAME` | 객체 부재·metadata 비표시·권한 거부를 구분하고 확인되지 않은 procedure는 호출하지 않음 |
 | 공격자 listener | 공격 호스트에서 SMB listener TCP/445를 열고 결과를 저장 가능 | `impacket-smbserver` 시작 로그 | 포트 점유, 권한, VPN 인터페이스와 로그 경로 확인 |
@@ -36,6 +25,8 @@ MSSQL에서 UNC 경로를 처리하는 stored procedure를 호출해 SQL Server 
 | 후속 활용 조건 | 캡처 계정과 대상 서비스가 식별되어 cracking 또는 실시간 relay 조건을 판단 가능 | 전체 NetNTLMv2 라인과 계정·도메인 출력 | hash 형식, SMB signing, EPA와 대상 서비스 ACL 분리 확인 |
 
 ## 실행
+
+`<ATTACKER_IP>`는 SQL Server가 TCP/445로 도달하는 공격 호스트 주소(가상 예시 `198.51.100.8`)이고, `<SHARE>`는 그 listener가 제공할 새 공유 이름(예: `capture`)이다. `<SQL_REQUESTER>`는 MSSQL query를 보내는 login, `<SERVICE_ACCOUNT>`는 listener 출력에서 확인할 SQL Server Windows service account다. `<MSSQL_SMB_SHARE_DIRECTORY>`·`<MSSQL_SMB_LOG>`·`<MSSQL_HASH_FILE>`·`<MSSQL_POTFILE>`은 공격 호스트의 서로 다른 새 경로이며, listener 시작·SQL query·정리에서 같은 경로를 재사용한다.
 
 1. 공격자 호스트에서 `impacket-smbserver`를 TCP/445로 실행한다.
 2. MSSQL에 접속해 현재 사용자와 권한을 확인한다.
@@ -46,7 +37,7 @@ MSSQL에서 UNC 경로를 처리하는 stored procedure를 호출해 SQL Server 
 
 ### impacket-smbserver listener 준비
 
-기존 445/TCP listener와 세 경로를 먼저 확인한다. 아래 경로 중 하나라도 이미 있거나 445/TCP가 점유되어 있으면 덮어쓰거나 기존 listener를 종료하지 말고 새 경로·별도 승인된 주소를 정한다.
+기존 445/TCP listener와 세 경로를 먼저 확인한다. 아래 경로 중 하나라도 이미 있거나 445/TCP가 점유되어 있으면 덮어쓰거나 기존 listener를 종료하지 말고 새 경로·별도 주소를 정한다.
 
 ```bash
 test ! -e '<MSSQL_SMB_SHARE_DIRECTORY>'
@@ -193,7 +184,7 @@ hashcat --show -m 5600 '<MSSQL_HASH_FILE>' --potfile-path '<MSSQL_POTFILE>' --ba
 1. MSSQL query와 hash 수집을 중단하고 SQL client를 정상 종료한다. cracking이 실행 중이면 그 terminal·PID의 Hashcat만 먼저 종료한다.
 2. listener를 실행한 exact terminal에서 `Ctrl-C`로 전경 pipeline을 종료한다. 다른 terminal에서 `ps -p <MSSQL_SMB_LISTENER_PID> -o pid=,args=`와 `sudo ss -ltnp 'sport = :445'`를 실행해 이번 PID가 끝나고 포트가 작업 전 상태로 돌아왔는지 확인한다.
 3. `find '<MSSQL_SMB_SHARE_DIRECTORY>' -mindepth 1 -maxdepth 1 -print`로 share 안의 파일을 확인한다. UNC 조회만 했다면 보통 비어 있어야 하며, 비어 있을 때만 `rmdir '<MSSQL_SMB_SHARE_DIRECTORY>'`를 실행한다. 예상하지 않은 파일이 있으면 이번 작업의 파일로 단정해 삭제하지 않는다.
-4. `<MSSQL_SMB_LOG>`·`<MSSQL_HASH_FILE>`·`<MSSQL_POTFILE>`은 challenge-response와 복구된 평문을 포함할 수 있다. 승인된 결과 인계 후 폐기하기로 했다면 exact 경로만 `rm -- '<MSSQL_SMB_LOG>' '<MSSQL_HASH_FILE>' '<MSSQL_POTFILE>'`로 제거하고 각각 `test ! -e`로 확인한다. 보존해야 하면 Vault가 아닌 승인된 위치와 접근 권한을 확인한다.
+4. `<MSSQL_SMB_LOG>`·`<MSSQL_HASH_FILE>`·`<MSSQL_POTFILE>`은 challenge-response와 복구된 평문을 포함할 수 있다. 분석이 끝나고 보존이 필요하지 않으면 exact 경로만 `rm -- '<MSSQL_SMB_LOG>' '<MSSQL_HASH_FILE>' '<MSSQL_POTFILE>'`로 제거하고 각각 `test ! -e`로 확인한다. 보존해야 하면 Vault 밖 위치와 접근 권한을 확인한다.
 
 listener 종료가 실패하면 먼저 기록한 PID의 command line과 445/TCP 소유자를 대조하고 모든 Python·SMB process를 이름으로 종료하지 않는다. SQL Server가 보낸 인증 시도와 서버·네트워크 감사 기록, 이미 relay된 인증은 되돌릴 수 없다. hash 캡처·cracking 성공과 listener·민감 파일 정리 완료는 별도로 판정한다.
 

@@ -13,12 +13,6 @@ tags:
 
 유효한 AD 계정과 DC·DNS 경로가 있으면 Windows의 SharpHound 또는 Linux의 bloodhound-python으로 필요한 객체·관계 범위를 수집하고, BloodHound의 경로를 원본 LDAP·SMB·호스트 조회로 재검증할 후보로 사용한다.
 
-## 사용할 때
-
-- 사용자·그룹·컴퓨터 목록을 수동으로 얻었지만 중첩 그룹, ACL, GPO, 세션과 원격 접근 관계를 함께 분석해야 할 때.
-- 현재 사용 중인 계정에서 고가치 객체까지 이어지는 관계를 우선순위화할 때.
-- 현재 도메인과 신뢰 대상 도메인의 외부 그룹 관계를 한 그래프에서 비교할 때.
-
 ## 전제 조건
 
 | 확인할 것 | 필요한 상태 | 확인 방법 | 미충족 시 다음 확인 |
@@ -36,6 +30,8 @@ tags:
 
 기존 수집물과 섞이지 않는 전용 디렉터리를 만들고, 도구가 출력한 ZIP의 exact 경로를 `<CURRENT_DOMAIN_ZIP_PATH>`로 기록한다. 비밀번호는 command line에 넣지 않고 prompt에 입력한다.
 
+`<BLOODHOUND_RUN_DIRECTORY>`는 Linux 공격 호스트의 새 작업 디렉터리(예: `/tmp/bh-corp-20260913`)다. 이후 `<CURRENT_DOMAIN_ZIP_PATH>`는 이 단계 출력의 ZIP 경로이고, 도메인·DC·DNS 입력은 현재 도메인과 신뢰 대상 도메인을 서로 구분해 앞 전제 표에서 확인한 값을 사용한다.
+
 ```bash
 test ! -e '<BLOODHOUND_RUN_DIRECTORY>'
 mkdir -m 700 '<BLOODHOUND_RUN_DIRECTORY>'
@@ -44,6 +40,8 @@ bloodhound-python -u '<USER>@<DOMAIN>' -ns <DC_IP> -d <DOMAIN> -c All --zip -op 
 ```
 
 #### Windows 공격 호스트에서 실행
+
+`<OUTPUT_NAME>`은 Windows 공격 호스트의 SharpHound 실행 디렉터리에 새로 생성될 ZIP 파일명(예: `sharphound-p05.zip`)이다. 실행 뒤 collector 출력에서 실제 `<SHARPHOUND_ZIP_PATH>`를 기록해 복구 표의 exact 경로와 연결한다.
 
 ```powershell
 .\SharpHound.exe -c All --zipfilename <OUTPUT_NAME>

@@ -28,6 +28,8 @@ snmpwalk -v<version> -c <community> <target> [oid]
 
 ## 대표 예시
 
+`<TARGET>`은 SNMP agent IP/FQDN(예: `snmp.example.test`)이며, `public`은 실제로 확인한 community string으로 바꾼다. 명령은 agent에 UDP/161으로 도달 가능한 Linux 호스트에서 실행한다.
+
 ### community string으로 기본 mib-2 subtree 순회
 
 ```bash

@@ -21,8 +21,11 @@ Inveigh는 Windows에서 LLMNR·NBNS·mDNS·WPAD 이름 해석 요청을 관찰�
 - 입력: legacy PowerShell 구현의 `Inveigh.ps1` 또는 C# 구현의 `Inveigh.exe`
 - 권한 조건: 패킷 캡처와 HTTP/HTTPS/SMB 등의 수신 포트 바인딩이 가능한 로컬 관리자 권한
 - 네트워크 조건: LLMNR/NBNS 요청이 도달하는 위치와 응답에 사용할 로컬 인터페이스
+- `<INTERFACE>`는 앞 단계에서 선택한 Windows adapter 이름 또는 IP(예: `Ethernet`/`192.0.2.20`)이며, listener 포트와 실행 기간은 시작 출력·도움말에서 확인한 현재 구현의 값만 사용한다.
 
 ## 표준 사용법
+
+`<INTERFACE>`는 요청이 도달하는 Windows adapter, `<RUN_DIRECTORY>`는 local output directory, `<RUN_MINUTES>`는 구현별 option으로 가정하지 않고 시작 output·help에 있는 수동 종료 기준만 사용한다. listener PID·output path는 시작 output에서 기록해 종료와 exact cleanup에 재사용한다.
 
 ### Legacy PowerShell 구현
 
@@ -149,7 +152,7 @@ Get-NetTCPConnection -State Listen | Sort-Object LocalPort
 Get-ChildItem -LiteralPath '<INVEIGH_RUN_DIRECTORY>' -File | Select-Object FullName,Length,LastWriteTime
 ```
 
-PID 조회가 비고 listener가 작업 전 상태로 돌아와야 process·listener 정리가 확인된다. 고유 run directory는 보존·인계가 끝난 뒤 그 안에서 이번 prefix로 생성된 exact 파일만 제거하고, directory가 비었을 때만 제거한다.
+PID 조회가 비고 listener가 작업 전 상태로 돌아와야 process·listener 정리가 확인된다. 고유 run directory는 필요한 결과를 별도 기록한 뒤 그 안에서 이번 prefix로 생성된 exact 파일만 제거하고, directory가 비었을 때만 제거한다.
 
 ```powershell
 Get-ChildItem -LiteralPath '<INVEIGH_RUN_DIRECTORY>' -File -Filter 'inveigh-<UNIQUE_ID>*'

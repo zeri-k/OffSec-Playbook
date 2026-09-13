@@ -17,6 +17,7 @@ tags:
 - 실행 위치: Metasploit Framework가 설치된 Linux 호스트
 - 필요한 입력: payload 이름, 대상 platform/architecture, 출력 format과 파일 경로
 - 연결형 payload 입력: 대상에서 도달 가능한 `LHOST`/`LPORT`; 필요하면 bad character, encoder, template 조건
+- `<LOCAL_OUTPUT_PATH>`는 Linux 생성 host의 새 파일 경로, `LHOST`/`LPORT`는 payload가 callback할 listener다. reverse·bind·relay는 주소와 포트의 역할이 다르므로 handler의 `PAYLOAD`와 transport 값을 생성 명령에서 그대로 맞춘다.
 
 
 ## 표준 사용법
@@ -25,7 +26,7 @@ tags:
 msfvenom -p <payload> LHOST=<ip> LPORT=<port> -f <format> -o <output>
 ```
 
-출력 파일은 기존 파일을 덮어쓰지 않는 고유한 `<LOCAL_OUTPUT_PATH>`를 사용하고 생성 뒤 경로·크기·SHA-256을 기록한다.
+출력 파일은 기존 파일을 덮어쓰지 않는 고유한 `<LOCAL_OUTPUT_PATH>`를 사용하고 생성 뒤 경로를 기록한다. 크기는 encoder·bad character 결과를 비교할 때만 기록한다.
 
 ### staged와 stageless 선택
 
@@ -48,7 +49,7 @@ Encoder는 exploit·전달 경로가 허용하지 않는 null byte·줄바꿈 �
 
 `-x <TEMPLATE>`와 `-k`는 template에 payload를 삽입하고 별도 thread로 원래 동작을 보존하려는 option이지만 Rapid7의 현재 문서는 `-k` 신뢰성을 오래된 x86 Windows 환경으로 제한한다. 정상 기능 유지, architecture·서명·무결성, 실행 결과를 확인하지 않은 template payload를 범용 전달 절차로 사용하지 않는다.
 
-공개 VirusTotal 제출은 결과를 여러 분석 partner와 공유하고 file name·submission metadata·sample 분석을 남길 수 있다. 고객 binary, 내부 URL·주소·credential·고유 payload는 공개 API나 공개 web upload에 제출하지 않는다. 이미 공개된 hash의 기존 report 조회와 승인된 private scanning은 새 sample 제출과 구분한다. 탐지 수가 0이라는 결과도 향후 또는 대상 환경의 미탐지를 보장하지 않는다.
+공개 VirusTotal 제출은 결과를 여러 분석 partner와 공유하고 file name·submission metadata·sample 분석을 남길 수 있다. 고객 binary, 내부 URL·주소·credential·고유 payload는 공개 API나 공개 web upload에 제출하지 않는다. 이미 공개된 hash의 기존 report 조회와 private scanning은 새 sample 제출과 구분한다. 탐지 수가 0이라는 결과도 향후 또는 대상 환경의 미탐지를 보장하지 않는다.
 
 ## 대표 예시
 

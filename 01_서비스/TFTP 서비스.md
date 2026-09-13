@@ -30,6 +30,8 @@ tags:
 
 TFTP에는 원격 삭제 명령이 없다. 서버의 셸·관리 인터페이스·공유 경로에서 정확한 proof 파일을 제거할 수 있을 때만 쓰기를 확인한다.
 
+`<TARGET>`은 TFTP 서버 IP 또는 FQDN(예: `192.0.2.10`)이다. 이 명령은 현재 실행 호스트에서 `<TARGET>`에 전송하며, `PROOF`는 현재 디렉터리에 새로 만드는 고유 파일명이고 재수신 파일은 `downloaded-$PROOF`다. 양쪽 hash 비교는 업로드 원본과 재수신본의 동일성이 WRITE 판단을 바꾸므로 유지한다.
+
 ```bash
 PROOF="tftp-proof-$(date -u +%Y%m%dT%H%M%SZ)-$$.txt"
 printf 'TFTP write proof: %s\n' "$PROOF" > "$PROOF"

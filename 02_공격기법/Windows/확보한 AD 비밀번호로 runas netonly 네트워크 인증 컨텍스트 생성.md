@@ -14,13 +14,6 @@ tags:
 
 Windows 셸에서 다른 AD 계정의 사용자명과 평문 비밀번호를 확보했고 SMB·LDAP·MSSQL 같은 원격 Windows 통합 인증 서비스를 사용해야 하면 `runas /netonly`로 네트워크 인증 전용 프로세스를 만들고 대상 서비스에서 실제 인증 주체와 권한을 확인한다.
 
-## 사용할 때
-
-- 현재 가진 정보: 현재 Windows 로그온 계정과 다른 `<DOMAIN>\<USER>`의 평문 비밀번호를 보유한다.
-- 명령 실행 위치와 도달성: Windows 호스트에서 `runas.exe`를 실행할 수 있고 대상 SMB·LDAP·MSSQL 등 원격 서비스에 연결할 수 있다.
-- 현재 계정과 권한: 현재 로컬 로그인 계정과 profile은 유지한다. 지정 AD 계정의 권한은 원격 서비스가 인증을 처리할 때만 평가된다.
-- 성공 결과: 지정 AD 계정의 네트워크 자격 증명을 사용하는 Logon Type 9 프로세스를 얻고, 원격 서비스에서 해당 계정의 실제 접근 범위를 확인한다.
-
 ## 전제 조건
 
 | 확인할 것 | 필요한 상태 | 확인 방법 | 미충족 시 다음 확인 |
@@ -38,6 +31,8 @@ Windows 셸에서 다른 AD 계정의 사용자명과 평문 비밀번호를 확
 ```cmd
 runas /netonly /user:<DOMAIN>\<USER> cmd.exe
 ```
+
+`<DOMAIN>\<USER>`는 원격 서비스에서 사용할 AD 계정 형식이며 `<PASSWORD>`는 prompt에만 입력한다. SMB 예시의 `<DC_FQDN>`은 domain controller FQDN이고, MSSQL 예시의 `<MSSQL_FQDN>`과 `<MSSQL_PORT>`는 SQL Server FQDN과 TCP 포트다. 각 FQDN·포트·SPN은 현재 로컬 `whoami` 결과와 바꾸어 해석하지 않는다.
 
 표시되는 password prompt에 확보한 `<PASSWORD>`를 입력한다. `/netonly`는 이 시점에 원격 서비스로 인증하지 않으므로 프로세스 생성만으로 비밀번호가 유효하다고 판단하지 않는다.
 

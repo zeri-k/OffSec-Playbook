@@ -19,8 +19,11 @@ Invoke-TheHash는 PowerShell에서 NT hash를 사용해 SMB 또는 WMI로 인증
 - 실행 위치: Invoke-TheHash 모듈을 불러올 수 있는 Windows PowerShell 호스트
 - 필요한 입력: 대상 호스트, 사용자명, NT hash, 로컬 또는 도메인 계정 범위와 실행 명령
 - 대상 조건: SMB 방식은 Service Control Manager 쓰기 권한, WMI 방식은 원격 WMI 실행 권한과 관련 RPC 경로 필요
+- `<TARGET>`은 원격 Windows host의 IP/FQDN, `<DOMAIN>\\<USER>` 또는 로컬 host 범위는 NT hash가 속한 계정의 namespace다. `<INVOKE_HASH_SERVICE>`는 이번 실행에만 쓰는 고유 서비스 이름이고 `<COMMAND>`는 대상에서 실행할 짧은 식별 명령이다.
 
 ## 표준 문법
+
+`<TARGET>`은 remote Windows host, `<DOMAIN>`·`<USER>`·`<NTLM_HASH>`는 같은 credential namespace이며 `<COMMAND>`는 target에서 실행할 명령이다. `<INVOKE_HASH_SERVICE>`는 SMBExec가 만든 이번 실행의 고유 service name으로, output의 생성·삭제 메시지와 recovery block에서 같은 값을 재사용한다.
 
 ```powershell
 Import-Module .\Invoke-TheHash.psd1

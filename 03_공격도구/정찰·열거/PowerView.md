@@ -24,6 +24,8 @@ PowerView는 PowerShell에서 AD 사용자·그룹·컴퓨터·트러스트·ACL
 
 ## 표준 사용법
 
+`<OBJECT>`은 실제 PowerView 명령 suffix(예: `User` 또는 `Group`)이고, `[options]`는 해당 명령의 help에서 확인한 선택 인수다. module은 PowerView.ps1을 둔 Windows PowerShell host에서 불러온다.
+
 ```powershell
 Import-Module .\PowerView.ps1
 Get-Domain<OBJECT> [options]
@@ -48,6 +50,8 @@ Get-DomainPolicy
 ```powershell
 Get-DomainGroupMember -Identity "<GROUP>" -Recurse
 ```
+
+`<GROUP>`은 현재 도메인에서 조회할 그룹의 표시 이름 또는 sAMAccountName(예: `Domain Admins`)이다. `<USER>`는 조회할 도메인 사용자(예: `alice`), `<DOMAIN>`은 DNS 도메인(예: `corp.example.test`)이며, `<MSSQL_FQDN>`과 `<PORT>`는 SPN 출력에서 얻은 서비스 호스트와 포트다.
 
 확인할 출력:
 

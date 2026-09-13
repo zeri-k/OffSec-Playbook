@@ -23,6 +23,8 @@ Rubeus는 Windows에서 Kerberos ticket을 조회·요청·덤프·주입·생�
 - ticket 입력: `.kirbi` 파일 또는 Base64 ticket
 - roast 입력: 현재 도메인 세션 또는 명시한 도메인·계정 조건
 
+`<DOMAIN>`은 AD DNS 도메인(예: `corp.example.test`), `<USER>`은 대상 sAMAccountName, `<AES256_KEY>`는 64자리 hex key, `<LOGON_LUID>`는 `dump` 출력의 LUID다. `<ASREP_HASH_FILE>`·`<KERBEROAST_HASH_FILE>`은 Rubeus를 실행하는 Windows 호스트의 새 출력 경로이고 `<SPN_USER>`는 `/stats` 출력에서 좁힌 SPN 계정이다.
+
 ## 표준 사용법
 
 ```cmd

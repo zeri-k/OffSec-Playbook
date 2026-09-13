@@ -29,7 +29,9 @@ tags:
 
 ## 시나리오 개요
 
-Windows 호스트의 SYSTEM 명령 실행에서 Meterpreter 세션을 열고 LSASS 또는 LSA secret에서 AD 자격 증명을 확보한다. 먼저 이 자료의 서비스별 로그온 권한·AD 객체 제어권·복제 권한을 재평가한다. 추가 계정이 필요하고 같은 링크에서 이름 해석 요청을 관찰할 수 있을 때만 Inveigh와 오프라인 크래킹을 선택하며, 비밀번호 재설정은 목표 접근을 실제로 넓히고 영향·복구가 승인된 사용자 객체에만 수행한다.
+Windows 호스트의 SYSTEM 명령 실행에서 Meterpreter 세션을 열고 LSASS 또는 LSA secret에서 AD 자격 증명을 확보한다. 먼저 이 자료의 서비스별 로그온 권한·AD 객체 제어권·복제 권한을 재평가한다. 추가 계정이 필요하고 같은 링크에서 이름 해석 요청을 관찰할 수 있을 때만 Inveigh와 오프라인 크래킹을 선택하며, 비밀번호 재설정은 목표 접근을 실제로 넓히는 사용자 객체에서만 수행한다.
+
+> 비밀번호 변경은 기존 서비스 로그온·자동 로그온·ticket에 영향을 줄 수 있고 원래 평문을 모르면 자동 복구할 수 없다. 이 분기를 쓰지 않아도 복제 권한이 확인되면 DCSync 경로를 별도로 판단한다.
 이후 원격 실행은 새 자격 증명에 대상 서비스의 로그온 권한이 있을 때만, DCSync는 같은 주체의 디렉터리 복제 권한을 별도로 확인한 경우에만 선택한다. 두 조건이 충족되지 않으면 해당 단계에서 멈추고 상태 라우터를 다시 선택한다.
 
 ## 기준 구조
@@ -41,7 +43,7 @@ Windows 시작 호스트 SYSTEM
   -> LSASS 또는 LSA secret에서 AD 자격 증명
     -> 서비스 접근·AD 객체 제어·복제 권한 재평가
       -> (조건부) 같은 링크 요청 관찰 시 Inveigh와 크래킹
-        -> (조건부) 승인된 대상 사용자 비밀번호 재설정
+        -> (조건부) 대상 사용자 비밀번호 재설정
           -> (조건부) 검증된 원격 로그온 경로
             -> (조건부) 복제 권한 확인 후 DCSync <DCSYNC_ACCOUNT>
 ```
@@ -56,15 +58,17 @@ Windows 시작 호스트 SYSTEM
 | 다음 호스트 접근 | 확보할 계정으로 RDP 또는 다른 원격 로그온 가능 | 서비스별 인증 | [[확보한 자격 증명으로 원격 접근 경로 선택]] |
 | AD 객체 제어권 | 현재 AD 계정이 사용자 또는 그룹 객체에 필요한 쓰기 권한 보유 | BloodHound와 ACL 재조회 | [[AD 객체 제어권 확보 후 악용 경로 선택]] |
 
+`<ATTACK_INTERFACE_OR_IP>`는 Linux 공격 호스트에서 handler가 bind할 주소(예: `192.0.2.10`)이고, `<SESSION_ID>`·job ID는 Metasploit의 새 `sessions -l`·`jobs -l` 행에서 얻는다. `<REMOTE_MIMIKATZ_PATH>`와 `<INVEIGH_OUTPUT_DIRECTORY>`는 Windows 대상에서 작업 전 없었던 절대 경로(예: `C:\\Windows\\Temp\\mimikatz-p03.exe`, `C:\\Temp\\inveigh-p03`)다. `<DOMAIN>`·`<AD_USER>`·`<TARGET_AD_USER>`·`<DCSYNC_ACCOUNT>`는 각각 현재 도메인 DNS 이름과 해당 출력에 연결된 계정명이며, `<NETNTLMV2_HASH_FILE>`·`<WORDLIST>`는 Linux 분석 호스트의 입력 파일 경로다.
+
 ## 공격 경로 요약
 
 | 단계 | 실행 위치 | 수행할 행동 | 확인할 출력·상태 | 다음 단계 |
 |---|---|---|---|---|
 | 1 | Metasploit와 Windows SYSTEM 명령 채널 | [[Metasploit Web Delivery로 Meterpreter 세션 획득]] | SYSTEM Meterpreter 세션 | 도구 반입 |
-| 2 | Meterpreter | [[Meterpreter upload로 Windows 파일 반입]] | 원격 Mimikatz 파일과 hash | LSASS 수집 |
+| 2 | Meterpreter | [[Meterpreter upload로 Windows 파일 반입]] | 원격 Mimikatz 파일 | LSASS 수집 |
 | 3 | Windows SYSTEM 세션 또는 Linux 공격 호스트 | [[LSASS 메모리 덤프]] 또는 [[Windows LSA Secrets 추출]] | 계정명이 연결된 평문 비밀번호·NT hash | 서비스별 로그온·AD 객체·복제 권한 재평가 |
 | 4 | Linux 공격 호스트 또는 Windows 사용자 세션 | 추가 계정이 필요하고 같은 링크 요청을 관찰할 때만 [[LLMNR NBT-NS 포이즈닝으로 NTLM 인증 수집]]과 [[오프라인 해시 크래킹]] | 사용자명과 NetNTLMv2 hash·검증된 평문 | 대상 사용자 제어권 확인 |
-| 5 | Windows 도메인 세션 | [[AD ACL 권한 열거와 공격 경로 식별]] | 대상 사용자 객체의 비밀번호 재설정 권한 또는 복제 권한 | 승인된 변경 또는 DCSync 분기 선택 |
+| 5 | Windows 도메인 세션 | [[AD ACL 권한 열거와 공격 경로 식별]] | 대상 사용자 객체의 비밀번호 재설정 권한 또는 복제 권한 | 비밀번호 변경 또는 DCSync 분기 선택 |
 | 6 | Windows 도메인 세션 | 필요한 경우만 [[AD 사용자 비밀번호 강제 재설정]] | 새 비밀번호로 인증 성공 | 검증된 서비스 로그온 경로만 선택 |
 | 7 | Linux 공격 호스트 | 원격 로그온 권한이 있을 때만 [[WMI 원격 명령 실행]] | 대상의 원격 명령 출력과 실제 계정 | 복제 권한이 있을 때만 DCSync |
 | 8 | Linux 공격 호스트 | 두 복제 권한을 확인한 경우만 [[DCSync]] | `<DCSYNC_ACCOUNT>` NT hash·Kerberos key | 결과 확인 후 복구 |
@@ -123,7 +127,6 @@ meterpreter > ls <REMOTE_MIMIKATZ_PATH>
 meterpreter > shell
 
 # Windows 대상의 cmd.exe
-C:\Windows\Temp> certutil.exe -hashfile "<REMOTE_MIMIKATZ_PATH>" SHA256
 C:\Windows\Temp> exit
 
 # Windows 대상의 Meterpreter
@@ -135,7 +138,7 @@ msf6 > sessions -l
 
 `shell` 뒤 `exit`는 Windows `cmd.exe`를 닫고 Meterpreter로 돌아간다. `background`는 세션을 끊지 않고 Linux의 `msfconsole` 프롬프트로 돌아간다.
 
-`ABSENT`가 확인된 고유한 `<REMOTE_MIMIKATZ_PATH>`만 사용하고, `upload` 뒤 `ls`의 원격 크기와 `certutil`의 SHA-256을 공격 호스트 원본과 대조한다.
+`ABSENT`가 확인된 고유한 `<REMOTE_MIMIKATZ_PATH>`만 사용하고, `upload` 뒤 `ls`에 같은 원격 경로가 표시되는지 확인한다. 전송 손상이 의심되고 신뢰할 기준값이 있을 때만 연결된 파일 반입 절차에서 비교한다.
 
 ```text
 C:\> <REMOTE_MIMIKATZ_PATH>
@@ -178,7 +181,7 @@ hashcat -m 5600 <NETNTLMV2_HASH_FILE> <WORDLIST> --backend-ignore-opencl -d 1 -O
 복구된 평문은 해당 hash에 표시된 사용자 계정의 비밀번호 후보이다. 새 서비스 인증으로 유효성과 계정 범위를 확인한다.
 
 ## 6. 대상 AD 사용자 객체의 비밀번호 재설정 권한 확인
-이 변경은 `<TARGET_AD_USER>`의 새 자격 증명이 목표 접근을 실제로 넓히고, 변경 영향·복구가 승인된 경우에만 선택한다. 복제 권한을 이미 확인했다면 비밀번호 변경 없이 DCSync 분기로 진행한다.
+이 변경은 `<TARGET_AD_USER>`의 새 자격 증명이 목표 접근을 실제로 넓힐 때만 선택한다. 복제 권한을 이미 확인했다면 비밀번호 변경 없이 DCSync 분기로 진행한다.
 
 BloodHound의 edge에서 주체와 대상 객체 유형을 확인한 뒤 PowerView로 대상 사용자 객체의 ACL을 재조회한다. 이 경로의 대상은 `<TARGET_AD_USER>` 계정이다.
 
@@ -248,9 +251,9 @@ impacket-secretsdump '<DOMAIN>/<TARGET_AD_USER>@<DC_IP>' -just-dc-user <DCSYNC_A
 
 `impacket-wmiexec` 셸에서 `exit`해 새 명령 실행을 끝낸다. 비밀번호를 변경했다면 `<TARGET_AD_USER>` 재설정 권한을 가진 기존 도메인 세션이 살아 있을 때 [[AD 사용자 비밀번호 강제 재설정]]의 복구 절차를 먼저 수행한다.
 
-- 원래 비밀번호를 알고 정책상 재사용할 수 있으면 복원 요청 성공과 승인된 서비스 인증을 별도로 확인한다.
-- 원래 비밀번호를 모르면 계정 소유자·관리자의 새 비밀번호 설정과 종속 서비스 갱신이 끝날 때까지 `관리자 복구 인계`다. 기존 세션·ticket, `pwdLastSet`과 감사 기록이 남으므로 원상복구 완료로 기록하지 않는다.
-- DCSync는 대상 AD 객체를 변경하지 않는다. 다만 화면 또는 별도 파일에 남은 hash·Kerberos key는 승인된 증적 보존·폐기 정책에 따라 처리하고 Vault에 저장하지 않는다.
+- 원래 비밀번호를 알고 정책상 재사용할 수 있으면 복원 요청 성공과 대상 서비스 인증을 별도로 확인한다.
+- 원래 비밀번호를 모르면 `복구 미완료(원래 비밀번호 미확인)`로 기록한다. 계정 소유자 또는 관리자가 새 비밀번호를 설정하고 종속 서비스 갱신과 정상 동작을 확인하기 전에는 원상복구 완료로 기록하지 않는다. 기존 세션·ticket, `pwdLastSet`과 감사 기록도 남을 수 있다.
+- DCSync는 대상 AD 객체를 변경하지 않는다. 다만 화면 또는 별도 파일에 남은 hash·Kerberos key는 Vault 밖에서 보존 또는 폐기 상태를 기록하고 Vault에 저장하지 않는다.
 
 3단계에서 원격 [[Windows LSA Secrets 추출]] 경로를 선택했다면 그 대상에 대한 SMB·피벗 경로가 살아 있을 때 Remote Registry의 실행·시작 유형과 `ADMIN$\Temp` 임시 hive를 먼저 기준선과 대조한다. 이 확인을 끝내기 전에 WMI·Meterpreter·피벗 session을 닫지 않으며, 연결이 이미 끊겼으면 LSA secret 확보 성공과 별개로 `원격 복구 미확인`으로 남긴다.
 
@@ -264,7 +267,7 @@ Get-NetTCPConnection -State Listen | Where-Object LocalPort -in 80,443,445 | Sel
 Get-ChildItem -LiteralPath '<INVEIGH_OUTPUT_DIRECTORY>' -File | Select-Object FullName,Length,LastWriteTime
 ```
 
-수집 파일은 hash cracking이나 승인된 증적으로 필요한 정확한 경로만 Vault 밖에서 보존하고, 불필요해진 exact 파일은 `Remove-Item -LiteralPath '<INVEIGH_OUTPUT_FILE>'`로 처리한다. 디렉터리가 비었을 때만 `Remove-Item -LiteralPath '<INVEIGH_OUTPUT_DIRECTORY>'`로 제거한다. listener가 닫혔는지 확인할 수 없거나 출력 파일 처분이 끝나지 않았으면 이 항목은 미완료다.
+수집 파일은 hash cracking에 필요한 정확한 경로만 Vault 밖에서 보존 상태를 기록하고, 불필요해진 exact 파일은 `Remove-Item -LiteralPath '<INVEIGH_OUTPUT_FILE>'`로 처리한다. 디렉터리가 비었을 때만 `Remove-Item -LiteralPath '<INVEIGH_OUTPUT_DIRECTORY>'`로 제거한다. listener가 닫혔는지 확인할 수 없거나 출력 파일 처분이 끝나지 않았으면 이 항목은 미완료다.
 
 ### 3. 대상 파일을 지운 뒤 Meterpreter 세션 종료
 
@@ -299,7 +302,7 @@ msf6 > jobs -l
 ### 공격 목표
 
 - LSASS·LSA 결과에서 확보한 자격 증명의 서비스별 로그온·AD 객체·복제 권한을 구분했다.
-- 필요한 조건이 있을 때만 NetNTLMv2 수집·크래킹과 승인된 사용자 비밀번호 재설정을 수행했다.
+- 필요한 조건이 있을 때만 NetNTLMv2 수집·크래킹과 사용자 비밀번호 재설정을 수행했다.
 - 검증된 원격 로그온과 복제 권한이 모두 있을 때만 `<DCSYNC_ACCOUNT>` DCSync 출력을 확인했다.
 
 ### 복구 상태

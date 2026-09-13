@@ -13,19 +13,13 @@ tags:
 
 공격 호스트에서 구형 Windows의 SMB 445번 포트에 연결할 수 있고 비파괴 scanner가 MS17-010 취약 조건을 확인했다면, 시스템 중단 위험과 세션 수신 경로를 검토한 뒤 대상 호스트의 SYSTEM 명령 실행 여부를 검증한다.
 
-## 사용할 때
-
-- SMB 445가 열려 있고 대상이 MS17-010 영향 가능 빌드로 보일 때. 보안 공지의 영향 버전과 현재 설치된 Metasploit module의 지원 target·architecture는 별도로 확인한다.
-- SMBv1 또는 MS17-010 관련 취약 신호가 나왔을 때.
-- 인증 없이 원격 코드 실행 가능성을 검증해야 할 때.
-
 ## 전제 조건
 
 | 조건 | 확인 방법 | 충족 기준 |
 |---|---|---|
 | SMB 접근 | 포트 스캔 결과 | `445/tcp open` |
 | 취약 가능 OS와 SMBv1 | SMB OS 정보, Nmap 또는 Metasploit scanner | 영향 가능 Windows·SMBv1과 전용 scanner의 취약 표시를 함께 확인. 설치된 module의 `info`, `show targets`, `show payloads` 지원 범위와도 일치해야 함 |
-| 패치 상태 | 승인된 호스트 관리 정보 또는 전용 scanner | MS17-010 보안 업데이트가 확인되면 exploit하지 않음 |
+| 패치 상태 | 호스트 관리 정보 또는 전용 scanner | MS17-010 보안 업데이트가 확인되면 exploit하지 않음 |
 | exploit 안정성 | 모듈 설명, 대상 OS/arch 확인 | crash 위험과 payload 조건을 이해한 상태 |
 
 ## 확인할 단서
@@ -37,6 +31,8 @@ tags:
 | OS/arch 불명확 | exploit target 선택 위험 | 추가 OS 확인 또는 `check` 우선 |
 
 ## 실행
+
+`<TARGET>`은 scanner와 exploit가 연결할 SMB 호스트(가상 예시 `192.0.2.45`)이고, `<ATTACKER_IP>:<PORT>`는 세션 콜백을 받을 공격 호스트 listener다. 아래 Nmap·Metasploit 명령은 공격 호스트에서 실행하며, `RHOSTS`·payload·target/architecture는 scanner 출력과 설치된 module의 `show` 결과에서 같은 대상에 맞춰 선택한다.
 
 1. SMB OS/버전 단서를 확인한다.
 2. MS17-010 전용 비파괴 scanner로 취약 가능성을 검증한다.
@@ -127,7 +123,7 @@ msf6 > jobs -l
 ss -lntp | grep -F ':<PORT>'
 ```
 
-대상에는 SMB 445 응답과 승인된 관리 채널의 host uptime·서비스 상태를 작업 전과 비교한다. session이 이미 끊겼거나 대상 상태를 확인할 관리 경로가 없으면 `원격 복구 미확인`이다. exploit로 발생한 crash, 재부팅, kernel·service 불안정과 audit 기록은 원상복구 불가능하거나 별도 운영 복구가 필요한 영향이며, session·listener가 없다는 이유만으로 원상복구 완료라고 표시하지 않는다.
+대상에는 SMB 445 응답과 관리 채널의 host uptime·서비스 상태를 작업 전과 비교한다. session이 이미 끊겼거나 대상 상태를 확인할 관리 경로가 없으면 `원격 복구 미확인`이다. exploit로 발생한 crash, 재부팅, kernel·service 불안정과 audit 기록은 원상복구 불가능하거나 별도 운영 복구가 필요한 영향이며, session·listener가 없다는 이유만으로 원상복구 완료라고 표시하지 않는다.
 
 ## 확인할 출력과 권한
 

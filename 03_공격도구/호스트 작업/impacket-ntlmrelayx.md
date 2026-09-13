@@ -20,9 +20,12 @@ tags:
 - 필요한 입력: 단일 target 또는 target list와 목적별 relay 옵션
 - 전제: relay 프로토콜의 signing, EPA/channel binding과 relay 계정 권한을 사전에 확인한다.
 - 리스너 조건: 같은 포트를 점유하는 Responder SMB/HTTP server와 충돌하지 않게 구성한다.
+- `<TARGET_URL>`은 relay protocol에 맞는 SMB host 또는 AD CS HTTP endpoint(예: `http://ca01.corp.example/certsrv/`)다. 수신 credential, relay target, callback 영향은 별도 상태이며 relay action은 signing·EPA·CBT와 target authorization 조건을 만족할 때만 판정한다.
 
 
 ## 표준 사용법
+
+`<TARGET_URL>`은 SMB 또는 AD CS HTTP relay endpoint, `<TARGETS_FILE>`은 Linux host의 one-target-per-line list다. inbound NTLM capture, relay authentication, selected action output은 별도 상태이며 signing·EPA·CBT와 target authorization이 충족되지 않으면 action 결과를 확정하지 않는다.
 
 ```bash
 impacket-ntlmrelayx -t <target_url_or_host> [options]

@@ -16,7 +16,7 @@ tags:
 ## 필요한 입력과 실행 환경
 
 - 실행 환경: `subfinder`가 설치된 Linux 호스트
-- 입력: 루트 도메인
+- 입력: 루트 도메인. `<DOMAIN>`은 가상 루트 FQDN(예: `example.test`)이며 결과 파일은 Linux 실행 호스트에 만든다.
 - 선택 입력: 일부 공개 source에 필요한 API key
 
 ## 표준 사용법

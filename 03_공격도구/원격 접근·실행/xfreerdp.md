@@ -19,9 +19,12 @@ tags:
 - 실행 환경: FreeRDP client가 설치된 Linux 호스트
 - 입력: RDP 서버, 사용자명과 비밀번호 또는 NTLM hash
 - 선택 입력: 도메인, 인증서 처리와 공유할 로컬 디렉터리
+- `/v:` 값은 RDP listener의 IP/FQDN(예: `ws01.corp.example`)이고 `/u:`는 `<DOMAIN>\\<USER>` 또는 로컬 계정 형식이다. `/drive:` 경로는 Linux client의 디렉터리이며, `/cert:fingerprint:` 값은 사전에 얻은 대상 인증서 fingerprint다.
 
 
 ## 표준 사용법
+
+`/v:<TARGET>`은 RDP listener IP/FQDN, `/u:`와 `/d:`는 authentication namespace, `/p:` 또는 `/pth:`는 선택한 credential 방식의 입력이다. `/drive:` path는 Linux client directory이고 RDP authentication 성공, desktop session, redirected drive access는 각각 출력에서 확인한다.
 
 ```bash
 xfreerdp /v:<TARGET> /d:<DOMAIN> /u:<USER> /cert:tofu
@@ -63,7 +66,7 @@ xfreerdp /v:<TARGET> /d:<DOMAIN> /u:<USER> /dynamic-resolution /cert:tofu /drive
 | `/drive:name,path` | 로컬 디렉터리를 RDP 세션에 마운트 |
 | `/cert:tofu` | 첫 접속의 인증서를 승인하고 이후 인증서 변경을 거부. 최초 fingerprint 확인 필요 |
 | `/cert:fingerprint:<HASH>` | 사전에 확인한 인증서 fingerprint만 승인 |
-| `/cert:ignore` | 인증서 검사를 전체 생략. 승인된 대상을 다른 경로로 확인한 제한 상황 외에는 기본값으로 사용하지 않음 |
+| `/cert:ignore` | 인증서 검사를 전체 생략. 다른 경로에서 대상 identity를 확인한 제한 상황 외에는 기본값으로 사용하지 않음 |
 
 
 ## 도구 고유 출력

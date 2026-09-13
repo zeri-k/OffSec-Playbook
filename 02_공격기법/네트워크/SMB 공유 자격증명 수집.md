@@ -15,12 +15,6 @@ tags:
 
 실행 호스트에서 대상 445/TCP에 접근할 수 있으면 익명·Guest 또는 요청자 계정의 비밀번호·NT hash·Kerberos ticket 중 현재 가능한 SMB 인증 방식을 선택하고, 해당 SMB 세션이 READ 가능한 공유에서 평문 비밀번호, token, key, 접속 문자열과 내부 서비스 단서를 수집한다.
 
-## 사용할 때
-
-- 현재 보유 정보: 익명 접근 가능 여부 또는 SMB 요청자 계정의 사용자명과 비밀번호·NT hash·Kerberos ticket 중 하나, 그리고 공유명 또는 공유 목록을 확보했다.
-- 명령 실행 위치와 도달성: `smbclient`, `smbmap` 또는 manspider를 실행할 호스트에서 대상 SMB 445/TCP에 접근하고 수집 파일을 로컬에 저장할 수 있다.
-- 현재 가능한 행동과 결과: `IT`, `Backups`, `Users`, `SYSVOL`, `Dev`, `Deploy`, `Scripts` 같은 공유에서 현재 SMB 계정이 읽을 수 있는 파일만 선별해 credential 후보와 내부 정보를 얻는다.
-
 ## 전제 조건
 
 | 확인할 것 | 필요한 상태 | 확인 방법 | 미충족 시 다음 확인 |
@@ -32,6 +26,8 @@ tags:
 | 필요한 파일·목록·주소 | 로컬 저장 경로와 검색 키워드 준비 | 다운로드 여유 공간과 `rg` 검색 위치 확인 | 저장 위치를 확정하고 중복·대용량 파일 수집 범위 조정 |
 
 ## 실행
+
+`<TARGET>`·`<TARGET_FQDN>`은 SMB 서버 주소와 Kerberos SPN용 FQDN(가상 예시 `192.0.2.45`, `files.example.test`), `<SHARE>`·`<REMOTE_FILE>`은 목록에서 확인한 공유·원격 경로다. `<REQUESTER>`의 password·NT hash·ccache는 SMB session을 만드는 자료이고, 수집한 credential 후보와 섞지 않는다. `<SMB_COLLECTION_DIR>` 등 출력 경로는 공격 호스트에 새로 만들며, 이후 다운로드·검색·정리에서 같은 경로를 재사용한다.
 
 1. 공유별 READ/WRITE 권한과 디렉터리 구조를 확인한다.
 2. 우선순위 높은 파일만 선별 다운로드한다.
@@ -96,7 +92,7 @@ smb: \> get <REMOTE_FILE> <LOCAL_FILE>
 
 확인할 출력:
 
-- 실제로 `<SMB_COLLECTION_DIR>/<LOCAL_FILE>`에 저장된 설정·백업·스크립트·문서의 크기와 hash. 공유 목록 조회만 성공한 상태와 파일 다운로드 성공을 구분한다.
+- 실제로 `<SMB_COLLECTION_DIR>/<LOCAL_FILE>`에 저장된 설정·백업·스크립트·문서. 공유 목록 조회만 성공한 상태와 파일 다운로드 성공을 구분한다.
 - 전체 `mget *`보다 역할·확장자·수정 시간으로 선별한 `<REMOTE_FILE>`을 우선한다. 추가 파일은 각 원격·로컬 경로를 작업 기록에 별도로 남긴다.
 
 ### 권한과 파일 후보 빠른 확인
@@ -184,7 +180,7 @@ Invoke-HuntSMBShares -Threads <THREAD_COUNT> -OutputDirectory '<POWERSHARES_PARE
 - 탐색한 호스트·공유와 읽기 가능한 경로 수.
 - 출력에 표시된 `<POWERSHARES_RUN_DIR>` 절대 경로와 그 안에 생성된 HTML·CSV·log. `-OutputDirectory`는 parent이며 도구가 `SmbShareHunt-<timestamp>` 하위 경로를 만들 수 있으므로 실제 출력을 기록한다.
 - 자동 분류 결과는 파일 접근 권한과 민감 정보 노출을 확정하지 않으므로 실제 파일 경로와 내용을 다시 확인한다.
-- `<THREAD_COUNT>`는 승인된 호스트 수·SMB 제한·관찰 조건에서 작게 시작해 조정한다. 교육 예시의 `100`을 모든 환경의 기본값으로 쓰지 않는다.
+- `<THREAD_COUNT>`는 대상 호스트 수·SMB 제한·관찰 조건에서 작게 시작해 조정한다. 교육 예시의 `100`을 모든 환경의 기본값으로 쓰지 않는다.
 
 ### SYSVOL 스크립트의 평문 자격 증명 검색
 

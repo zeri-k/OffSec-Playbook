@@ -21,14 +21,19 @@ tags:
 - 입력: 대상 session ID와 현재 destination session name
 - 권한: 해당 session의 Full Control 또는 Connect 권한
 - 인증: 다른 사용자 소유 session은 `/password:*`로 소유자 암호를 prompt에 입력하는 것이 문서화된 기본이다. SYSTEM 무암호 연결은 [[RDP 세션 하이재킹]]에서 버전·구성 의존 기법으로 별도 판정한다.
+- `<TARGET_SESSION_ID>`는 `query user` 출력의 numeric ID, `<CURRENT_SESSION_NAME>`은 현재 연결 대상 session name이다. session 존재는 Connect/Full Control 권한이나 대상 사용자 인증을 뜻하지 않는다.
 
 ## 표준 문법
+
+`<TARGET_SESSION_ID>`는 target Windows host에서 `query user`가 반환한 numeric session ID, `<CURRENT_SESSION_NAME>`은 현재 destination session name이다. `/password:*`는 대상 session 소유자 credential을 interactive prompt로 받으며 Connect/Full Control 권한과 session 존재·연결 성공·desktop access 결과를 구분한다.
 
 ```cmd
 tscon <TARGET_SESSION_ID> /dest:<CURRENT_SESSION_NAME> /password:* /v
 ```
 
 ## 대표 예시
+
+예시의 session ID와 name은 직전 `query user` output에서 같은 host 기준으로 얻어 재사용한다. 연결 뒤 기존 session state를 바꾸거나 새 process·파일을 만들지 않는 이 도구의 cleanup은 새 session 생성 여부가 아니라 original destination/session mapping을 다시 확인하는 것으로 한정한다.
 
 ```cmd
 query user

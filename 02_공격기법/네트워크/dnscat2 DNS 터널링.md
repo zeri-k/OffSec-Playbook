@@ -15,12 +15,6 @@ tags:
 
 대상에서 코드를 실행할 수 있고 대상의 DNS 질의가 공격 호스트 또는 공격자가 제어하는 권한 있는 DNS 경로까지 도달한다면, dnscat2로 명령 및 제어(Command and Control, C2) 채널을 만들어 현재 프로세스 권한의 셸을 얻는다.
 
-## 사용할 때
-
-- HTTP/HTTPS/TCP egress가 제한되지만 DNS 질의는 허용될 때.
-- Windows 대상에서 PowerShell client를 실행하거나 Linux 대상에서 native C client를 실행할 수 있을 때.
-- 일반 reverse shell 포트가 막혀 있고 DNS를 통한 명령 채널이 필요할 때.
-
 ## 전제 조건
 
 | 조건 | 확인 방법 | 충족 기준 |
@@ -30,6 +24,8 @@ tags:
 | 서버 수신 | `dnscat2.rb --dns ...` | secret 생성 및 질의 수신 |
 
 ## 실행
+
+`<DOMAIN>`은 공격 호스트가 권한 있는 DNS 응답을 제공하는 tunnel domain(가상 예시 `tunnel.example.test`)이고, `<ATTACKER_IP>`는 server listener 주소다. `<SECRET>`·`<WINDOW_ID>`는 server 출력에서 기록한 이번 세션 식별값, `<DNSCAT_PID>`는 시작한 server 또는 client PID다. server는 공격 호스트에서, PowerShell·native client는 피벗 호스트에서 실행하며 DNS 질의 성공, command channel, 최종 명령 결과를 분리해 확인한다.
 
 ### 선택 기준
 | 단서 | 의미 | 다음 행동 |

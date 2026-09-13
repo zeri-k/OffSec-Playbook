@@ -18,6 +18,7 @@ tags:
 - 실행 위치: 피해자와 게이트웨이가 보이는 동일 L2 네트워크의 Linux 호스트
 - 필요한 권한과 입력: 로컬 root, 대상 주소, 게이트웨이 주소, 사용할 인터페이스
 - DNS 조작 입력: 설치된 버전의 `<ETTER_DNS_PATH>`에 있는 정확한 도메인/IP 매핑. Linux 패키지는 보통 `/etc/ettercap/etter.dns`를 사용하지만 source 설치와 다른 OS에서는 경로가 다를 수 있으며, HTTPS는 인증서와 HSTS의 영향을 받는다.
+- `<TARGET_IP>`와 `<GATEWAY_IP>`는 같은 L2 segment의 host와 gateway, `<INTERFACE>`는 공격 host의 adapter다. redirect IP는 해당 interface에서 도달 가능한 주소이며 DNS mapping 변경과 HTTPS response interception은 별도 조건이다.
 
 
 ## 표준 사용법

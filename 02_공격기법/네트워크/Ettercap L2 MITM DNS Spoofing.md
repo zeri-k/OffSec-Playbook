@@ -12,13 +12,6 @@ tags:
 
 공격 호스트가 피해자와 게이트웨이와 같은 Layer 2 브로드캐스트 구간에 있고 패킷 전달과 ARP 변조에 필요한 관리자 권한이 있다면, Ettercap으로 중간자 위치를 만든 뒤 관찰한 DNS 질의에만 조작 응답을 보내 HTTP 연결이 통제한 호스트로 이동하는지 검증한다.
 
-## 사용할 때
-
-- 같은 L2 네트워크에 있고 ARP spoofing/MITM 위치를 확보할 수 있을 때.
-- 피해자가 내부 DNS 또는 로컬 네트워크 응답을 신뢰하는 구조일 때.
-- 특정 도메인 접속을 공격자 웹 서버나 캡처 지점으로 리디렉션해 영향도를 검증해야 할 때.
-- 재귀 resolver cache 자체를 변조하는 cache poisoning 검증에는 이 문서를 사용하지 않는다.
-
 ## 전제 조건
 
 | 조건 | 확인 방법 | 충족 기준 |
@@ -38,6 +31,8 @@ tags:
 | HTTPS/HSTS 사용 | 인증서 오류 또는 차단 가능성 | DNS spoofing 영향과 HTTPS 한계를 구분 |
 
 ## 실행
+
+`<INTERFACE>`는 같은 L2 세그먼트의 캡처 인터페이스(예: `eth0`), `<TARGET_IP>`·`<GATEWAY_IP>`는 ARP 대상 주소, `<ETTER_DNS_PATH>`는 수정할 로컬 etter.dns 절대 경로다. `<ETTER_DNS_BACKUP>`은 같은 호스트에 새로 만드는 백업 경로이고 `<HTTP_PORT>`·`<HTTP_PID>`는 이번 로컬 listener의 포트·PID다. 아래 Linux 명령은 MITM·listener를 실행하는 호스트에서 순서대로 사용하며, 복구에도 같은 경로와 PID를 재사용한다.
 
 1. 인터페이스, 피해자 IP, 게이트웨이 IP, 공격 호스트의 `ip_forward`와 양 끝점의 원래 ARP·DNS 결과를 기록한다.
 2. 설치된 `etter.dns` 경로와 기존 파일 hash를 확인하고, 충돌하지 않는 `<TASK_ID>` 표시와 백업 경로를 정해 조작할 도메인 하나만 추가한다.
@@ -160,7 +155,7 @@ test ! -e <HTTP_LOG>
 
 - 현재 설정 hash가 `<ETTER_DNS_TASK_SHA256>`와 같을 때만 백업 전체를 복원한다. 다른 변경이 섞였으면 전체를 덮어쓰지 말고 `sudoedit <ETTER_DNS_PATH>`로 `<TASK_ID>` 블록만 제거한 뒤 원본 내용과 대조한다.
 - Ettercap은 unified sniffing을 시작할 때 kernel IP forwarding을 변경할 수 있고, 공격 호스트가 gateway이면 종료 후 원래 값을 자동 복원하지 못할 수 있다. 기록한 `<IP_FORWARD_BEFORE>` 값으로만 되돌리고 `sysctl -n net.ipv4.ip_forward`로 확인한다.
-- `<HTTP_PID>`만 종료하고 `ss -lntp`에서 해당 PID와 `<HTTP_PORT>` listener가 사라졌는지 확인한다. 프로세스가 이미 없으면 이름으로 다른 Python을 종료하지 말고 포트의 실제 소유자를 확인한다. `<HTTP_LOG>`는 승인된 작업 저장소로 먼저 옮겨야 하는 증적이 아니라면 exact 경로만 제거하며 Vault에 넣지 않는다.
+- `<HTTP_PID>`만 종료하고 `ss -lntp`에서 해당 PID와 `<HTTP_PORT>` listener가 사라졌는지 확인한다. 프로세스가 이미 없으면 이름으로 다른 Python을 종료하지 말고 포트의 실제 소유자를 확인한다. `<HTTP_LOG>`는 작업 저장소로 보존하지 않는다면 exact 경로만 제거하며 Vault에 넣지 않는다.
 
 ## 관련 상태 라우터
 

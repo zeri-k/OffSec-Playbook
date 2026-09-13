@@ -19,6 +19,8 @@ tags:
 - HTTP form 입력: 요청 경로, form parameter와 실패 문자열
 - spraying 조건: 계정 잠금 정책과 rate limit을 확인하고 thread/시도 간격을 정한다.
 
+`<TARGET>`은 인증 서비스 호스트/IP(예: `ssh.example.test`), `<SERVICE>`는 해당 서비스의 Hydra 모듈, 목록 입력은 Linux 호스트의 newline 파일이다. `<USER_LIST>`·`<PASSWORD_LIST>`는 조합 입력, `<USERPASS_FILE>`은 `login:password` 한 쌍씩인 파일이며, `<FAILURE_MARKER>`는 대상 HTTP 실패 응답에서 관찰한 문자열이다.
+
 
 ## 표준 사용법
 
@@ -43,7 +45,7 @@ cd -- "$HYDRA_WORKDIR"
 hydra -L '<USER_LIST>' -P '<PASSWORD_LIST>' ssh://<TARGET>
 ```
 
-이 예시는 모든 사용자·비밀번호 조합을 허용한 범위에서만 쓴다. 유출 pair 재사용 검증을 의미하지 않는다.
+이 예시는 사용자·비밀번호의 모든 조합을 시도한다. 유출 pair 재사용 검증을 의미하지 않는다.
 
 ### 유출 `login:password` pair 검증
 
@@ -126,7 +128,7 @@ hydra -L '<USER_LIST>' -p '<PASSWORD>' -f smtp://<TARGET>
 
 - Hydra는 인증 시도와 서버 로그를 남길 수 있고 계정 잠금을 유발할 수 있다. 로컬 파일을 삭제해도 이 영향은 되돌려지지 않으므로 [[원격 비밀번호 공격]]의 중단·잠금 분기를 따른다.
 - `-o result.txt`는 양성 credential을, debug pipeline은 시도 조합과 서버 응답을 담을 수 있다. 중단된 작업은 현재 작업 디렉터리에 `hydra.restore`를 남길 수 있다.
-- 검토·인계가 끝나면 Hydra를 실행한 Linux host에서 이번 작업이 만든 정확한 파일만 삭제한다. 작업 디렉터리에 다른 파일이 있으면 원인을 확인하고 디렉터리 제거를 중단한다.
+- 필요한 분석이 끝나면 Hydra를 실행한 Linux host에서 이번 작업이 만든 정확한 파일만 삭제한다. 작업 디렉터리에 다른 파일이 있으면 원인을 확인하고 디렉터리 제거를 중단한다.
 
 ```bash
 cd -- "$HYDRA_ORIGINAL_WORKDIR"

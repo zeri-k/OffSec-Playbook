@@ -14,13 +14,6 @@ tags:
 
 현재 제어하는 AD 사용자 또는 그룹의 SID와 GPO·ACL 읽기 권한이 있으면, DC LDAP에 닿는 Windows PowerShell에서 쓰기 ACE를 찾고 GPO GUID를 표시 이름과 연결하여 변경 가능성과 잠재 영향 범위를 별도로 검증할 후보를 얻는다.
 
-## 사용할 때
-
-- 현재 보유 정보: [[AD ACL 권한 열거와 공격 경로 식별]] 또는 BloodHound에서 GPO 제어 edge와 제어 중인 사용자·그룹을 확인했다.
-- 명령 실행 위치와 도달 대상: PowerView를 불러올 수 있는 Windows PowerShell에서 대상 도메인의 DC LDAP에 접근할 수 있다.
-- 현재 계정과 권한: 조회에 사용하는 AD Identity가 GPO 객체와 ACL을 읽을 수 있다. 조회 계정과 ACE의 `SecurityIdentifier`가 가리키는 제어 주체가 다를 수 있으므로 각각 확인한다.
-- 지금 가능한 행동과 결과: GPO를 변경하기 전에 쓰기 ACE의 대상 GPO, 표시 이름과 잠재 적용 OU·사용자·컴퓨터를 좁힐 수 있으며, 이 문서에서는 정책을 수정하지 않는다.
-
 ## 전제 조건
 
 | 확인할 것 | 필요한 상태 | 확인 방법 | 미충족 시 다음 확인 |
@@ -32,6 +25,8 @@ tags:
 | 필요한 파일·목록·주소 | 제어 중인 사용자·그룹 SID, PowerView, 필요하면 GroupPolicy module | `Convert-NameToSid`와 모듈 import 결과 확인 | 이름 형식·그룹 중첩을 확인하고 RSAT가 없으면 PowerView 결과만 사용 |
 
 ## 실행
+
+이 문서에서 `<CONTROLLED_USER_OR_GROUP>`은 ACE에 대응시킬 제어 주체(예: `CORP\\operators`)이고, `<GPO_GUID>`는 앞 ACL 출력의 GPO `name` 필드에서 얻은 중괄호 포함 GUID(예: `{01234567-89ab-cdef-0123-456789abcdef}`)다. 둘 다 조회 PowerShell 계정과는 별개의 입력일 수 있다.
 
 ### 도구 경로 선택
 
@@ -116,7 +111,6 @@ Get-GPO -Guid '<GPO_GUID>'
 
 - [[AD ACL 권한 열거와 공격 경로 식별]]
 - [[AD 관계 그래프 수집과 공격 경로 식별]]
-- [[AD ACL 권한 열거와 공격 경로 식별]]
 
 ## 관련 도구
 

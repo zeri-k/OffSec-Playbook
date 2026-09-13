@@ -19,6 +19,7 @@ ProxyChains는 TCP `connect()`를 사용하는 명령의 연결을 설정된 SOC
 - 실행 입력: SOCKS를 지원하지 않는 TCP 기반 CLI 명령
 - 네트워크 조건: 로컬에서 SOCKS listener에 연결되고 SOCKS 서버에서 내부 목적지로 도달 가능
 - 제약: raw socket과 UDP 기반 동작은 ProxyChains를 통과하지 않음
+- wrapped command의 `<INTERNAL_TARGET>`은 SOCKS server가 도달할 IP/FQDN/URL이며, `<DOMAIN>`·`<USER>`·`<PASSWORD>`는 그 대상 서비스에 전달하는 인증 입력으로 proxy 설정과 별개다. SOCKS 연결 성공은 내부 service 인증·명령 실행을 보장하지 않는다.
 
 ## 표준 사용법
 
@@ -83,7 +84,7 @@ Nmap은 raw SYN scan이 아니라 TCP connect scan인 `-sT`를 사용해야 Prox
 ### SMB 접속을 proxy로 라우팅
 
 ```bash
-proxychains smbclient //<INTERNAL_TARGET>/HR -U user
+proxychains smbclient //<INTERNAL_TARGET>/HR -U '<USER>'
 ```
 
 기존 CrackMapExec 명령을 재현하거나 현재 NetExec으로 SMB 인증과 원격 명령을 확인할 때도 같은 SOCKS 경로를 사용할 수 있다.

@@ -22,8 +22,11 @@ tags:
 - Silver Ticket 입력: 서비스 계정·컴퓨터 계정 key와 `<SERVICE>/<HOST_FQDN>` SPN.
 - 같은 포리스트 cross-domain ExtraSids 입력: 부모 도메인 SID와 대상 그룹 RID를 결합한 SID. forest·external trust에 일반화하지 않고 SID filtering 경계를 별도 확인한다.
 - 환경에 따라 KDC가 ticket의 클라이언트 계정 이름을 확인한다. 재현성과 오류 진단을 위해 실제로 존재하는 사용자 이름과 일치하는 RID를 사용한다.
+- `<DOMAIN_SID>`는 대상 domain SID, `<SERVICE>/<HOST_FQDN>`은 Silver Ticket service principal, key·user·RID는 같은 principal 관계에서 얻은 값이다. output ccache는 Linux host의 새 파일이며 파일 생성은 service acceptance가 아니다.
 
 ## 표준 사용법
+
+`<DOMAIN_SID>`·`<DOMAIN>`·`<USER>`·`<RID>`는 ticket subject의 같은 AD namespace 값이고 `<KEY>`는 `krbtgt` 또는 service/computer account key다. `<SERVICE>/<HOST_FQDN>`는 Silver Ticket SPN, `<OUTPUT_CCACHE>`는 Linux output path이며 generated file은 KDC/service acceptance가 아니다.
 
 ```bash
 impacket-ticketer -domain <DOMAIN> -domain-sid <DOMAIN_SID> (-nthash <NT_HASH> | -aesKey <AES_KEY>) [options] <USER>

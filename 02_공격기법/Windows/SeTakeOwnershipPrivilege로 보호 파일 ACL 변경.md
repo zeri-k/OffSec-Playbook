@@ -14,11 +14,7 @@ tags:
 
 현재 token에 `SeTakeOwnershipPrivilege`가 있고 변경할 대상 파일이 있으면, 필요한 경우 그 privilege 하나만 현재 PowerShell process에서 활성화하고 소유권·최소 ACL을 변경해 파일을 읽은 뒤 원래 보안 설명자와 privilege 상태로 복구한다.
 
-## 사용할 때
-
-- `whoami /priv`에서 `SeTakeOwnershipPrivilege`가 `Enabled` 또는 `Disabled`로 존재하고, 파일은 나열할 수 있지만 내용 읽기가 거부될 때.
-- 파일·폴더·레지스트리 같은 securable object의 owner·ACL 변경이 실제 대상의 동작에 영향을 줄 수 있을 때.
-- 이미 읽기 가능한 다른 정보 수집 경로가 없고, 파일 경로·원래 owner·ACL을 기록할 수 있을 때.
+> owner 또는 DACL 변경은 기존 사용자·서비스의 파일 접근을 바꿀 수 있다. 변경 전 기록한 exact owner와 ACL만 복원하며, 원래 값을 확정하지 못하면 복구 완료로 표시하지 않는다.
 
 ## 전제 조건
 

@@ -19,6 +19,7 @@ Plink는 Windows에서 SSH 연결과 동적 SOCKS 포워딩·로컬 단일 포�
 - SSH 입력: 피벗 호스트 주소와 포트, 사용자명, PuTTY private key 또는 Pageant의 인증 키, 검증된 SSH host key fingerprint
 - 동적 포워딩 입력: 열어 둘 로컬 SOCKS 포트
 - 로컬 포워딩 입력: 로컬 listen 포트와 내부 목적지 IP·포트
+- `<PIVOT>`은 Windows client가 SSH로 접속할 host, `<INTERNAL_TARGET>`은 pivot 관점 목적지, `.ppk`는 Windows client의 절대 key path다. `-hostkey` fingerprint는 사전에 검증한 SSH server fingerprint이며 임의 수락 값이 아니다.
 
 ## 표준 사용법
 
@@ -61,7 +62,7 @@ plink.exe -ssh -N -L 127.0.0.1:13389:<INTERNAL_IP>:3389 -hostkey "<SSH_HOST_KEY_
 | `-L <LPORT>:<RHOST>:<RPORT>` | 로컬 포트 포워딩 | RDP/DB/웹 단일 포트 접근 |
 | `-l <USER>` | 사용자 지정 | 사용자명 분리 입력 |
 | `-i <KEY>` | private key 지정 | 키 기반 인증 |
-| `-hostkey <FINGERPRINT>` | 허용할 서버 host key 지정 | registry 신뢰 상태를 바꾸지 않고 승인된 fingerprint 고정 |
+| `-hostkey <FINGERPRINT>` | 허용할 서버 host key 지정 | registry 신뢰 상태를 바꾸지 않고 사전 검증한 fingerprint 고정 |
 | `-batch` | 대화형 prompt 대신 오류로 종료 | host key와 비대화형 인증을 미리 준비한 자동 실행 |
 
 ## 도구 고유 출력
@@ -71,8 +72,8 @@ plink.exe -ssh -N -L 127.0.0.1:13389:<INTERNAL_IP>:3389 -hostkey "<SSH_HOST_KEY_
 | SSH 세션 유지 | 터널 생성 가능 | 로컬 포트 listen 확인 |
 | 로컬 SOCKS 포트 listen | `-D` 성공 | [[Proxifier]] 또는 ProxyChains로 내부 접근 |
 | 로컬 포트로 서비스 응답 | `-L` 성공 | 해당 서비스 클라이언트 실행 |
-| SSH 로그인 실패 | 계정·키·host key 또는 SSH 서버 포트 문제 | `-v` 출력과 `-l`, `-i`, `-P`, 승인된 fingerprint 확인 |
-| `The host key is not cached` 또는 host key 불일치 | 서버 신뢰 기준이 없거나 예상 fingerprint와 다름 | 임의 수락하지 말고 승인된 fingerprint와 `-hostkey` 값 대조 |
+| SSH 로그인 실패 | 계정·키·host key 또는 SSH 서버 포트 문제 | `-v` 출력과 `-l`, `-i`, `-P`, 사전 검증한 fingerprint 확인 |
+| `The host key is not cached` 또는 host key 불일치 | 서버 신뢰 기준이 없거나 예상 fingerprint와 다름 | 임의 수락하지 말고 사전 검증한 fingerprint와 `-hostkey` 값 대조 |
 | `-D` 후 RDP가 직접 안 됨 | SOCKS 프록시와 단일 포워딩 혼동 | RDP 하나는 `-L 13389:<TARGET>:3389`로 검증 |
 | SOCKS client 실패 | proxy 설정 오류 | SOCKS host/port, SOCKS4/5 지원 확인 |
 | 내부 서비스 실패 | 피벗 호스트에서 내부 대상 접근 불가 | 피벗 호스트에서 `nc -vz <INTERNAL_IP> <PORT>` |

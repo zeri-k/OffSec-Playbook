@@ -17,10 +17,13 @@ DBeaver는 JDBC driver를 통해 MySQL, MSSQL 등 여러 DB에 접속하고 sche
 
 - 실행 위치: GUI를 사용할 수 있는 Linux 또는 Windows 호스트와 DB별 JDBC driver
 - 필요한 입력: DB 종류, host, port, database/SID/service, 사용자명과 비밀번호
+- host는 DB listener의 IP/FQDN(예: `database.example.invalid`), Oracle의 Service Name은 SID와 다른 접속 식별자다. GUI에 입력한 virtual 예시는 `analyst`/`Example-Only-Password!`이며 실제 credential의 출처와 저장 위치를 명령 결과와 혼동하지 않는다.
 - 환경별 입력: SSL/TLS와 DB별 driver property; 연결 전 대상 DB에 대한 네트워크 접근이 필요하다.
 
 
 ## 표준 사용법
+
+Host와 Port는 GUI를 실행한 host에서 도달하는 DB listener이고, Database/SID/Service는 선택한 driver가 요구하는 접속 식별자다. 가상 MySQL 예시는 `database.example.invalid:3306`의 `app`, MSSQL 예시는 같은 host의 `1433`이며 Username/Password는 해당 DB authentication 입력이다.
 
 1. 새 Database Connection을 만든다.
 2. DB 종류를 선택한다.
@@ -41,6 +44,8 @@ Password: <password>
 ```
 
 ### MSSQL 계정으로 테이블 탐색
+
+`<TARGET>`은 MSSQL listener IP/FQDN, `<USER>`·`<password>`는 SQL 또는 Windows authentication 방식에 맞는 한 credential pair다. 연결 test 성공과 schema/tree 표시는 서로 다른 DB object의 READ·WRITE 권한을 뜻하지 않는다.
 
 ```text
 Driver: SQL Server
@@ -66,7 +71,7 @@ Password: <password>
 | 출력/상태 | 의미 | 다음 행동 |
 |---|---|---|
 | 연결 성공 및 schema/tree 표시 | credential로 DB 접근 가능 | DB/테이블 목록, 권한, 민감 데이터 위치 확인 |
-| 테이블 조회 가능 | 데이터 읽기 권한 존재 | 계정, 토큰, 설정값, 개인정보 등 영향 범위 정리 |
+| 테이블 조회 가능 | 데이터 읽기 권한 존재 | 계정, API bearer token·web session token 같은 민감값, 설정값, 개인정보 등 영향 범위 정리 |
 | 권한 오류 | 접속은 됐지만 조회/수정 권한 제한 | 현재 사용자 권한과 접근 가능한 schema 확인 |
 | 연결 실패 | 호스트, 포트, DB 종류, SSL, credential 문제 | CLI 클라이언트로 같은 값 재검증 |
 

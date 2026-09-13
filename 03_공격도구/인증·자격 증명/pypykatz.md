@@ -20,6 +20,8 @@ Pypykatz는 Windows LSASS minidump를 오프라인으로 분석해 로그온 세
 - 파일 조건: 분석 호스트에서 읽을 수 있고 전송 과정에서 손상되지 않은 dump
 - 선택 입력: 긴 분석 결과를 받을 shell 출력 파일
 
+`<LSASS_DUMP_PATH>`는 Linux/Windows 분석 호스트에서 읽는 전달받은 dump 경로, `<PYPYKATZ_OUTPUT>`은 새 분석 출력 파일(예: `./pypykatz.txt`)이다. `<OPERATOR_HOME>`은 실행 호스트의 작업 디렉터리이며 표준 예시의 `<OPERATOR_HOME>/Documents/lsass.dmp`는 같은 dump의 경로 표기다.
+
 ## 표준 사용법
 
 ```bash
@@ -39,7 +41,6 @@ pypykatz lsa minidump <OPERATOR_HOME>/Documents/lsass.dmp
 ```bash
 test ! -e '<PYPYKATZ_OUTPUT>'
 pypykatz lsa minidump '<LSASS_DUMP_PATH>' | tee '<PYPYKATZ_OUTPUT>'
-test -s '<PYPYKATZ_OUTPUT>'
 ```
 
 기존 출력 파일이 있으면 덮어쓰지 말고 다른 exact 경로를 정한다. `tee`의 종료 상태만으로 parser 성공을 확정하지 않고 화면과 파일에서 `FILE`, `LogonSession`, parser 오류를 함께 확인한다.
@@ -64,7 +65,7 @@ test -s '<PYPYKATZ_OUTPUT>'
 
 ## 변경 영향과 복구
 
-기본 분석은 입력 dump를 읽고 표준 출력에 표시할 뿐이다. `tee` 예시는 `<PYPYKATZ_OUTPUT>`을 추가로 만들며, 이 파일에도 hash·key·masterkey·평문 후보가 남을 수 있다. 필요한 후속 처리가 끝나면 이번 실행 전 없었던 exact 출력만 승인된 보존·폐기 정책에 따라 처리한다.
+기본 분석은 입력 dump를 읽고 표준 출력에 표시할 뿐이다. `tee` 예시는 `<PYPYKATZ_OUTPUT>`을 추가로 만들며, 이 파일에도 hash·key·masterkey·평문 후보가 남을 수 있다. 필요한 후속 처리가 끝나면 이번 실행에서 만든 exact 출력만 처리한다.
 
 ```bash
 rm -- '<PYPYKATZ_OUTPUT>'

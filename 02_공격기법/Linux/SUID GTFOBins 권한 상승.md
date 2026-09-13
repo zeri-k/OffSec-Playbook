@@ -13,11 +13,7 @@ tags:
 
 현재 Linux 셸의 계정으로 실행 가능한 SUID 프로그램이 있고 그 프로그램에 검증된 셸 실행·하위 명령 실행 또는 파일 읽기 기능이 있다면, 프로그램 소유자의 effective user ID로 셸이나 제한된 고권한 파일 접근을 얻는다.
 
-## 사용할 때
-
-- `find / -perm -4000` 결과에 비표준 SUID binary가 있을 때.
-- `find`, `bash`, `base64` 또는 custom binary처럼 GTFOBins 후보가 보일 때.
-- root 소유 SUID 파일이 writable path나 취약한 호출 경로를 사용할 때.
+`find / -perm -4000` 결과에 비표준 SUID binary 또는 GTFOBins 후보가 보이면, 설치된 버전과 실제 호출 경로를 먼저 대조한다. root 소유 SUID 파일이 보인다는 사실만으로 셸·쓰기 권한을 얻었다고 판단하지 않는다.
 
 ## 전제 조건
 
@@ -41,6 +37,8 @@ tags:
 아래 예시는 발견한 모든 명령을 차례로 실행하는 목록이 아니다. `find`, `bash`, `base64` 중 실제 SUID 소유권과 기능을 확인한 하나만 선택한다. 파일 쓰기는 기존 내용·소유권·mode 복구가 필요한 상태 변경이므로 이 문서의 대표 실행 범위에서 제외한다.
 
 ### SUID 탐색
+
+이 블록은 대상 Linux 셸에서 실행한다. 출력의 경로·소유자·mode 중 SUID bit와 실제 소유자를 다음 실행 전에 확인하며, `find` 결과만으로 effective UID 변경을 확정하지 않는다.
 
 ```bash
 find / -perm -4000 -type f -ls 2>/dev/null
@@ -79,7 +77,7 @@ find / -perm -4000 -type f -ls 2>/dev/null
 
 ### SUID `base64`로 파일 읽기
 
-실행 위치: `/usr/bin/base64` 자체가 SUID 후보로 확인됐고 `<TARGET_FILE>`의 정확한 경로와 읽을 목적이 정해진 대상 Linux 셸.
+실행 위치: `/usr/bin/base64` 자체가 SUID 후보로 확인된 대상 Linux 셸. `<TARGET_FILE>`은 해당 host에서 읽을 목적이 있는 절대 경로(가상 예: `/root/.ssh/id_rsa`)이며, 이 블록의 성공은 제한된 읽기 결과만 뜻한다.
 
 ```bash
 ls -l /usr/bin/base64

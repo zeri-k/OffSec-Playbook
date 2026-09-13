@@ -21,10 +21,13 @@ tags:
 - 필요한 파일: 대상 환경에 맞는 `SeBackupPrivilegeUtils.dll`, `SeBackupPrivilegeCmdLets.dll`.
 - 호환 조건: upstream에 포함된 prebuilt DLL은 x64·.NET Framework 2.0용이다. `Import-Module` 실패 시 현재 PowerShell process architecture와 CLR 호환성을 확인하고, 맞지 않으면 검증된 source에서 대상 환경용으로 빌드한 DLL을 사용한다.
 - 대상 조건: 원본 파일 경로와 현재 계정이 쓸 수 있는 사본 저장 경로.
+- `<SOURCE_FILE>`은 대상 Windows host의 절대 보호 파일 경로, `<DESTINATION_FILE>`은 현재 계정이 생성 가능한 별도 절대 경로(예: `C:\\Temp\\copied-SAM`)다. EFS·ADS·reparse point는 단순 복사 출력만으로 보존 여부를 단정하지 않는다.
 
 현재 upstream 구현은 원본을 `GENERIC_READ`, share mode 0, `OPEN_EXISTING`, `FILE_FLAG_BACKUP_SEMANTICS`로 열고 `ReadFile`로 기본 stream을 복사한다. 따라서 활성화된 backup privilege의 읽기에는 원본 DACL의 명시적 deny를 일반 실패 원인으로 두지 않는다. 반면 출력은 backup flag 없이 `GENERIC_WRITE`로 새로 열므로 출력 parent ACL과 파일 충돌이 별도 조건이며, source의 기존 handle과 share mode가 충돌하면 sharing violation이 날 수 있다. EFS·alternate stream·reparse point 등 파일 형태는 이 단순 복사가 모든 backup data를 보존한다고 가정하지 말고 생성된 사본을 따로 검증한다.
 
 ## 표준 사용법
+
+아래 `<SOURCE_FILE>`은 이 PowerShell session이 실행되는 대상 Windows host의 절대 원본 경로이고, `<DESTINATION_FILE>`은 현재 account가 새로 만들 수 있는 별도 절대 경로다. 예시는 `C:\\Windows\\System32\\config\\SAM`에서 `C:\\Temp\\copied-SAM`으로의 복사다. DLL 경로는 같은 PowerShell host의 현재 directory 기준이며, `Set-SeBackupPrivilege`와 복사는 같은 process에서 이어서 실행한다.
 
 ```powershell
 Import-Module .\SeBackupPrivilegeUtils.dll
@@ -50,15 +53,16 @@ Get-SeBackupPrivilege
 
 ### 보호 파일 사본 생성
 
+`<PROTECTED_FILE>`과 `<WRITABLE_PATH>`는 바로 앞 표준 문법의 `<SOURCE_FILE>`·`<DESTINATION_FILE>`과 같은 역할이다. 원본은 대상 Windows host의 절대 파일 경로이고 출력 directory는 복사 process account가 쓰는 경로다. 예시 값은 `C:\\Windows\\System32\\config\\SAM`과 `C:\\Temp`이다.
+
 ```powershell
 Copy-FileSeBackupPrivilege '<PROTECTED_FILE>' '<WRITABLE_PATH>\copied-file'
-Get-FileHash '<WRITABLE_PATH>\copied-file'
 ```
 
 확인할 출력:
 
-- `Copied <SIZE> bytes`와 생성된 사본의 크기·hash.
-- 이 출력만으로 원본의 최신성, 사본 내용의 유용성이나 고권한 세션을 확정할 수는 없다.
+- `Copied <SIZE> bytes`는 기본 stream 사본 생성과 copy가 보고한 byte 수를 뜻한다.
+- 이 출력만으로 원본의 최신성, 사본 내용의 유용성, DACL 보존, EFS·alternate stream·reparse point 처리 또는 고권한 세션을 확정할 수는 없다. 후속 도구가 요구하는 파일 형식·내용은 별도 읽기 단계에서 판단한다.
 - `Opening input file`이면 같은 process의 privilege 활성 상태, DLL 호환성, 원본 경로·EFS와 sharing violation을 확인한다.
 - `Error creating output file`이면 출력 파일의 사전 존재·overwrite 선택, parent directory ACL과 사용 중인 handle을 확인한다.
 
@@ -75,7 +79,7 @@ Get-FileHash '<WRITABLE_PATH>\copied-file'
 | 출력·상태 | 의미 | 다음 확인 |
 |---|---|---|
 | `SeBackupPrivilege is enabled` | 현재 세션에서 privilege 활성화 | 보호 파일 복사 시도 |
-| `Copied <SIZE> bytes` | 사본 생성 성공 | 크기·hash와 내용 확인 |
+| `Copied <SIZE> bytes` | 기본 stream 사본 생성과 copy가 보고한 byte 수 | 후속 도구가 요구하는 파일 형식·내용을 별도 읽기 단계에서 확인; DACL·EFS·alternate stream 보존은 이 출력만으로 판정하지 않음 |
 | `Opening input file`·access denied·sharing violation | privilege·모듈 호환성 또는 source open 조건 실패 | 같은 process의 privilege 상태, source 경로·암호화·share mode 확인 |
 | `Error creating output file` | destination create 조건 실패 | 사전 존재·overwrite 선택과 parent ACL 확인 |
 

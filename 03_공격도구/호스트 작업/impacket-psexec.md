@@ -20,9 +20,12 @@ tags:
 - 실행 위치: 대상 SMB/RPC TCP/445에 접근 가능한 Linux 호스트
 - 필요한 입력: 대상 주소, 도메인/로컬 관리자 credential 또는 NTLM hash
 - 대상 조건: `ADMIN$` 접근과 Service Control Manager를 통한 서비스 생성 권한이 필요하다.
+- `<TARGET>`은 SMB server의 IP/FQDN이고 `<DOMAIN>/<USER>` 또는 로컬 host 범위는 credential namespace다. 임시 service와 binary 이름은 매 실행 고유하게 기록해 기존 service와 충돌하지 않도록 하며 복구는 exact 이름만 대상으로 한다.
 
 
 ## 표준 사용법
+
+`<TARGET>`은 SMB/RPC host, `<DOMAIN>/<USER>` 또는 `LM:NT`는 remote admin requester credential이다. generated service·binary identifiers는 output에서 exact name/path를 기록해 cleanup에서 재사용하며 ADMIN$ access·service creation·shell output은 각각 별도 확인한다.
 
 ```bash
 impacket-psexec <domain>/<user>:<password>@<target>

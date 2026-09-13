@@ -23,7 +23,7 @@ tags:
 | 현재 계정 | 현재 token에 `Event Log Readers` SID 또는 동등한 채널 읽기 ACE가 반영됨 | `whoami /groups`와 실제 채널 조회 결과 확인 | 그룹 디렉터리 상태와 현재 token을 구분하고 새 로그온 필요 여부 확인 |
 | 현재 권한 | 선택한 로그 채널의 event read 성공 | `wevtutil gl <LOG>`와 제한된 query의 접근 거부 여부 확인 | 채널별 ACL을 확인하고 다른 채널의 성공을 Security 로그 권한으로 확대하지 않음 |
 | 기록 조건 | 4688과 `Process Command Line` 또는 PowerShell Operational 이벤트가 실제로 기록됨 | 최근 이벤트 몇 건의 ID·message·XML 확인 | 이벤트 부재, audit 미설정, retention으로 인한 삭제를 구분 |
-| 검색 범위 | 승인된 시간 범위와 최대 이벤트 수를 정함 | 시작 시각과 `/c:<COUNT>` 또는 `-MaxEvents` 기록 | 전체 로그 무제한 dump 대신 최근 범위부터 좁힘 |
+| 검색 범위 | 시간 범위와 최대 이벤트 수를 정함 | 시작 시각과 `/c:<COUNT>` 또는 `-MaxEvents` 기록 | 전체 로그 무제한 dump 대신 최근 범위부터 좁힘 |
 
 Event Log Readers 멤버십은 읽기 후보일 뿐 모든 채널 접근을 보장하지 않는다. 특히 Security 채널은 로컬 정책과 채널 ACL에 따라 별도 권한이 필요할 수 있으므로 실제 query 성공으로 확인한다.
 
@@ -96,7 +96,7 @@ Get-WinEvent -FilterHashtable @{LogName='Microsoft-Windows-PowerShell/Operationa
 
 - 그룹 구성원 목록, 현재 process token의 그룹 SID, 특정 채널 event read 성공을 서로 분리한다.
 - event에 기록된 문자열은 과거 명령 인자다. 현재 유효한 비밀번호·token인지, 어느 계정과 서비스에 속하는지는 별도 검증이 필요하다.
-- 조회만 수행하며 로그를 clear·export하거나 audit 정책을 변경하지 않는다. `wevtutil cl`은 증적을 지우므로 이 절차에서 사용하지 않는다.
+- 조회만 수행하며 로그를 clear·export하거나 audit 정책을 변경하지 않는다. `wevtutil cl`은 로그 기록을 지우므로 이 절차에서 사용하지 않는다.
 
 ## 후속 공격 연결
 

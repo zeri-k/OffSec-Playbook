@@ -19,9 +19,12 @@ tags:
 - 실행 위치: 대상 FTP TCP/21에 접근 가능한 Linux 또는 Windows 호스트
 - 필요한 입력: 서버 주소와 포트, anonymous 또는 사용자 credential
 - 파일 전송 입력: 로컬/원격 경로와 텍스트·바이너리 전송 모드
+- 로컬 경로는 FTP client를 실행한 호스트 기준(예: `./report.bin`)이고 원격 경로는 FTP server의 현재 디렉터리 기준(예: `incoming/report.bin`)이다. `get`은 READ 결과, `put`은 WRITE 결과이므로 전송 성공을 실행 권한으로 해석하지 않는다.
 
 
 ## 표준 사용법
+
+`<TARGET>`은 FTP control listener의 IP/FQDN, `<REMOTE_PATH>`는 server의 현재 directory 기준 파일명·경로, `<LOCAL_PATH>`는 FTP client 실행 host의 파일 경로다. 가상 예시는 `ftp.example.invalid`, `incoming/report.bin`, `./report.bin`이며 get과 put은 각각 별도의 READ·WRITE 결과다.
 
 ```bash
 ftp <target>

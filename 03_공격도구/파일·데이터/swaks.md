@@ -18,6 +18,7 @@ tags:
 - 실행 환경: `swaks`가 설치된 Linux 호스트
 - 입력: SMTP 서버, 포트와 envelope 발신자·수신자
 - 선택 입력: 제목, 본문, STARTTLS 설정과 SMTP 인증 정보
+- `<SMTP_HOST>`는 SMTP listener의 IP/FQDN, `<TEST_ID>`는 제목·header·body에 같은 가상 식별자로 넣는 값이다. envelope `--from`/`--to`와 message header는 별도이며 `250` queue 수락은 mailbox 수신을 단독으로 보장하지 않는다.
 
 ## 표준 사용법
 
@@ -40,12 +41,12 @@ swaks --from relay-test@external.test --to receiver@external.test --server <TARG
 - `MAIL FROM`, `RCPT TO` 단계가 `250` 계열로 수락되는지 확인한다.
 - `--quit-after RCPT`는 DATA를 보내지 않으므로 실제 queue 수락·외부 전달은 아직 미확인이다.
 
-### 허가된 전체 전달 확인
+### 전체 전달 확인
 
-통제하는 외부 수신함에 같은 `<TEST_ID>`가 없음을 확인한 뒤, 실제 전달 검증이 허가된 경우에만 실행한다.
+통제하는 외부 수신함에 같은 `<TEST_ID>`가 없음을 확인한 뒤 실행한다.
 
 ```bash
-swaks --from relay-test@external.test --to receiver@external.test --header 'Subject: Relay Test <TEST_ID>' --header 'X-Assessment-ID: <TEST_ID>' --body 'Authorized relay delivery check <TEST_ID>' --server <TARGET>
+swaks --from relay-test@external.test --to receiver@external.test --header 'Subject: Relay Test <TEST_ID>' --header 'X-Assessment-ID: <TEST_ID>' --body 'Relay delivery check <TEST_ID>' --server <TARGET>
 ```
 
 확인할 출력:

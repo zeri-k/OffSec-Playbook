@@ -13,12 +13,6 @@ tags:
 
 현재 명령 실행 위치에서 대상 IMAP 또는 POP3 포트에 연결할 수 있고 유효한 메일 계정이 있다면, 그 계정의 메일함에서 내부 URL·초기 비밀번호·토큰·첨부 파일을 찾는다. 메일 계정 로그인 성공은 다른 서비스의 인증 성공을 의미하지 않는다.
 
-## 사용할 때
-
-- IMAP/POP3 포트가 열려 있고 메일 계정 credential 또는 후보가 있을 때.
-- [[SMTP 사용자 열거]], [[POP3 USER 사용자 열거]], 웹 유출, SMB 공유에서 이메일 계정이 확보되었을 때.
-- 메일함에 VPN, 웹 포털, 임시 비밀번호, 티켓, 첨부가 있을 가능성이 있을 때.
-
 ## 전제 조건
 
 | 조건 | 확인 방법 | 충족 기준 |
@@ -29,6 +23,8 @@ tags:
 | 로컬 저장 경로 | `test ! -e '<LOCAL_MAIL_DIR>'` | 이번 작업 전용 경로를 새로 만들 수 있음 |
 
 ## 실행
+
+`<IMAP_HOST>`·`<POP3_HOST>`는 대상 메일 서버 FQDN(가상 예시 `mail.example.test`)이고, `<USER>`·`<PASSWORD>`는 해당 메일 서비스에 제출할 계정 자료다. `<UID>`는 `UID SEARCH` 결과의 IMAP UID, `<ID>`는 `LIST` 결과의 POP3 message ID이며 `<LOCAL_MAIL_DIR>`은 공격 호스트에 새로 만들 절대 또는 상대 경로다. 아래 명령은 메일 서버에 도달하는 공격 호스트에서 실행하고, 같은 UID·ID는 조회·복구에 재사용한다.
 
 ### 프로토콜과 전송 방식 선택
 
@@ -44,7 +40,7 @@ IMAP은 폴더와 서버 보관 메시지를 다루고 POP3는 메시지 번호�
 1. TLS/STARTTLS와 capability를 확인한다. 인증서 검증이 실패하면 내부 CA를 지정하고, 오류를 숨기는 `-k`를 기본값으로 사용하지 않는다.
 2. credential을 수동 또는 curl password prompt로 검증하며 실제 password를 명령행·Vault·수집 transcript에 남기지 않는다.
 3. IMAP은 `EXAMINE`과 `BODY.PEEK[]`, POP3는 `LIST`와 `RETR`만 사용해 작업 전 메시지 상태를 보존한다.
-4. 필요한 메시지만 전용 로컬 경로에 저장하고 크기·SHA-256을 확인한다.
+4. 필요한 메시지만 전용 로컬 경로에 저장하고 MIME 정보와 내용을 확인한다.
 5. 비밀번호, 토큰, 내부 URL, 파일명을 추출해 후속 서비스로 넘기되 문자열 존재와 실제 인증 성공을 분리한다.
 
 ### IMAPS 993/TCP
@@ -115,7 +111,6 @@ test ! -e '<LOCAL_MAIL_DIR>'
 install -d -m 700 '<LOCAL_MAIL_DIR>'
 test ! -e '<LOCAL_MAIL_DIR>/<UID>.eml'
 curl 'imaps://<IMAP_HOST>/INBOX/;UID=<UID>' --user '<USER>' --output '<LOCAL_MAIL_DIR>/<UID>.eml'
-sha256sum '<LOCAL_MAIL_DIR>/<UID>.eml'
 ```
 
 내부 CA를 신뢰해야 하면 검증한 CA 파일에 `--cacert '<CA_CERT>'`를 추가한다. 인증서 오류를 무시해 얻은 메일을 정상 TLS 수집으로 기록하지 않는다.
@@ -146,7 +141,7 @@ QUIT
 |---|---|---|---|
 | TLS 연결과 IMAP·POP3 capability가 보임 | 메일 서비스와 암호화 방식을 식별함 | 메일 인증 경로 | 올바른 계정 형식으로 로그인 |
 | IMAP 로그인 성공 또는 POP3 `+OK` 후 목록이 나옴 | 유효한 메일 계정으로 접근함 | 메일함 접근 | 필요한 폴더와 메시지만 조회 |
-| 본문·첨부를 내려받고 크기·hash가 확인됨 | 메일 데이터를 온전히 수집함 | 메시지 또는 첨부 파일 | 내부 URL·토큰·자격 증명 단서 분석 |
+| 본문·첨부를 내려받고 MIME 정보와 내용을 확인함 | 메일 데이터를 수집함 | 메시지 또는 첨부 파일 | 내부 URL·토큰·자격 증명 단서 분석 |
 | 다른 서비스에서 수집한 credential이 실제 인증됨 | 메일 단서가 후속 접근으로 이어짐 | 재사용 가능한 자격 증명 | 해당 서비스 노트에서 권한 확인 |
 | 로그인 실패 | username 형식, 도메인 또는 비밀번호가 맞지 않음 | 서비스 접근만 유지 | 전체 이메일 주소와 짧은 username 형식 비교 |
 | TLS handshake가 실패함 | 포트·STARTTLS·인증서 처리 방식이 다름 | 암호화 경로 미확정 | `openssl`로 protocol과 포트 확인 |
@@ -160,14 +155,14 @@ QUIT
 | TLS·capability | 배너, protocol capability, 인증서 이름 | 서비스 식별과 계정 인증을 구분 |
 | 인증 | IMAP 성공 응답 또는 POP3 `+OK` | 유효한 메일 identity 확인 |
 | 메일 권한 | 폴더 목록, message list, `RETR`·fetch 결과 | 목록 권한과 본문·첨부 READ를 구분 |
-| 첨부 무결성 | 파일 크기, MIME 정보, `sha256sum` | 손상된 디코딩과 정상 수집을 구분 |
+| 첨부 형식 | MIME 정보와 파일 내용 | 메시지 본문과 첨부 형식을 구분 |
 | 후속 credential | 별도 서비스의 실제 인증 결과 | 메일에 문자열이 있다는 사실과 credential 유효성을 구분 |
 
 ## 변경 영향과 복구
 
 | 변경 항목 | 작업 전 확인과 식별값 | 정리·복원 | 완료 확인 |
 |---|---|---|---|
-| 로컬 수집 디렉터리와 `.eml` 파일 | 경로가 없음을 확인하고 `<LOCAL_MAIL_DIR>`, mailbox, UID, SHA-256 기록 | 수집 산출물은 보존 정책에 따라 다룬다. 일시 검증 파일만 `rm -- '<LOCAL_MAIL_DIR>/<UID>.eml'`로 정확한 경로를 제거하고 빈 전용 디렉터리를 `rmdir -- '<LOCAL_MAIL_DIR>'`로 정리 | `test ! -e '<LOCAL_MAIL_DIR>/<UID>.eml'`; 보존 시에는 파일·hash가 일치하는지 확인 |
+| 로컬 수집 디렉터리와 `.eml` 파일 | 경로가 없음을 확인하고 `<LOCAL_MAIL_DIR>`, mailbox, UID 기록 | 수집 산출물은 보존 정책에 따라 다룬다. 일시 검증 파일만 `rm -- '<LOCAL_MAIL_DIR>/<UID>.eml'`로 정확한 경로를 제거하고 빈 전용 디렉터리를 `rmdir -- '<LOCAL_MAIL_DIR>'`로 정리 | `test ! -e '<LOCAL_MAIL_DIR>/<UID>.eml'` |
 | IMAP message flags | `UID FETCH <UID> (FLAGS)`로 UID와 작업 전 `\Seen` 여부 기록 | 기본 절차의 `EXAMINE`·`BODY.PEEK[]`는 변경하지 않는다. 이번 작업 때문에 baseline에 없던 `\Seen`만 추가됐다면 write 권한이 있는 새 `SELECT` session에서 `UID STORE <UID> -FLAGS.SILENT (\Seen)` 실행 | 같은 UID의 `FLAGS`에서 task-created `\Seen`만 제거됐는지 확인. 동시 변경이나 baseline 불명확 시 복원 완료로 쓰지 않음 |
 | POP3 삭제 표시 | `LIST`의 message ID와 이번 session에서 `DELE`를 사용하지 않았는지 확인 | `QUIT` 전에 `RSET`; 이미 UPDATE가 완료됐으면 서버 mailbox·backup에서 실제 삭제를 확인하고 운영자 복구 절차 사용 | `RSET +OK` 뒤 `LIST`에서 message가 유지됨. UPDATE 뒤 원격에서 확인할 수 없으면 복구 완료로 쓰지 않음 |
 

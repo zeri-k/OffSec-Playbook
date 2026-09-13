@@ -22,8 +22,11 @@ NetExec은 SMB·WinRM·LDAP·RDP 같은 여러 서비스에서 인증을 일괄 
 - 입력: 프로토콜, 단일 호스트·CIDR·대상 목록
 - 인증 입력: 도메인/로컬 사용자와 비밀번호·NTLM hash 또는 사용자·비밀번호 목록
 - 기능별 조건: dump와 원격 명령 실행에는 대상에서 관리자급 권한 필요
+- `<TARGET>`은 선택한 protocol의 listener 주소·CIDR·한 줄씩 기록한 목록 파일이며, 목록 파일은 Linux 실행 호스트에서 읽는다. `<DOMAIN>`은 AD 도메인이고 `--local-auth`는 대상의 로컬 계정일 때만 쓴다.
 
 ## 표준 사용법
+
+`<PROTOCOL>`은 `smb`·`winrm` 등 설치된 NetExec protocol, `<TARGET>`은 그 listener의 host·CIDR·Linux 목록 파일이다. `<DOMAIN>`·`<USER>`·`<PASSWORD>` 또는 NT hash는 같은 authentication namespace의 입력이고 workspace/output path는 Linux 실행 host의 새 경로다.
 
 ```shell
 nxc <protocol> <target> -u <user> -p <password>

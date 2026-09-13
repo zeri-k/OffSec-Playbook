@@ -31,6 +31,8 @@ smbmap -H <target> [options]
 
 ## 대표 예시
 
+`<TARGET>`은 SMB 서버 IP/FQDN(예: `smb.example.test`)이다. `<USER>`·`<PASSWORD>`는 인증 계정 입력이며, `-u`·`-p`에는 null, guest 또는 실제 계정 형식 중 관찰한 인증 방식 하나만 넣고, share READ/WRITE 표시는 개별 파일 ACL과 구분한다.
+
 ### SMB share와 권한 빠르게 확인
 
 ```bash
@@ -40,7 +42,7 @@ smbmap -H <TARGET>
 ### 인증 정보로 share 권한 확인
 
 ```bash
-smbmap -H <TARGET> -u user -p '<PASSWORD>'
+smbmap -H <TARGET> -u '<USER>' -p '<PASSWORD>'
 ```
 
 ### null과 guest 접근을 분리 확인

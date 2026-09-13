@@ -23,6 +23,8 @@ ADRecon은 도메인·포리스트·trust·사용자·그룹·컴퓨터·GPO·DN
 
 ## 표준 사용법
 
+`<ADRECON_RUN_DIRECTORY>`는 ADRecon을 실행하는 Windows 호스트의 새 절대 출력 디렉터리(예: `C:\\Temp\\adrecon-20260914`)이며, `<REPORT_DIRECTORY>`는 `-OutputDir` 실행 뒤 그 아래에 생성된 report 디렉터리다.
+
 ```powershell
 .\ADRecon.ps1
 ```
@@ -77,7 +79,7 @@ if (Test-Path -LiteralPath '<ADRECON_RUN_DIRECTORY>') { throw 'run directory alr
 
 ## 변경 영향과 복구
 
-보고서 directory에는 사용자·SPN·group·trust·DNS·GPO와 권한이 허용된 경우 LAPS·BitLocker 같은 민감 속성이 포함될 수 있다. 후속 분석과 필요한 사본 처리가 끝난 뒤, 실행 전 존재하지 않았던 exact `<ADRECON_RUN_DIRECTORY>`만 제거한다.
+보고서 directory에는 사용자·SPN·group·trust·DNS·GPO와 읽기 권한이 있는 경우 LAPS·BitLocker 같은 민감 속성이 포함될 수 있다. 후속 분석과 필요한 사본 처리가 끝난 뒤, 이번 실행에서 생성한 exact `<ADRECON_RUN_DIRECTORY>`만 제거한다.
 
 ```powershell
 Remove-Item -LiteralPath '<ADRECON_RUN_DIRECTORY>' -Recurse

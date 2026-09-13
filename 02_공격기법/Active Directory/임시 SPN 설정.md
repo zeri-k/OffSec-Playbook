@@ -14,12 +14,6 @@ tags:
 
 현재 Windows 세션의 AD 계정이 공격 대상 사용자 객체의 `servicePrincipalName`을 쓸 수 있으면 변경 전 값을 기록하고 고유한 임시 SPN 하나를 추가해 표적 Kerberoasting의 전제 조건을 만든다.
 
-## 사용할 때
-
-- 현재 보유 정보: 공격 대상 사용자명과 그 객체에 대한 `GenericWrite`·`GenericAll` 또는 SPN 속성 쓰기 권한을 확인했다.
-- 명령 실행 위치와 도달성: PowerView를 실행하는 Windows 호스트에서 도메인 LDAP에 접근할 수 있다.
-- 현재 가능한 행동과 결과: 현재 Windows Identity로 대상 사용자의 SPN 속성을 변경할 수 있으며, 이 문서는 TGS를 요청하거나 비밀번호를 복구하지 않는다.
-
 ## 전제 조건
 
 | 확인할 것 | 필요한 상태 | 확인 방법 | 미충족 시 다음 확인 |
@@ -32,7 +26,11 @@ tags:
 
 ## 실행
 
+> 임시 SPN은 대상 사용자의 서비스 인증과 충돌할 수 있다. 기존 multi-value SPN 기준값을 보존하고, 이번에 추가한 정확한 `service/host[:port]` 값 하나만 제거한다.
+
 아래 명령은 `whoami`에 표시되는 현재 Windows Identity로 LDAP 변경을 요청한다. `<TARGET_USER>`는 속성이 변경될 공격 대상이며 요청자 계정과 구분한다.
+
+`<UNIQUE_TEMP_SPN>`은 `service/host[:port]` 형식의 새 값(예: `http/test.directory.example.test:8080`)이며, 기존 servicePrincipalName 값과 충돌하지 않아야 한다. `<TARGET_USER>`는 이 SPN을 받는 sAMAccountName이다.
 
 ### 1. 기존 SPN 기준값 확인
 

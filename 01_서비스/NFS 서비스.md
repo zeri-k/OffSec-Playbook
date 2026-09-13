@@ -34,13 +34,14 @@ tags:
 
 읽기 전용 마운트를 먼저 해제하고, 쓰기·소유자 매핑을 확인해야 할 때만 같은 export를 `rw`로 다시 마운트한다.
 
+`<3_OR_4>`는 확인한 NFS 버전(예: `3`), `<TARGET>`은 NFS 서버 IP 또는 FQDN(예: `192.0.2.10`), `<EXPORT>`는 `showmount` 또는 NFSv4 pseudo-root에서 확인한 export 절대 경로(예: `/srv/share`)다. 이 명령은 현재 실행 호스트의 `./target-NFS` 마운트 지점에서 고유 파일을 만들고 삭제한다.
+
 ```bash
 sudo umount ./target-NFS
 sudo mount -t nfs -o vers=<3_OR_4>,rw,nosuid,nodev <TARGET>:/<EXPORT> ./target-NFS
 PROOF="nfs-proof-$(date -u +%Y%m%dT%H%M%SZ)-$$.txt"
 printf 'NFS write proof: %s\n' "$PROOF" > "./target-NFS/$PROOF"
 stat -c '%n %s bytes uid=%u gid=%g mode=%a' "./target-NFS/$PROOF"
-sha256sum "./target-NFS/$PROOF"
 rm -f -- "./target-NFS/$PROOF"
 test ! -e "./target-NFS/$PROOF" && echo 'proof removed'
 sudo umount ./target-NFS

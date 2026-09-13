@@ -21,8 +21,11 @@ PowerShell은 Windows에서 cmdlet·.NET API·스크립트를 실행해 시스�
 - 입력: 실행할 명령 문자열, `.ps1` 파일 또는 UTF-16LE Base64 명령
 - 파일 전송 입력: HTTP(S) URL·출력 경로 또는 접근 가능한 UNC 경로
 - 기능별 조건: 사용하는 cmdlet과 대상 리소스에 맞는 현재 세션 권한
+- `<URL>`은 다운로드 서버의 전체 URL(예: `https://files.example.invalid/report.ps1`)이고 `<OUT_FILE>`은 현재 PowerShell 세션 호스트의 경로다. Base64 입력은 UTF-16LE로 인코딩한 명령 문자열에서 만들며, 원격 세션의 경로와 로컬 경로를 같은 값으로 쓰지 않는다.
 
 ## 표준 사용법
+
+`<COMMAND>`은 현재 PowerShell session에서 실행할 문자열, `<BASE64_COMMAND>`는 그 문자열을 UTF-16LE로 인코딩한 값이다. `<URL>`은 전체 HTTP(S) URL, `<OUT_FILE>`·UNC path는 해당 PowerShell session host에서 해석하며, 다운로드 성공은 파일 실행이나 remote command 성공을 뜻하지 않는다.
 
 ```powershell
 powershell.exe [options] -Command <command>

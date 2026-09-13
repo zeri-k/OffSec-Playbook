@@ -17,6 +17,8 @@ tags:
 
 ## 필요한 입력과 실행 환경
 
+`<DOMAIN>`은 tenant의 DNS 도메인(예: `example.onmicrosoft.com` 또는 `corp.example.test`)이고, `users.txt`·`usersfound.txt`는 UPN 한 줄씩인 Linux 호스트 파일이다. `<PASSWORD>`는 한 round의 단일 평문 값, `<ATTEMPTS_PER_WINDOW>`와 `<RESET_MINUTES>`는 관찰한 정책의 양의 정수, `<O365_OUTPUT_DIR>`은 새 로컬 출력 디렉터리, `<O365_RESULT_FILE>`은 그 안에서 도구가 만든 정확한 결과 파일이다. 평문 credential 결과는 Vault에 저장하지 않는다.
+
 - 실행 환경: Python 3와 도구 의존성이 설치된 Linux 호스트
 - 공통 입력: Microsoft 365 도메인
 - 열거 입력: UPN 또는 이메일 형식의 사용자 목록

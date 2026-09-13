@@ -21,6 +21,7 @@ R-Services 클라이언트는 `rlogin`, `rsh`, `rexec`, `rusers`를 이용해 Un
 - 실행 환경: `rlogin`, `rsh`, `rexec`, `rusers` 클라이언트가 설치된 Linux/Unix 호스트
 - `rusers` 조회에는 대상의 `rusersd` RPC 서비스가 별도로 필요하다.
 - `.rhosts`·`hosts.equiv`의 행은 `<SOURCE_HOST> [<SOURCE_USER>]` 순서다. 대상 로컬 사용자는 `-l <USER>`와 사용자별 파일 위치로 구분한다.
+- `<TARGET>`은 rlogin/rsh/rexec server의 IP/FQDN, `<USER>`는 대상의 로컬 account이며 `<COMMAND>`는 target에서 실행할 텍스트 명령이다. source host trust는 source IP·hostname·source user 조합이므로 연결 성공을 password 인증으로 해석하지 않는다.
 
 ## 표준 사용법
 

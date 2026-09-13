@@ -15,14 +15,6 @@ tags:
 
 도메인 계정의 NTLM/RC4 또는 AES key를 보유하고 현재 Windows 호스트에서 `<DC_FQDN>:88`로 도달할 수 있으면, 해당 계정의 Kerberos TGT를 발급·주입한 뒤 `<HOST_FQDN>:<SERVICE_PORT>`에서 ticket 주체의 실제 서비스 권한을 확인한다.
 
-## 사용할 때
-
-- 현재 보유 정보: LSASS·NTDS 등에서 수집한 `<DOMAIN>\<USER>`의 NTLM/RC4 또는 AES128/AES256 key와 `<DOMAIN>`, `<DC_FQDN>`을 알고 있다. 로컬 계정 NT hash는 도메인 KDC의 TGT 발급에 사용할 수 없다.
-- 명령 실행 위치: Rubeus 또는 Mimikatz를 실행할 Windows 호스트에서 DNS로 DC와 대상 서비스 FQDN을 해석하고 Kerberos 포트에 연결할 수 있어야 한다.
-- 현재 계정·권한: 명령을 실행하는 현재 Windows 계정과 key가 가리키는 `<DOMAIN>\<USER>`는 서로 다를 수 있다. Mimikatz `sekurlsa::pth`는 현재 호스트의 관리자·debug 권한을 필요로 한다.
-- 지금 가능한 행동: 가능하면 AES key로 TGT를 요청해 전용 Type 9 로그온 세션에 적용한 뒤 [[Pass the Ticket]]으로 대상 SPN와 서비스를 검증한다. 장기 key→TGT→service ticket→서비스 인가의 경계는 [[Kerberos 인증 자료와 서비스 접근]]에 따라 구분한다.
-- 성공 범위: TGT 발급은 key가 도메인 계정에 유효함, ticket 주입은 현재 세션에서 사용 가능함, SMB·WinRM·WMI 성공은 해당 서비스의 인증·행동 권한을 각각 의미한다. 관리자·Domain Admin 권한은 자동으로 얻지 않는다.
-
 ## 전제 조건
 
 | 확인할 것 | 필요한 상태 | 확인 방법 | 미충족 시 다음 확인 |
@@ -34,6 +26,8 @@ tags:
 | 필요한 파일·목록·주소 | `<DOMAIN>`, `<USER>`, `<NTLM_HASH>` 또는 `<AES256_KEY>`, `<DC_FQDN>`, `<HOST_FQDN>` | 수집 기록과 도메인·realm·FQDN 대응 확인 | 계정·key·domain 쌍과 FQDN 수정 |
 
 ## 실행
+
+`<DOMAIN>\<USER>`와 key는 TGT 요청 대상 계정이고 현재 Windows 실행 계정과 다를 수 있다. `<DC_FQDN>`은 KDC, `<HOST_FQDN>`과 `<SERVICE_PORT>`는 후속 서비스 대상이며 PID·LUID는 ticket 생성 단계 출력에서 얻는다.
 
 ### 방식 선택
 

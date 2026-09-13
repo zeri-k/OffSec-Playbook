@@ -21,9 +21,12 @@ tags:
 - 원격 입력: 대상 주소와 관리자 credential/hash/ticket; DC dump에는 AD 복제 권한
 - 오프라인 입력: SAM, SECURITY, SYSTEM hive 또는 NTDS.dit와 일치하는 SYSTEM hive
 - 범위 입력: 필요하면 `-just-dc`, `-just-dc-user`, `-sam`, `-security`, `-system`으로 수집 범위를 제한한다.
+- 원격 `<TARGET>`과 requester credential은 별도이며, offline `NTDS.dit`에는 같은 시점의 SYSTEM hive가 필요하다. `<OUTPUT_PREFIX>`는 Linux 실행 host의 새 prefix이고 `-just-dc-user <DOMAIN>/<USER>`는 전체 dump 대신 한 계정 요청으로 범위를 제한한다.
 
 
 ## 표준 사용법
+
+remote `<TARGET>`과 requester credential·hash/ticket은 별도 입력이며, offline `<SAM>`·`<SECURITY>`·`<SYSTEM>` 또는 `<NTDS>`는 같은 acquisition set의 Linux file paths다. `<OUTPUT_PREFIX>`는 새 local output prefix이고 `-just-dc-user`의 subject는 requester·DC 전체 dump 대상과 구분한다.
 
 ```bash
 impacket-secretsdump [options] <target>

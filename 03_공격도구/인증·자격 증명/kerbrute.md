@@ -21,6 +21,8 @@ Kerbrute는 Kerberos KDC 응답 차이를 이용해 AD 사용자 이름을 열�
 - 필요한 입력: DC 주소, 도메인, 사용자 목록과 명령에 따라 비밀번호 또는 password list
 - 환경 조건: DNS/realm과 시간을 맞추고 spraying 전 계정 잠금 정책과 시도 간격을 확인한다.
 
+`<TARGET>`·`<DC>`는 KDC/DC 주소(예: `directory.example.test`), `<DOMAIN>`은 Kerberos realm의 DNS 도메인(예: `corp.example.test`)이며 목록 파일은 실행 호스트의 newline 입력이다. `<PASSWORD>`는 한 round에 전달할 단일 평문 값이다.
+
 
 ## 표준 사용법
 

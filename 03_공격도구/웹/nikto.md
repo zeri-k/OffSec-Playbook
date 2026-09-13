@@ -21,6 +21,7 @@ tags:
 - 선택 입력: 검사 범위(`-Tuning`), 대상 포트, TLS 사용 여부, 출력 파일과 형식
 - 대상에서 필요한 서비스와 권한: HTTP 연결 후 응답을 읽을 수 있어야 한다. `401`·`403` 수신은 서비스 도달을 뜻할 수 있지만 인증 성공이나 해당 경로의 읽기 권한을 뜻하지 않는다.
 - 실행 특성: 다수의 HTTP 요청을 순차적으로 전송하므로 응답 지연, WAF와 rate limit의 영향을 받는다.
+- `<TARGET_URL>`은 URL 또는 vhost를 포함한 host·port이며(예: `https://site.example.invalid:8443/`), `-id`는 `user:pass` 형식의 HTTP basic credential이다. `-Tuning` 값·output 파일은 실행 host의 선택 입력이고 401/403은 결과에서 따로 분류한다.
 
 ## 표준 사용법
 
@@ -31,6 +32,8 @@ nikto -h <host_or_url>
 HTTPS, 포트, 인증, 출력 파일 등은 옵션으로 지정한다.
 
 ## 대표 예시
+
+`<TARGET>`과 `<DOMAIN>`은 요청할 HTTP(S) host 또는 URL(예: `site.example.invalid`)이고, `-p`의 포트는 해당 서비스의 TCP 포트다. `<PASSWORD>`는 `-id admin:<PASSWORD>`에 쓰는 HTTP basic credential의 비밀번호이며, 명령은 Linux 실행 호스트에서 실행한다.
 
 ### 기본 웹 서버 점검
 

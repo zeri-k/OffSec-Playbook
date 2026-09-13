@@ -23,6 +23,8 @@ tags:
 
 ## 표준 사용법
 
+`<DC_IP>`는 LDAP를 제공하는 DC 주소(예: `directory.example.test`)이며, `<BASE_DN>`은 RootDSE에서 얻은 DN(예: `DC=corp,DC=example,DC=test`)이다. `<SCOPE>`는 `base`·`one`·`sub`, `<LDAP_FILTER>`는 RFC 4515 filter, `[ATTRIBUTES]`는 반환 속성 목록이다. 명령은 LDAP에 도달 가능한 Linux 호스트에서 실행한다.
+
 ```bash
 ldapsearch -H ldap://<DC_IP> -x -b "<BASE_DN>" -s <SCOPE> "<LDAP_FILTER>" [ATTRIBUTES]
 ```

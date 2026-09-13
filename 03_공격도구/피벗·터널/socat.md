@@ -18,6 +18,7 @@ Socat은 두 주소 또는 데이터 스트림을 연결하는 중계 도구로,
 - 실행 환경: `socat`을 실행할 수 있는 Linux 또는 Windows 피벗 호스트
 - 입력: 수신 주소·포트와 목적지 주소·포트
 - 네트워크 조건: 피벗 호스트에서 목적지 TCP 포트에 접근 가능
+- `<LISTEN_PORT>`는 pivot host에 여는 listener, `<DESTINATION_HOST>:<DESTINATION_PORT>`는 pivot 관점의 내부 TCP endpoint다. `fork`는 연결마다 child를 만들며 listener 생성은 destination response·authentication을 뜻하지 않는다.
 
 ## 표준 사용법
 

@@ -18,8 +18,11 @@ tags:
 - 연결 확인 입력: TLS endpoint와 필요한 경우 SNI·STARTTLS 프로토콜
 - 임시 TLS 전송 입력: listen 포트, 인증서, private key, 송수신 파일
 - 암복호화 입력: 원본 파일, 출력 파일, 암호화 방식과 비밀번호
+- endpoint는 `host:port` 또는 SNI가 필요한 FQDN(예: `mail.corp.example:465`)이고, certificate·key·송수신 파일은 실행 호스트의 절대 경로로 구분한다. 전송 동일성은 원본과 수신본을 실제로 비교하는 단계에서만 판단한다.
 
 ## 표준 사용법
+
+TLS blocks의 `<TARGET>`은 client host에서 도달하는 endpoint FQDN/IP, `<TLS_PORT>`는 그 listener port이며 SNI가 필요하면 FQDN을 별도 지정한다. `<TLS_CERT>`·`<TLS_KEY>`·송수신 file은 Linux 실행 host의 절대 경로다. 암복호화 block의 hash 비교는 `<INPUT_FILE>`과 `<ROUNDTRIP_OUTPUT>`의 동일성이 복호화 판단을 바꾸는 그 block에만 적용한다.
 
 ```bash
 openssl <subcommand> [options]
@@ -54,7 +57,6 @@ ps -p "$OPENSSL_SERVER_PID" -o pid=,args=
 ```bash
 test ! -e '<TLS_RECEIVED_FILE>'
 openssl s_client -connect <TARGET>:<TLS_PORT> -quiet > '<TLS_RECEIVED_FILE>'
-sha256sum '<TLS_RECEIVED_FILE>'
 ```
 
 ### 파일 암호화·복호화 왕복 확인

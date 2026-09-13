@@ -14,12 +14,6 @@ tags:
 
 요청자 AD 계정이 사용자 또는 컴퓨터 객체의 `msDS-KeyCredentialLink`를 쓸 수 있고 실행 호스트에서 LDAP와 KDC에 접근할 수 있으면 공격자 public key를 추가해 공격 대상 계정의 PFX와 TGT를 얻는다.
 
-## 사용할 때
-
-- 현재 보유 정보: 요청자 AD 계정의 인증 수단과 `AddKeyCredentialLink` 등 공격 대상 객체의 속성 쓰기 경로가 확인된 상태다.
-- 명령 실행 위치와 도달성: pywhisker와 `gettgtpkinit.py`를 실행할 호스트에서 대상 DC의 LDAP와 Kerberos 서비스에 접근할 수 있고 PKINIT을 사용할 수 있다.
-- 현재 가능한 행동과 결과: 요청자 계정으로 공격 대상 객체에 새 KeyCredential을 추가하고, 생성된 PFX로 대상 계정의 TGT를 발급받되 대상 계정의 비밀번호나 NT hash를 직접 얻는 것은 아니다.
-
 ## 전제 조건
 
 | 확인할 것 | 필요한 상태 | 확인 방법 | 미충족 시 다음 확인 |
@@ -32,6 +26,8 @@ tags:
 
 ## 실행
 
+> 새 KeyCredential은 대상 객체의 인증 수단을 바꾸고 생성된 PFX·ccache는 민감한 인증 자료다. 추가 출력의 exact DeviceID와 기존 목록을 보존해 해당 항목 하나만 원복한다.
+
 1. 요청자 AD 계정, 공격 대상 객체와 요청자 계정의 쓰기 권한을 각각 확인한다.
 2. 기존 KeyCredential 목록을 기록한다.
 3. pywhisker로 certificate와 KeyCredential을 생성해 속성에 추가하고 새 DeviceID를 기록한다.
@@ -43,13 +39,15 @@ tags:
 
 세 방식은 `msDS-KeyCredentialLink` 변경을 요청하는 `<REQUESTER>`를 LDAP에 인증하는 수단만 다르다. `<TARGET_USER>`는 속성이 변경되고 PFX·TGT가 발급될 공격 대상이며, 요청자의 비밀번호·NT hash·ticket과 혼동하지 않는다.
 
+`<DC_IP>`는 대상 DC의 IP, `<DOMAIN>`은 DNS 도메인(예: `corp.example`), `<REQUESTER>`와 `<TARGET_USER>`는 각각 LDAP 변경 요청자와 속성이 바뀌는 sAMAccountName이다. `<ACTION>`은 이 절의 `list` 또는 `add`이며, `<DEVICE_ID>`는 `add` 출력에서 받은 GUID다. `<SHADOW_PFX_BASENAME>`과 `<SHADOW_CCACHE_PATH>`는 Linux 실행 호스트의 새 출력 이름과 경로다.
+
 | 보유한 요청자 인증 수단 | 사용할 방식 | 추가로 확인할 조건 |
 |---|---|---|
 | `<REQUESTER>`의 평문 비밀번호 | NTLM 비밀번호 인증 | 요청자 비밀번호와 도메인·사용자 형식 정상 |
 | `<REQUESTER>`의 NT hash | NTLM Pass-the-Hash | NT hash가 요청자 계정에 속하며 LDAP 인증에 사용 가능 |
 | `<REQUESTER>`의 TGT가 담긴 ccache | Kerberos Pass-the-Cache | `KRB5CCNAME`, DC FQDN·realm·DNS·시간과 ticket 유효성 정상 |
 
-선택한 인증 옵션을 유지한 채 `<ACTION>`을 `list` 또는 `add`로 바꾼다. `remove`에는 이번 작업에서 생성한 `--device-id <DEVICE_ID>`가 추가로 필요하므로 복구 절차의 명령을 사용한다.
+세 인증 방식은 모두 같은 `<REQUESTER>`로 `list`·`add`·`remove`를 요청한다. 아래 password 블록은 대표 예시일 뿐이며, NT hash 또는 ccache를 선택했다면 해당 requester auth flags를 `list`·`add`·`remove`에도 그대로 재사용한다. `remove`에는 이번 작업에서 생성한 `--device-id <DEVICE_ID>`가 추가로 필요하므로 복구 절차의 명령을 사용한다.
 
 #### 1. 요청자 평문 비밀번호 사용
 
@@ -104,6 +102,8 @@ pywhisker --dc-ip <DC_IP> -d <DOMAIN> -u <REQUESTER> -p '<PASSWORD>' --target <T
 
 ### TGT 발급과 사용
 
+`<PFX_PASS>`는 pyWhisker가 이번 `<SHADOW_PFX_BASENAME>.pfx` 생성 시 출력한 PFX 비밀번호이고, `<SHADOW_CCACHE_PATH>`는 앞서 부재를 확인한 Linux 실행 호스트의 새 ccache 경로다. `<DOMAIN>/<TARGET_USER>`는 add를 수행한 동일 대상 계정을 재사용한다.
+
 ```bash
 python3 gettgtpkinit.py -cert-pfx '<SHADOW_PFX_BASENAME>.pfx' -pfx-pass '<PFX_PASS>' -dc-ip <DC_IP> <DOMAIN>/<TARGET_USER> '<SHADOW_CCACHE_PATH>'
 export KRB5CCNAME='<SHADOW_CCACHE_PATH>'
@@ -123,7 +123,7 @@ klist
 | `klist`에 공격 대상 계정의 principal이 표시된 TGT | certificate 기반 Kerberos 인증 성공 | 공격 대상 계정의 TGT 확보 | exact DeviceID 원복 후 [[AD Identity 확인 후 도메인 컨텍스트 열거]] |
 | WinRM, SMB 또는 LDAP 접근 성공 | 공격 대상 계정에 해당 서비스 사용 권한이 존재 | 공격 대상 Identity의 서비스 접근 | 원복 후 [[확보한 자격 증명으로 원격 접근 경로 선택]] 또는 [[AD Identity 확인 후 도메인 컨텍스트 열거]] |
 | LDAP modify 실패 | 속성 쓰기 권한 또는 인증 경로 문제 | 객체 미변경 | ACL, 대상 객체, LDAP/LDAPS 인증 방식 확인 |
-| PKINIT 실패 | DC certificate 또는 EKU 조건 문제 | PFX만 확보 | PKINIT 지원과 PassTheCert 대안 검토 |
+| PKINIT 실패 | DC certificate 또는 EKU 조건 문제 | PFX만 확보 | PKINIT 지원, realm, DNS와 시간을 확인하고 이 문서에서 다른 인증 경로를 추가하지 않음 |
 | 서비스 접근 실패 | TGT는 유효하지만 공격 대상 계정의 해당 서비스 권한이 부족할 수 있음 | TGT만 확보 | 공격 대상 계정의 그룹·로그온 권한과 서비스별 ACL 확인 |
 
 ## 확인할 출력과 권한
@@ -156,7 +156,7 @@ pywhisker --dc-ip <DC_IP> -d <DOMAIN> -u <REQUESTER> -k --no-pass --target <TARG
 - 기존 DeviceID가 모두 그대로 남아 있어야 한다.
 - 인증 방식과 관계없이 `--action list`를 다시 실행해 정확한 DeviceID 하나만 사라졌는지 확인한다.
 
-로컬 PFX와 ccache는 작업 전 `test ! -e`로 부재를 확인했고 위 명령이 생성한 정확한 두 경로만 필요한 증적을 분리한 뒤 삭제한다. 기존 파일이었거나 기준선을 확인하지 못한 경로는 삭제하지 않는다.
+로컬 PFX와 ccache는 작업 전 `test ! -e`로 부재를 확인했고 위 명령이 생성한 정확한 두 경로만 사용 후 삭제한다. 기존 파일이었거나 기준선을 확인하지 못한 경로는 삭제하지 않는다.
 
 ```bash
 unset KRB5CCNAME

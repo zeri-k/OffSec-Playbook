@@ -32,6 +32,8 @@ tags:
 
 외부 SaaS·클라우드·호스팅 서비스로 이어지는 CNAME을 발견하면 실제 리소스를 등록하지 않고 DNS chain과 공급자별 미점유 신호까지만 확인한다.
 
+`<SUBDOMAIN>`은 현재 실행 호스트에서 질의할 대상 FQDN이며, 예시는 `portal.example.test`다. 아래 모든 명령은 같은 이름을 사용해 CNAME 응답, HTTP 응답, TLS SNI를 대조한다.
+
 ```bash
 dig +noall +answer <SUBDOMAIN> CNAME
 host <SUBDOMAIN>
@@ -45,8 +47,10 @@ openssl s_client -connect <SUBDOMAIN>:443 -servername <SUBDOMAIN> </dev/null
 - HTTP status·header·body의 공급자 고유 오류와 SNI 인증서.
 - CNAME target의 `NXDOMAIN`만으로 takeover라고 판단하지 않는다. 공급자의 현재 custom domain 조건과 미점유 응답이 함께 일치해야 후보로 기록한다.
 - 정상 콘텐츠, 잘못된 region, 인증서 오류와 일시 장애를 미점유 상태와 구분한다.
-- 인증서 검증 오류가 나면 오류를 먼저 기록한다. HTTP 본문을 추가 확인해야 할 때만 승인된 범위에서 `curl -k`를 별도 사용하며, 이 결과가 TLS 정상 여부를 증명하지는 않는다.
-- 공급자 리소스 생성·도메인 연결은 외부 상태와 비용을 만들 수 있다. 명시적 허가, 고유 리소스 식별자와 삭제·잔여 영향 계획이 없으면 실제 점유를 시도하지 않고 `미점유 신호가 일치한 후보`에서 중단한다.
+> 외부 공급자 리소스를 만들거나 도메인을 연결하면 비용과 외부 상태가 남을 수 있다. 실제 점유 대신 `미점유 신호가 일치한 후보`에서 판단을 멈춘다.
+
+- 인증서 검증 오류가 나면 오류를 먼저 기록한다. HTTP 본문을 추가 확인해야 할 때만 `curl -k`를 별도 사용하며, 이 결과가 TLS 정상 여부를 증명하지는 않는다.
+- 실제 점유를 시도하지 않고 CNAME·공급자 응답·현재 custom domain 조건을 대조한다.
 
 ## 단서별 다음 경로
 
@@ -57,7 +61,7 @@ openssl s_client -connect <SUBDOMAIN>:443 -servername <SUBDOMAIN> </dev/null
 | 서브도메인 후보 필요 또는 새 이름 발견 | [[DNS 열거와 Zone Transfer]] | `dnsenum`, `subfinder`, `subbrute` | 웹·관리·개발 호스트 후보 |
 | `_ldap._tcp`, `_kerberos._tcp`, `dc._msdcs` SRV 또는 DC 역할 hostname 발견 | [[AD 도메인 컨텍스트 기본 확인]] | `dig`, `nslookup`, `ldapsearch` | DNS 단서와 실제 DC·도메인·현재 AD Identity를 분리해 확인 |
 | 현재 AD 계정의 DnsAdmins 멤버십이 Windows token에 반영되고 대상이 Windows DNS Server임 | [[DnsAdmins DNS 서버 플러그인 DLL 실행]] | `dnscmd` | 기존 plug-in 값과 별도 service-control 권한을 확인한 controlled DNS 서비스 계정 실행 후보 |
-| DnsAdmins token으로 승인된 Windows DNS zone의 WPAD 영향과 client 인증 경로를 확인해야 함 | [[DnsAdmins WPAD DNS 레코드로 NTLM 인증 유도]] | `PowerShell`, `Responder`, `Inveigh` | DNS 응답·client HTTP 요청·NetNTLM 수집을 분리한 인증 유도 결과 |
+| DnsAdmins token으로 Windows DNS zone의 WPAD 영향과 client 인증 경로를 확인해야 함 | [[DnsAdmins WPAD DNS 레코드로 NTLM 인증 유도]] | `PowerShell`, `Responder`, `Inveigh` | DNS 응답·client HTTP 요청·NetNTLM 수집을 분리한 인증 유도 결과 |
 | CNAME이 S3, GitHub Pages, CDN 등 외부 서비스로 연결 | 이 문서의 외부 CNAME과 Subdomain Takeover 후보 확인 | `dig`, `curl`, `openssl` | 외부 CNAME과 공급자별 미점유 신호가 일치한 후보 |
 | 피해자와 게이트웨이 사이 L2 MITM 가능 | [[Ettercap L2 MITM DNS Spoofing]] | `ettercap` | 관찰한 DNS 질의의 응답 조작과 HTTP 트래픽 유도 가능성 |
 

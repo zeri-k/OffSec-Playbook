@@ -14,14 +14,6 @@ tags:
 
 공격 호스트에서 `<TARGET>:3389`에 도달할 수 있고 로컬·도메인 범위가 확인된 `<USER>`의 비밀번호 또는 NT hash를 보유하면, credential 인증과 Remote Desktop 로그온 권한을 별도로 검증해 `<TARGET>`의 GUI 세션을 얻고 세션 내 실제 계정·그룹·무결성 수준과 파일 접근 범위를 확인한다.
 
-## 사용할 때
-
-- 현재 보유 정보·경로: 공격 호스트에서 `<TARGET>:3389/TCP`가 직접 또는 SOCKS·포트 포워딩 경로로 응답하고 `<USER>`의 비밀번호 또는 NT hash를 보유한다.
-- 명령 실행 위치: `xfreerdp`는 3389/TCP 경로와 credential을 보유한 공격 호스트에서, `whoami /all`·`net use`·`dir \\tsclient\share`는 성공한 `<TARGET>` RDP 세션 내에서 실행한다.
-- 현재 계정·권한: credential 보유는 인증 전 상태, 인증 성공은 계정·비밀번호 또는 hash의 유효성, GUI 세션은 RDP 로그온 권한 확인이다. 평문 비밀번호 GUI 세션은 로컬 관리자를 의미하지 않지만, Restricted Admin Mode의 hash 인증은 대상 로컬 Administrators 권한을 별도로 요구한다.
-- 지금 가능한 행동: GUI에서 브라우저·문서·Credential Manager·데스크톱 파일을 현재 Windows 계정의 ACL 범위에서 확인하고, drive redirection이 허용되면 `\\tsclient\<SHARE>`로 파일을 반입·회수한다.
-- 성공 범위: RDP 인증 창·NLA 통과, GUI 세션, drive redirection, 세션 내 관리자 토큰을 각각 별도로 확인한다.
-
 ## 전제 조건
 
 | 확인할 것 | 필요한 상태 | 확인 방법 | 미충족 시 다음 확인 |
@@ -69,7 +61,7 @@ xfreerdp /v:<TARGET> /d:<DOMAIN> /u:<USER> /cert:tofu /dynamic-resolution
 확인할 출력:
 
 - `/p`를 생략해 prompt에 `<PASSWORD>`를 입력하고 shell history·process 인자에 평문을 남기지 않는다. 로컬 계정이면 `/d:<DOMAIN>`을 제거하고 대상과 계정 범위를 맞춘다.
-- 첫 연결의 `/cert:tofu`는 인증서를 최초 승인하고 이후 변경을 거부하므로, 표시된 호스트명·fingerprint가 승인된 대상과 맞는지 확인한다. `/cert:ignore`는 인증서 검사를 전체 생략하므로 기본 절차로 사용하지 않는다.
+- 첫 연결의 `/cert:tofu`는 인증서를 최초 승인하고 이후 변경을 거부하므로, 표시된 호스트명·fingerprint가 의도한 대상과 맞는지 확인한다. `/cert:ignore`는 인증서 검사를 전체 생략하므로 기본 절차로 사용하지 않는다.
 - GUI 세션, 인증 오류, 로그인 권한 오류를 구분한다.
 
 #### 드라이브 공유
@@ -91,10 +83,9 @@ net use
 dir \\tsclient\<SHARE>
 Test-Path -LiteralPath '<REMOTE_COPY_PATH>'
 Copy-Item -LiteralPath '\\tsclient\<SHARE>\<SOURCE_FILE>' -Destination '<REMOTE_COPY_PATH>'
-Get-FileHash -LiteralPath '<REMOTE_COPY_PATH>' -Algorithm SHA256
 ```
 
-`Test-Path`가 `False`인 고유한 `<REMOTE_COPY_PATH>`만 사용한다. `\\tsclient`가 보이지 않으면 대상의 network profile이나 firewall group을 바꾸지 말고 `/drive:<SHARE>,<LOCAL_PATH>` 옵션을 넣어 RDP를 다시 연결한다. RDP drive redirection은 Windows Network Discovery·File and Printer Sharing과 별개다. 정책으로 redirection이 차단되면 [[상황별 파일 전송]]에서 HTTP·SMB 등 승인된 다른 경로를 선택한다.
+`<SHARE>`는 공격 호스트의 `/drive` 이름, `<LOCAL_PATH>`는 그 share가 가리키는 공격 호스트 디렉터리, `<SOURCE_FILE>`은 그 안의 파일명이며 `<REMOTE_COPY_PATH>`는 대상 Windows의 새 절대 경로다. `Test-Path`가 `False`인 고유한 `<REMOTE_COPY_PATH>`만 사용한다. 이 절차는 비교 기준을 제공하지 않으므로 단독 hash 계산은 수행하지 않는다. `\\tsclient`가 보이지 않으면 대상의 network profile이나 firewall group을 바꾸지 말고 `/drive:<SHARE>,<LOCAL_PATH>` 옵션을 넣어 RDP를 다시 연결한다. RDP drive redirection은 Windows Network Discovery·File and Printer Sharing과 별개다. 정책으로 redirection이 차단되면 [[상황별 파일 전송]]에서 HTTP·SMB 등 다른 경로를 선택한다.
 
 ### Linux 공격 호스트에서 NT hash로 실행
 

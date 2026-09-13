@@ -36,14 +36,16 @@ dig example.com A
 
 ### zone transfer 가능성 확인
 
+`@<DNS_SERVER>`은 질의할 DNS 서버 IP/FQDN(예: `dns.example.test`)이고, `-x <IP_TO_REVERSE>`는 역조회할 IP(예: `192.0.2.10`)다. 두 역할을 같은 값으로 가정하지 않는다.
+
 ```bash
-dig @<TARGET> example.com AXFR
+dig @<DNS_SERVER> example.com AXFR
 ```
 
 ### reverse lookup
 
 ```bash
-dig -x <TARGET> +short
+dig -x <IP_TO_REVERSE> +short
 ```
 
 ### 네임서버만 간단히 확인

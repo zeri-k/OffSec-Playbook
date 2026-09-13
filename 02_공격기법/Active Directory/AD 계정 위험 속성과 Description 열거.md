@@ -14,13 +14,6 @@ tags:
 
 유효한 AD Identity로 DC LDAP에 닿는 Windows PowerShell 세션이 있으면, 읽을 수 있는 사용자 Description과 UAC 속성을 조회하여 민감 정보·약한 설정·자격 증명 후보를 찾되 실제 인증 성공이나 비밀번호 추출과 구분한다.
 
-## 사용할 때
-
-- 현재 보유 정보: 유효한 도메인 계정 자격 증명·ticket·Windows 세션 중 하나와 대상 도메인 컨텍스트가 있다.
-- 명령 실행 위치와 도달 대상: PowerView 또는 ActiveDirectory module을 사용할 Windows PowerShell에서 DC LDAP에 접근할 수 있다.
-- 현재 계정과 권한: 조회 계정이 도메인 사용자 객체의 `description`과 `userAccountControl` 속성을 읽을 수 있다. 관리자 권한이나 대상 사용자 제어권은 필요하지 않다.
-- 지금 가능한 행동과 결과: 인증된 AD 객체 열거를 확장해 `Description`·`Notes`의 운영 메모, `PASSWD_NOTREQD`, 가역 암호화 저장 허용 계정을 후보로 수집하고 별도 인증·덤프 검증 대상으로 넘길 수 있다.
-
 ## 전제 조건
 
 | 확인할 것 | 필요한 상태 | 확인 방법 | 미충족 시 다음 확인 |

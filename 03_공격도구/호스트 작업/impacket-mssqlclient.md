@@ -19,9 +19,12 @@ tags:
 - 실행 위치: MSSQL/TDS 서비스에 접근 가능한 Linux 호스트
 - 필요한 입력: SQL 또는 Windows 인증 정보, 대상 주소/instance와 database
 - Windows 인증 조건: 도메인 형식과 `-windows-auth`, Kerberos 사용 시 ticket와 SPN/FQDN을 맞춘다.
+- SQL 인증은 `<USER>:<PASSWORD>@<TARGET>`, Windows 인증은 `<DOMAIN>/<USER>@<TARGET>`처럼 구분한다. `<TARGET>`은 TDS endpoint/instance이며 Kerberos는 IP가 아닌 SPN과 일치하는 FQDN 및 앞 단계 ccache를 사용한다.
 
 
 ## 표준 사용법
+
+`<TARGET>`은 TDS listener/instance, `<DOMAIN>/<USER>`·`<PASSWORD>` 또는 `LM:NT`는 SQL/Windows authentication 입력이다. Kerberos block은 FQDN·SPN·ccache를 함께 사용하며 prompt·query success, `xp_cmdshell` state, OS command execution은 별도 출력으로 확인한다.
 
 ```bash
 impacket-mssqlclient <domain>/<user>:<password>@<target> [options]

@@ -35,8 +35,8 @@ MSSQL 인증에 성공하면 현재 SQL 로그인의 DB 권한, `IMPERSONATE`, l
 |---|---|---|---|---|
 | MSSQL 인증에 성공했지만 DB 목록·서버 역할·현재 로그인 권한이 미확인임 | [[DB 인증과 데이터 열거]] | 접근 가능한 DB·테이블과 서버 권한 | 이 상태 라우터에서 다시 선택 | SQL 인증과 Windows 인증, 현재 DB·login과 `sysadmin`을 분리해 확인 |
 | 현재 login이 `sysadmin`이거나 `xp_cmdshell` 실행 권한이 확인됨 | [[MSSQL xp_cmdshell 명령 실행]] | SQL Server 서비스 계정의 Windows 명령 실행 | 일반 계정이면 [[Windows 셸 또는 세션 확보 후 컨텍스트 열거]], SYSTEM이면 [[고권한 세션 확보 후 후속 판단]] | DB 권한과 OS 계정·호스트를 `IS_SRVROLEMEMBER`, `hostname`, `whoami /all`로 구분 |
-| `xp_cmdshell`의 `whoami /priv`에서 `SeImpersonatePrivilege`가 `Enabled`이고 실행 파일을 쓸 수 있음 | [[PrintSpoofer로 SeImpersonatePrivilege 권한 상승]] | SQL Server 호스트의 SYSTEM 명령 실행 | [[고권한 세션 확보 후 후속 판단]] | Windows build·arch, 실행 파일 무결성, 현재 token과 `CreateProcessAsUser()` 결과 확인 |
-| `xp_cmdshell`로 명령을 실행할 수 있고 Windows 호스트에서 공격 호스트 HTTP 포트에 연결 가능함 | [[Certutil로 Windows HTTP 파일 반입]] | SQL Server 호스트에 저장된 도구 파일 | 이 상태 라우터에서 파일을 사용할 기법 재선택 | 대상 쓰기 경로, URL·포트 도달성, 파일 크기·SHA-256 확인 |
+| `xp_cmdshell`의 `whoami /priv`에서 `SeImpersonatePrivilege`가 `Enabled`이고 실행 파일을 쓸 수 있음 | [[PrintSpoofer로 SeImpersonatePrivilege 권한 상승]] | SQL Server 호스트의 SYSTEM 명령 실행 | [[고권한 세션 확보 후 후속 판단]] | Windows build·arch, 실행 파일 경로, 현재 token과 `CreateProcessAsUser()` 결과 확인 |
+| `xp_cmdshell`로 명령을 실행할 수 있고 Windows 호스트에서 공격 호스트 HTTP 포트에 연결 가능함 | [[Certutil로 Windows HTTP 파일 반입]] | SQL Server 호스트에 저장된 도구 파일 | 이 상태 라우터에서 파일을 사용할 기법 재선택 | 대상 쓰기 경로, URL·포트 도달성과 다운로드 결과를 확인 |
 | 현재 login에 다른 login을 가장할 `IMPERSONATE` 권한이 있음 | [[MSSQL Impersonation 권한 상승]] | 가장한 SQL login의 DB·서버 권한 | 이 상태 라우터에서 다시 선택 | 가장 대상, 실행 전후 `SYSTEM_USER`와 `IS_SRVROLEMEMBER('sysadmin')` 확인 |
 | `sys.servers`에서 linked server가 확인되고 query 또는 RPC 경로가 있음 | [[MSSQL Linked Server 내부 이동]] | 연결된 SQL Server의 query·login mapping | 이 상태 라우터에서 원격 서버 권한 재평가 | linked server가 가리키는 실제 호스트, login mapping, RPC Out과 원격 query 오류 확인 |
 | SQL Server가 UNC 경로에 접근할 수 있고 수신 SMB 서버를 준비할 수 있음 | [[MSSQL 서비스 Hash 캡처]] | SQL Server 서비스 계정의 NetNTLM 인증 시도 | [[확보한 자격 증명으로 원격 접근 경로 선택]] | outbound SMB, 서비스 계정 종류와 수신 측 challenge·response 확인 |

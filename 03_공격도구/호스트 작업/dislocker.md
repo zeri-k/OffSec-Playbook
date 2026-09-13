@@ -19,9 +19,12 @@ tags:
 - 실행 위치: `dislocker`와 FUSE를 사용할 수 있는 Linux 또는 macOS 분석 호스트
 - 필요한 입력: BitLocker 볼륨/VHD/loop device와 password, recovery key 또는 BEK 파일
 - 마운트 입력: `dislocker-file`을 둘 디렉터리와 복호화된 파일시스템을 마운트할 별도 디렉터리
+- device/image는 analysis host에서 확인한 block device 또는 image file, BEK·password와 mount path도 같은 host의 입력이다. read-only source·loop mapping·두 mount point는 구분하고 teardown은 역순으로 수행한다.
 
 
 ## 표준 사용법
+
+`<BITLOCKER_PARTITION>`은 analysis host에서 `lsblk`로 식별한 raw partition·loop child device, `<DISLOCKER_DIR>`와 `<MOUNT_DIR>`은 서로 다른 local directory다. password·recovery key·BEK는 volume unlock input이며 `dislocker-file` 생성과 mounted filesystem contents는 별도로 확인하고 teardown은 mount→dislocker→loop 순서로 한다.
 
 ```bash
 dislocker -r -V <BITLOCKER_DEVICE> -u -- <DISLOCKER_FUSE_DIR>
@@ -51,7 +54,7 @@ LOOP_DEV="$(sudo losetup --find --show --partscan --read-only <BITLOCKER_IMAGE>)
 sudo lsblk -o NAME,TYPE,FSTYPE,SIZE,MOUNTPOINTS "$LOOP_DEV"
 ```
 
-`lsblk`에서 실제 BitLocker partition 번호를 확인한 뒤 `<BITLOCKER_PARTITION>`에 `${LOOP_DEV}p<PARTITION_NUMBER>`를 기록한다. raw volume을 직접 받은 경우에는 loop device를 만들지 않고 그 승인된 read-only device를 사용한다.
+`lsblk`에서 실제 BitLocker partition 번호를 확인한 뒤 `<BITLOCKER_PARTITION>`에 `${LOOP_DEV}p<PARTITION_NUMBER>`를 기록한다. raw volume을 직접 받은 경우에는 loop device를 만들지 않고 그 식별한 read-only device를 사용한다.
 
 ### BitLocker password로 복호화 파일 생성
 

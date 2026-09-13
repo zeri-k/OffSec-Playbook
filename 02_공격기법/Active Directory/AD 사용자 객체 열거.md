@@ -14,12 +14,6 @@ tags:
 
 도메인·DC와 사용할 AD 계정을 확인했으면 Windows 도메인 세션 또는 Linux 공격 호스트에서 사용자 객체를 조회하여 계정명·DN·활성 상태와 주요 속성을 수집하고 그룹·SPN·계정 위험 속성 열거의 입력으로 사용한다.
 
-## 사용할 때
-
-- 도메인 사용자 목록과 개별 계정 속성이 필요한 경우.
-- 그룹 구성원, SPN 서비스 계정 또는 비활성 계정 후보를 조사하기 전에 입력 목록을 만들 때.
-- 인증 성공과 실제 사용자 객체 반환 범위를 구분해야 할 때.
-
 ## 전제 조건
 
 | 확인할 것 | 필요한 상태 | 확인 방법 | 미충족 시 다음 확인 |
@@ -31,6 +25,8 @@ tags:
 ## 실행
 
 ### Linux 공격 호스트에서 실행
+
+`<DC>`와 `<DC_IP>`는 같은 DC의 hostname/FQDN 또는 문서 예약 IP(예: `directory.example.test`, `192.0.2.10`)다. `<USER>@<DOMAIN>`과 `<PASSWORD>`는 LDAP·SMB 조회 요청자(예: `alice@directory.example.test`)이고, 반환되는 사용자 객체와 구분한다. `<OU_DN>`은 선택적 search base, `<MAX_OBJECTS>`는 양의 정수 제한이다.
 
 ```bash
 crackmapexec smb <DC> -u <USER> -p '<PASSWORD>' --users
@@ -53,7 +49,7 @@ Get-ADUser -Filter * -Server '<DC_FQDN>' -Properties Enabled,PasswordLastSet,Las
   Select-Object SamAccountName,DistinguishedName,Enabled,PasswordLastSet,LastLogonDate,AccountExpirationDate,ServicePrincipalName,userAccountControl
 ```
 
-`-Filter *`는 현재 검색 base의 전체 사용자 객체를 요청하므로 승인된 도메인·DC 범위를 확인하고, 큰 환경에서는 `-SearchBase '<OU_DN>'` 또는 `-ResultSetSize <MAX_OBJECTS>`로 먼저 줄인다. 추가 속성은 `-Properties`를 지정해야 반환된다.
+`-Filter *`는 현재 검색 base의 전체 사용자 객체를 요청하므로, 큰 환경에서는 `-SearchBase '<OU_DN>'` 또는 `-ResultSetSize <MAX_OBJECTS>`로 먼저 줄인다. 추가 속성은 `-Properties`를 지정해야 반환된다.
 
 확인할 출력:
 

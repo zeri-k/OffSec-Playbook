@@ -32,7 +32,7 @@ group3r.exe -f <OUTPUT_LOG>
 
 ### 결과를 파일로 저장
 
-기존 파일을 덮어쓰지 않는 `<GROUP3R_LOG_PATH>`를 정하고 실행 전 부재를 확인한다.
+`<GROUP3R_LOG_PATH>`는 Group3r를 실행하는 Windows 호스트의 새 로그 파일 절대 경로(예: `C:\\Temp\\group3r-20260914.log`)다. 기존 파일과 다른 경로를 사용한다.
 
 ```cmd
 if exist "<GROUP3R_LOG_PATH>" exit /b 1

@@ -4,20 +4,16 @@ tags:
 시작조건: ["Linux shell 또는 읽기 가능한 파일 경로 확보"]
 필요권한: ["대상 설정·스크립트·로그 파일의 읽기 권한"]
 필요조건: ["검색할 홈·웹 루트·애플리케이션 경로", "검증할 계정·서비스 후보"]
-결과: ["평문 비밀번호·token·접속 문자열 후보", "검증 가능한 서비스·계정 단서"]
+결과: ["평문 비밀번호·서비스 인증 token·접속 문자열 후보", "검증 가능한 서비스·계정 단서"]
 ---
 
 # Linux 파일 자격증명 검색
 
 ## 한 줄 판단
 
-Linux 파일시스템에서 설정·스크립트·로그를 읽을 수 있으면 비밀번호·token·접속 문자열과 적용 계정·서비스 단서를 함께 수집한다.
+Linux 파일시스템에서 설정·스크립트·로그를 읽을 수 있으면 비밀번호·서비스 인증 token·접속 문자열과 적용 계정·서비스 단서를 함께 수집한다.
 
-## 사용할 때
-
-- 현재 보유 정보: 현재 Linux 사용자와 읽을 수 있는 홈·웹 루트·설정·로그 경로를 알고 있다.
-- 명령 실행 위치: 대상 Linux shell 또는 대상 파일시스템이 마운트된 분석 호스트다.
-- 현재 가능한 행동과 결과: 파일에 저장된 값을 수집할 수 있지만 값의 최신성, 계정 소유자와 실제 서비스 인증은 별도 검증한다.
+대상 Linux shell 또는 대상 파일시스템이 마운트된 분석 호스트에서, 현재 읽을 수 있는 홈·웹 루트·설정·로그 경로를 검색한다. 파일 값의 최신성, 계정 소유자와 실제 서비스 인증은 별도 검증한다.
 
 ## 전제 조건
 
@@ -42,6 +38,8 @@ Linux 파일시스템에서 설정·스크립트·로그를 읽을 수 있으면
 
 ### 설정과 스크립트 검색
 
+이 블록은 대상 Linux host 또는 마운트된 대상 파일시스템을 읽는 분석 호스트에서 실행한다. `/home`·`/var/www`·`/opt`·`/etc`는 현재 읽기 범위의 검색 루트이며, 출력 경로와 문자열은 적용 계정·서비스를 확인하기 전에는 자격 증명 후보로만 취급한다.
+
 ```bash
 for ext in conf config cnf env ini yml yaml php py sh; do find /home /var/www /opt /etc -xdev -type f -name "*.$ext" -readable 2>/dev/null; done
 rg -i "password|passwd|pwd|secret|token|user|key" /home /var/www /opt /etc 2>/dev/null
@@ -53,6 +51,8 @@ rg -i "password|passwd|pwd|secret|token|user|key" /home /var/www /opt /etc 2>/de
 - 예시값·폐기된 환경 변수를 구분할 계정명, 대상 서비스와 파일 수정 시각.
 
 ### 로컬 DB·note·cron 참조 좁히기
+
+이 블록도 같은 검색 호스트에서 실행하며, 확장자와 문자열은 이전 블록의 범위를 보강할 뿐 값의 현재 유효성이나 서비스 인증을 뜻하지 않는다.
 
 ```bash
 find /home /var/www /opt -xdev -type f \( -name '*.db' -o -name '*.sqlite*' -o -name '*.sql' -o -name '*.txt' -o -name '*.bak' \) -readable -print 2>/dev/null
@@ -107,7 +107,7 @@ rg -i "password|accepted|sudo|COMMAND=|ssh" /var/log 2>/dev/null
 
 ## 다음 행동
 
-- 일반 비밀번호·token: [[원격 비밀번호 공격]]
+- 일반 비밀번호·서비스 인증 token: [[원격 비밀번호 공격]]
 - SSH 개인키 단서: [[Linux 개인키 검색]]
 - 명령 기록 단서: [[Linux Shell History 자격증명 검색]]
 

@@ -30,14 +30,10 @@ showmount -e <target>
 
 ### NFS export 목록 확인
 
+`<TARGET>`은 mountd/NFS 서버 IP 또는 FQDN(예: `nfs.example.test`)이다. export 출력은 mount나 파일 READ·WRITE 권한을 증명하지 않는다.
+
 ```bash
 showmount -e <TARGET>
-```
-
-### 발견한 export를 로컬에 마운트
-
-```bash
-sudo mount -t nfs <TARGET>:/shared /mnt/nfs -o nolock
 ```
 
 ## 주요 옵션
@@ -53,7 +49,7 @@ sudo mount -t nfs <TARGET>:/shared /mnt/nfs -o nolock
 
 | 출력/상태 | 의미 | 다음 행동 |
 |---|---|---|
-| export 경로와 접근 범위 출력 | NFS export 확인 | `mount -t nfs`로 읽기/쓰기와 UID 매핑 확인 |
+| export 경로와 접근 범위 출력 | NFS export 확인 | [[NFS export 마운트와 권한 매핑 검증]]에서 UID/GID·읽기/쓰기와 복구 조건 확인 |
 | `everyone` 또는 넓은 네트워크 허용 | 접근 제어가 약할 가능성 | 민감 파일, 백업, 홈 디렉터리 노출 여부 확인 |
 | `clnt_create: RPC: Timed out` | RPC/NFS 접근 불가 또는 필터링 | TCP/UDP 111, 2049와 mountd 포트 확인 |
 | `Program not registered` / empty | mountd/NFS export 없음 | NFS 버전과 RPC 서비스 상태 재확인 |

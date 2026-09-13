@@ -30,6 +30,8 @@ whatweb [options] <url_or_host>
 
 ## 대표 예시
 
+`<TARGET>`은 스킴·vhost·필요한 포트를 포함한 HTTP(S) 대상(예: `site.example.invalid`)이며, `whatweb.json`은 Linux 실행 호스트에 새로 만드는 결과 파일이다.
+
 ### 웹 기술 스택 빠른 식별
 
 ```bash
@@ -65,7 +67,7 @@ whatweb --log-json whatweb.json http://<TARGET>
 
 | 옵션 | 의미 | 사용하는 상황 |
 | --- | --- | --- |
-| `-a` | 탐지 강도 조정. 값이 높을수록 적극적 | 기본 응답만으로 plugin 근거가 부족하고 추가 요청이 허용될 때 |
+| `-a` | 탐지 강도 조정. 값이 높을수록 적극적 | 기본 응답만으로 plugin 근거가 부족하고 추가 요청이 필요한 때 |
 | `-v` | plugin 탐지 근거와 요청 정보를 상세 출력 | 제품·버전 후보가 어떤 응답에서 나왔는지 검토할 때 |
 | `--log-json` | 결과를 JSON 로그로 저장 | URL·status·plugin 결과를 구조화해 후속 비교할 때 |
 | `--log-brief` | 간단한 결과 저장 | 많은 대상의 핵심 fingerprint만 빠르게 비교할 때 |

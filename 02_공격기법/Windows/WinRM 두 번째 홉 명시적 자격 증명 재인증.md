@@ -15,14 +15,6 @@ tags:
 
 `<JUMP_HOST>`의 WinRM 세션에서 로컬 명령은 성공하지만 DC 또는 두 번째 Kerberos 서비스 접근만 실패하고 원래 AD 계정의 plaintext password가 있으면, 지원되는 명령에 `PSCredential`을 전달해 해당 계정으로 두 번째 서비스에 다시 인증한다.
 
-## 사용할 때
-
-- 공격 호스트에서 `<JUMP_HOST>:5985/5986` WinRM 세션을 확보했다.
-- `<JUMP_HOST>`에서 DC 또는 `<SECOND_HOST>`의 DNS와 필요한 Kerberos·LDAP·서비스 포트에 연결할 수 있다.
-- 현재 WinRM 세션에는 `HTTP/<JUMP_HOST>` service ticket만 있고 재사용 가능한 사용자 TGT가 없거나, 두 번째 Kerberos 서비스 요청에서만 인증 오류가 발생한다.
-- 원래 WinRM 로그인 계정의 plaintext password를 보유한다.
-- 기본 선택은 명령별 `-Credential $Cred` 전달이다. RunAs endpoint는 관리자 콘솔과 GUI credential prompt를 사용할 수 있고 WinRM 서비스 재시작 영향을 감수할 때만 사용한다.
-
 ## 전제 조건
 
 | 확인할 것 | 필요한 상태 | 확인 방법 | 미충족 시 다음 확인 |
@@ -34,6 +26,8 @@ tags:
 | RunAs 선택 조건 | `<JUMP_HOST>`의 상승된 로컬 관리자 token과 GUI prompt, 고유한 endpoint 이름 | 관리자 token, WinRM service와 endpoint 기준선 확인 | 조건이 없거나 같은 이름의 endpoint가 이미 있으면 `PSCredential` 방식만 사용 |
 
 ## 실행
+
+`<JUMP_HOST>`는 현재 WinRM 세션이 열린 Windows 호스트이고, `<SECOND_HOST>`는 그 호스트에서 FQDN으로 도달해야 하는 두 번째 서비스 호스트다. `<DOMAIN>\<USER>`와 `<PASSWORD>`는 최초 WinRM 계정과 동일한 재인증 자료일 때만 함께 사용하며, RunAs endpoint 이름은 기존 endpoint와 겹치지 않는 값만 사용한다.
 
 ### 1. Windows 점프 호스트에서 두 번째 홉 후보 확인
 
@@ -85,7 +79,7 @@ Enter-PSSession -ComputerName '<JUMP_HOST>' -Credential '<DOMAIN>\<USER>' -Confi
 klist
 ```
 
-`NoServiceRestart`를 지원하지 않는 Windows PowerShell에서는 `Register-PSSessionConfiguration -Name '<TEMP_ENDPOINT>' -RunAsCredential '<DOMAIN>\<USER>'`의 restart prompt를 로컬 관리자 콘솔에서 한 번 승인한다. 이 경우 뒤에서 `Restart-Service`를 중복 실행하지 않는다. 등록 또는 restart 때 기존 원격 session이 끊길 수 있으므로, 별도 관리 경로 없이 현재 WinRM session 하나만 가진 상태에서는 이 분기를 사용하지 않는다.
+`NoServiceRestart`를 지원하지 않는 Windows PowerShell에서는 `Register-PSSessionConfiguration -Name '<TEMP_ENDPOINT>' -RunAsCredential '<DOMAIN>\<USER>'`가 표시하는 restart prompt를 로컬 관리자 콘솔에서 한 번 확인한다. 이는 cmdlet의 UI 입력 동작이며, 이 경우 뒤에서 `Restart-Service`를 중복 실행하지 않는다. 등록 또는 restart 때 기존 원격 session이 끊길 수 있으므로, 별도 관리 경로 없이 현재 WinRM session 하나만 가진 상태에서는 이 분기를 사용하지 않는다.
 
 확인할 출력:
 

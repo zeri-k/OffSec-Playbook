@@ -13,12 +13,6 @@ tags:
 
 현재 Windows 사용자 세션에서 DPAPI 복호화를 호출할 수 있거나 해당 프로필 파일과 DPAPI master key를 복호화할 로그온 비밀번호·NT hash·도메인 backup key가 있다면, Credential Manager·Windows Vault·브라우저·앱 저장소의 평문 비밀번호 또는 token을 복호화한다.
 
-## 사용할 때
-
-- 현재 보유 정보: Windows foothold의 현재 사용자와 프로필 경로를 알고 있거나 LSASS·SECURITY·사용자 프로필에서 해당 사용자의 DPAPI master key·DPAPI_SYSTEM secret을 확보한 상태다.
-- 명령 실행 위치와 도달성: 대상 Windows 사용자의 세션에서 Credential Manager GUI, `cmdkey`, Mimikatz 또는 LaZagne를 실행할 수 있고, 검증할 원격 리소스가 있으면 그 서비스에도 접근할 수 있다.
-- 현재 가능한 행동과 결과: 현재 사용자에게 보이는 저장 항목을 열거하거나 복호화하고, 저장된 대화형 계정은 별도 `runas` 실행 기법의 입력으로 넘긴다.
-
 ## 전제 조건
 
 | 확인할 것 | 필요한 상태 | 확인 방법 | 미충족 시 다음 확인 |
@@ -30,6 +24,8 @@ tags:
 | 필요한 파일·목록·주소 | DPAPI masterkey 또는 현재 사용자 세션, 저장 대상과 검증할 서비스 식별 | 사용자 SID·프로필·Target 정보를 함께 기록 | 서로 다른 사용자의 masterkey·프로필 혼용 여부 확인 |
 
 ## 실행
+
+저장 항목의 `Target`·`User`는 관찰값이고 현재 로그인 사용자와 같다고 가정하지 않는다. `<MASTERKEY>`·`<NTLM_HASH>`·도메인 backup key는 서로 다른 DPAPI 입력이므로, 한 사용자 프로필과 그 입력의 출처가 일치할 때만 다음 도구 단계에 전달한다.
 
 1. Credential Manager GUI와 `cmdkey /list`로 저장 credential 대상과 사용자를 확인한다.
 2. 현재 권한이 허용하는 범위에서 Mimikatz/LaZagne로 CredMan·DPAPI·브라우저 credential을 추출한다.

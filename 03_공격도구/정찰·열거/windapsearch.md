@@ -23,6 +23,8 @@ tags:
 
 ## 표준 사용법
 
+`<DC_IP>`는 LDAP를 제공하는 DC 주소(예: `dc.example.test`)이고, `<USER>@<DOMAIN>`은 bind UPN(예: `alice@corp.example.test`)이다. `<ENUMERATION_OPTION>`에는 `-U`, `-C`, `--da`, `-PU` 중 한 열거 목적을 넣는다.
+
 ```bash
 python3 windapsearch.py --dc-ip <DC_IP> [-u '<USER>@<DOMAIN>' -p '<PASSWORD>'] <ENUMERATION_OPTION>
 ```

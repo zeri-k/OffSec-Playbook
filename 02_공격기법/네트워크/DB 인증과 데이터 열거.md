@@ -10,13 +10,6 @@
 
 현재 명령 실행 위치에서 대상 DB 포트에 연결할 수 있고 유효한 데이터베이스 계정이 있다면, 그 로그인으로 볼 수 있는 데이터베이스·테이블·사용자·서버 역할을 열거한다. DB 로그인 성공, DB 관리자 권한, 서버 파일 접근과 운영체제 명령 실행은 각각 별도로 확인한다.
 
-## 사용할 때
-
-- MySQL/MSSQL/Oracle 포트가 열려 있고 credential 후보가 있을 때.
-- 웹 설정, SMB/FTP/NFS 파일, 메일에서 DB 접속 문자열을 얻었을 때.
-- Kerberoasting으로 `MSSQLSvc` SPN 소유 계정의 평문 비밀번호를 복구했을 때.
-- DB 안에 계정/비밀번호/token/업무 데이터가 있을 가능성이 있을 때.
-
 ## 전제 조건
 
 | 조건 | 확인 방법 | 충족 기준 |
@@ -27,6 +20,8 @@
 | 권한 범위 | `show grants`, role 확인 | 데이터/파일/관리 권한 구분 |
 
 ## 실행
+
+아래 `<TARGET>`은 명령 실행 호스트에서 도달하는 DB 서버 주소(예: `192.0.2.20`)이고, `<USER>`·`<PASSWORD>`·`<NT_HASH>`·`<CCACHE_FILE>`은 표에서 고른 같은 인증 방식의 요청자 자료다. `<SID_OR_SERVICE>`는 Oracle listener가 확인한 SID 또는 service name이며, 이 값들은 DB client를 실행하는 공격 호스트에서 사용한다.
 
 ### DB와 인증 방식 선택
 
@@ -68,7 +63,7 @@ SHOW GRANTS FOR CURRENT_USER;
 확인할 출력:
 
 - `USER()`의 client 제시 계정·접속 호스트와 `CURRENT_USER()`의 실제 grant 적용 계정. 두 값이 다르면 `CURRENT_USER()`를 기준으로 권한을 판독한다.
-- 접근 가능한 DB, 사용자/비밀번호/hash/token 테이블, `FILE` 권한.
+- 접근 가능한 DB, 사용자/비밀번호/hash/API token 테이블, `FILE` 권한.
 - shell에서 `SHOW DATABASES`를 실행하지 않는다. MySQL prompt가 열리지 않으면 query 권한을 판단하기 전에 포트 도달성, TLS 조건과 사용자명·비밀번호를 확인한다.
 
 ### MSSQL 접속과 열거
@@ -246,7 +241,7 @@ from dba_users
 order by username;
 ```
 
-`PASSWORD_VERSIONS`는 10G·11G·12C 등 보유 verifier 형식이지 offline cracking에 사용할 verifier 본문이 아니다. Oracle이 문서화한 `DBMS_METADATA`의 `USER` metadata도 password 표시가 `SYS`, `EXP_FULL_DATABASE`, 해당 user 자신으로 제한되고 `SELECT_CATALOG_ROLE`만으로는 표시되지 않는다. 이는 지원되는 metadata 조회 경계이지 반환 DDL을 cracking 입력 형식으로 분해하는 계약은 아니다. `SYS.USER$`는 문서화된 범용 verifier 조회 인터페이스가 아니며, Oracle 11g 서버에서 `PASSWORD` 값이 반환됐다는 사실만으로 그 값을 11G verifier라고 해석하지 않는다. 승인된 8i~12c 서버에서 account별 version과 direct internal-field 조회 권한까지 확인한 경우에만 [[Oracle password verifier 추출과 오프라인 입력 준비]]로 이동한다. 18c 이상은 현재 metadata 범위를 유지한다. 원격 `AS SYSDBA`도 해당 계정의 관리 권한과 password file·인증 구성이 확인된 경우에만 별도로 시도한다.
+`PASSWORD_VERSIONS`는 10G·11G·12C 등 보유 verifier 형식이지 offline cracking에 사용할 verifier 본문이 아니다. Oracle이 문서화한 `DBMS_METADATA`의 `USER` metadata도 password 표시가 `SYS`, `EXP_FULL_DATABASE`, 해당 user 자신으로 제한되고 `SELECT_CATALOG_ROLE`만으로는 표시되지 않는다. 이는 지원되는 metadata 조회 경계이지 반환 DDL을 cracking 입력 형식으로 분해하는 계약은 아니다. `SYS.USER$`는 문서화된 범용 verifier 조회 인터페이스가 아니며, Oracle 11g 서버에서 `PASSWORD` 값이 반환됐다는 사실만으로 그 값을 11G verifier라고 해석하지 않는다. 8i~12c 서버에서 account별 version과 direct internal-field 조회 권한까지 확인한 경우에만 [[Oracle password verifier 추출과 오프라인 입력 준비]]로 이동한다. 18c 이상은 현재 metadata 범위를 유지한다. 원격 `AS SYSDBA`도 해당 계정의 관리 권한과 password file·인증 구성이 확인된 경우에만 별도로 시도한다.
 
 ## 변경 영향과 복구
 
@@ -269,7 +264,7 @@ order by username;
 | `/netonly` 세션의 `sqlcmd -E`에서 기대한 `<DOMAIN>\<SPN_USER>`가 `SYSTEM_USER`로 반환됨 | 복구한 AD 계정의 Windows Integrated Authentication과 SQL login mapping 성공 | Windows 공격 호스트에서 MSSQL 세션 | DB role·데이터·impersonation·linked server 권한 확인 |
 | AD 인증은 유효하지만 MSSQL에서 `Login failed for user`가 반환됨 | 서비스 계정 비밀번호 확보와 SQL login 허용은 별개임 | AD credential 유효·DB 세션 미확보 | SPN 최신성, 대상 instance와 Windows login 등록·`CONNECT SQL` 권한 확인 |
 | DB·table 목록은 보이지만 일부 객체가 거부됨 | 제한된 데이터 READ 권한이 있음 | 제한된 DB 접근 | 읽기 가능한 schema 안에서만 수집 |
-| 민감 table에서 credential, hash, token 또는 내부 URL이 나옴 | 후속 접근 후보를 수집함 | 민감 데이터 또는 자격 증명 후보 | 평문·hash·token을 구분해 별도 검증 |
+| 민감 table에서 credential, hash, API token 또는 내부 URL이 나옴 | 후속 접근 후보를 수집함 | 민감 데이터 또는 자격 증명 후보 | 평문·hash·API token을 구분해 별도 검증 |
 | FILE·sysadmin·DBA 같은 권한이 확인됨 | 데이터 조회를 넘어 파일·명령 실행 후보가 있음 | 고권한 DB 기능 후보 | 전용 파일 쓰기·명령 실행 기법으로 이동 |
 | Oracle 8i~10g server release 또는 11g~12c `PASSWORD_VERSIONS`와 내부 field 직접 조회 권한이 확인됨 | account별 raw verifier를 제한적으로 분류할 수 있음 | Oracle verifier 추출 후보 | [[Oracle password verifier 추출과 오프라인 입력 준비]] |
 | 다른 서비스에서 DB credential이 실제 인증됨 | 계정 재사용이 확인됨 | 재사용 가능한 자격 증명 | 새 서비스의 identity와 권한 확인 |

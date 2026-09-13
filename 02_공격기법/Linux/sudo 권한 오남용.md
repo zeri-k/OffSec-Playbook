@@ -13,12 +13,6 @@ tags:
 
 현재 Linux 셸에서 `sudo -l`에 표시된 명령을 비밀번호 없이 또는 보유한 현재 사용자 비밀번호로 실행할 수 있다면, 해당 프로그램의 기능을 이용해 root·다른 사용자 셸이나 제한된 고권한 파일 접근을 얻는다.
 
-## 사용할 때
-
-- Linux shell을 얻었고 사용자 비밀번호가 있거나 NOPASSWD sudo가 의심될 때.
-- 특정 binary를 root 또는 다른 사용자로 실행할 수 있을 때.
-- 제한된 명령이 파일 읽기/쓰기/명령 실행 기능을 포함할 때.
-
 ## 전제 조건
 
 | 조건 | 확인 방법 | 충족 기준 |
@@ -31,6 +25,8 @@ tags:
 
 ## 실행
 ### sudo 권한 확인
+
+이 블록은 대상 Linux 셸의 현재 사용자로 실행한다. 출력의 runas 사용자·절대 명령 경로·인자 규칙·`NOPASSWD` 여부를 다음 블록의 입력으로 그대로 사용하며, `sudo -l` 성공은 root shell을 뜻하지 않는다.
 
 ```bash
 sudo -l
@@ -57,6 +53,8 @@ sudo -i
 
 `sudo -l`에서 대상 사용자로 `id` 또는 셸을 실행할 수 있다고 표시되는 경우에만 해당 명령을 사용한다.
 
+`<USER>`는 바로 앞 `sudo -l`의 `(RUNAS)`에 표시된 사용자명(가상 예: `backup`)이며, 임의의 계정명으로 바꾸지 않는다.
+
 ```bash
 sudo -u <USER> id
 sudo -u <USER> /bin/bash
@@ -77,7 +75,7 @@ User <CURRENT_USER> may run the following commands on <HOST>:
     (<RUNAS_USER>) NOPASSWD: /usr/bin/find
 ```
 
-대상 Linux 셸에서 허용된 runas 사용자와 경로를 그대로 지정한다. `find`가 허용된 권한을 유지한 채 하위 셸을 실행할 수 있는지 먼저 `id`로 확인한다.
+대상 Linux 셸에서 허용된 runas 사용자와 경로를 그대로 지정한다. `<RUNAS_USER>`는 `sudo -l`의 `(RUNAS)`에 나온 사용자명(가상 예: `root`)이며, `find`가 허용된 권한을 유지한 채 하위 셸을 실행하는지 먼저 `id`로 확인한다.
 
 ```bash
 sudo -u <RUNAS_USER> /usr/bin/find . -exec /bin/sh -c 'id; exec /bin/sh' \; -quit

@@ -19,8 +19,11 @@ tags:
 - 실행 환경: 로컬 관리자 권한을 가진 Windows 피벗 호스트
 - 입력: `listenaddress`, `listenport`, `connectaddress`, `connectport`
 - 네트워크 조건: 공격 호스트에서 listen 포트로, 피벗 호스트에서 내부 목적지 TCP 포트로 각각 도달 가능
+- listen address·port는 Windows pivot에 만들 endpoint, connect address·port는 pivot 관점 destination(예: `192.0.2.50:443`)이다. account는 명령 실행 권한과 별개이고 portproxy 추가는 listener가 실제로 동작함을 보장하지 않는다.
 
 ## 표준 사용법
+
+`<LISTEN_ADDRESS>:<LISTEN_PORT>`는 Windows pivot의 portproxy listener, `<CONNECT_ADDRESS>:<CONNECT_PORT>`는 pivot 관점 destination이다. add·show·delete에는 같은 listen address/port를 재사용하며 listener 등록, final TCP response, destination authentication은 separate results다.
 
 ```cmd
 netsh.exe interface portproxy add v4tov4 listenport=<LISTEN_PORT> listenaddress=<PIVOT_IP> connectport=<DEST_PORT> connectaddress=<DEST_IP>

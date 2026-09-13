@@ -21,12 +21,15 @@ SocksOverRDP는 RDP Dynamic Virtual Channel을 통해 RDP 피벗 호스트가 �
 - 입력: RDP 계정, plugin DLL과 server 실행 파일
 - 필요 권한: 공식 기본 절차에서 plugin DLL 등록은 client의 상승된 관리자, server EXE는 피벗 호스트의 일반 사용자도 실행 가능
 - 네트워크 조건: RDP Dynamic Virtual Channel 사용 가능
+- plugin DLL은 Windows RDP client의 절대 경로, server EXE는 pivot RDP session에서 실행할 경로다. client·pivot host와 architecture를 구분하며 SOCKS listener 생성 뒤 실제 내부 TCP 응답을 확인한다.
 
 ## 표준 사용법
 
 plugin을 Windows RDP client에 등록하고 그 client의 `mstsc.exe`로 RDP 세션을 연 뒤, 피벗 호스트에서 server를 실행한다. 두 구성 요소가 같은 호스트에서 연속 실행되는 명령으로 해석하지 않는다.
 
 ## 대표 예시
+
+`<CLIENT_PLUGIN_PATH>`는 RDP client에서 등록할 plugin DLL의 절대 경로(예: `C:\\Tools\\SocksOverRDP-Plugin.dll`)이고, `<SERVER_EXE_PATH>`는 RDP 세션 안 피벗 호스트에서 실행할 server EXE의 절대 경로(예: `C:\\Users\\Public\\SocksOverRDP-Server.exe`)다. 둘은 서로 다른 호스트·경로이며 후속 `1080`은 client 로컬 SOCKS listener다.
 
 ### plugin 등록
 

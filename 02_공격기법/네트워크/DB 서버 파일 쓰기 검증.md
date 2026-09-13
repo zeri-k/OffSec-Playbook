@@ -12,7 +12,7 @@ tags:
 
 ## 한 줄 판단
 
-현재 MySQL 또는 Microsoft SQL Server(MSSQL) 세션에 서버 측 파일 생성 기능을 사용할 권한이 있고 DB 서비스 계정이 대상 디렉터리에 쓸 수 있다면, 기존 파일을 덮어쓰지 않는 고유 proof 파일 하나를 생성해 파일 쓰기와 웹 노출·실행을 각각 분리해 확인한다.
+현재 MySQL 또는 Microsoft SQL Server(MSSQL) 세션에 서버 측 파일 생성 기능을 사용할 권한이 있고 DB 서비스 계정이 대상 디렉터리에 쓸 수 있다면, 기존 파일을 덮어쓰지 않는 고유 파일 하나를 생성해 파일 쓰기와 웹 노출·실행을 각각 분리해 확인한다.
 
 ## 전제 조건
 
@@ -22,11 +22,13 @@ tags:
 | MySQL 권한·경로 | `FILE`, `secure_file_priv`, mysqld의 디렉터리 쓰기 권한 | `SHOW GRANTS FOR CURRENT_USER;`, `SHOW VARIABLES LIKE 'secure_file_priv';` | `NULL`·허용 디렉터리·빈 값과 OS ACL을 구분 |
 | MSSQL 권한·설정 | OLE procedure 실행 권한, 비활성 설정을 바꾸려면 `ALTER SETTINGS` | `IS_SRVROLEMEMBER`, `HAS_PERMS_BY_NAME`, `sys.configurations` | 설정 변경 권한과 각 procedure의 `EXECUTE` 권한을 구분 |
 | 대상 파일 | DB 서버 관점의 절대 경로와 고유 이름, 기존 파일 부재 | MySQL은 `INTO OUTFILE`의 비덮어쓰기 결과, MSSQL은 `FileExists` | 파일이 있으면 중단하고 새 고유 이름 선택 |
-| 복구 경로 | 생성한 exact 경로를 DB 기능 또는 승인된 서버 관리 셸로 제거 가능 | 아래 제품별 정리 명령을 작업 전에 선택 | 제거 경로가 없으면 쓰기 proof를 수행하지 않음 |
+| 복구 경로 | 생성한 exact 경로를 DB 기능 또는 서버 관리 셸로 제거 가능 | 아래 제품별 정리 명령을 작업 전에 선택 | 제거 경로가 없으면 쓰기 검증을 수행하지 않음 |
 
 MySQL의 `SELECT ... INTO OUTFILE`은 클라이언트가 아니라 서버 호스트에 파일을 만들며 `FILE` 권한을 요구한다. MSSQL의 OLE Automation은 SQL Server 프로세스에서 등록된 OLE object를 호출하므로, 설정 활성화 가능성과 `Scripting.FileSystemObject` 생성·파일 쓰기 성공은 별도 단계다. DB 권한→OS Identity·path→웹 mapping·handler의 공통 경계는 [[DB 서버 측 작업의 실행 주체와 결과 경계]]를 따른다.
 
 ## 실행
+
+아래 `<UNIQUE_PROOF>`는 DB 서버에서 새로 만들 basename(예: `db-check-42f1`)이고, 경로는 DB 서비스 계정이 보는 서버의 절대 경로다. MySQL·MSSQL 명령은 각각 DB query를 실행하는 클라이언트의 해당 SQL prompt에서 실행하며, 뒤의 HTTP 확인에서 `<TARGET>`은 파일을 제공할 수 있는 서버 주소다. 같은 proof 이름은 생성·조회·삭제 단계에서 재사용한다.
 
 ### MySQL에서 고유 proof 파일 생성
 
@@ -37,7 +39,9 @@ SHOW GRANTS FOR CURRENT_USER;
 SHOW VARIABLES LIKE 'secure_file_priv';
 ```
 
-`secure_file_priv`가 디렉터리이면 그 안의 경로만 사용한다. `NULL`이면 이 파일 기능이 비활성화된 상태이며, 빈 값이어도 mysqld의 운영체제 쓰기 권한은 별도로 필요하다. 서버 관리자에게 exact 경로가 없음을 확인했거나, 고유 이름을 사용해 기존 파일 충돌을 피할 수 있을 때 proof를 생성한다.
+`secure_file_priv`가 디렉터리이면 그 안의 경로만 사용한다. `NULL`이면 이 파일 기능이 비활성화된 상태이며, 빈 값이어도 mysqld의 운영체제 쓰기 권한은 별도로 필요하다. 고유 이름을 사용해 기존 파일 충돌을 피할 수 있을 때 파일을 생성한다.
+
+`<UNIQUE_PROOF>`는 DB 서버에서 새로 만들 basename이며 가상 예시는 `db-check-42f1`이다. 이 블록은 MySQL prompt에서 실행하고 `/var/www/html/`은 DB 서버의 절대 경로 예시다.
 
 ```sql
 SELECT 'db-file-write-proof' INTO OUTFILE '/var/www/html/<UNIQUE_PROOF>.txt';
@@ -111,7 +115,7 @@ EXEC sp_OADestroy @fso;
 
 - 모든 OLE 호출의 반환 코드 `0`은 해당 호출의 성공이다. 비zero HRESULT가 나오면 바로 다음 호출로 덮기 전에 `sp_OAGetErrorInfo`로 원인을 확인한다.
 - `Invalid class string`이면 해당 호스트에 ProgID가 등록되지 않았고, access denied·path not found이면 procedure 권한과 SQL Server 서비스 계정의 경로·ACL을 확인한다.
-- DB query 완료만으로 파일 생성을 단정하지 않는다. 아래 존재 확인 또는 승인된 서버 관리 경로에서 exact 파일과 고유 문자열을 확인한다.
+- DB query 완료만으로 파일 생성을 단정하지 않는다. 아래 존재 확인 또는 서버 관리 경로에서 exact 파일과 고유 문자열을 확인한다.
 
 ```sql
 DECLARE @fso int, @exists bit;
@@ -141,7 +145,7 @@ EXEC sp_OADestroy @fso;
 
 ### MySQL proof 정리
 
-`SELECT ... INTO OUTFILE`에는 생성 파일 삭제 기능이 없다. 작업 전에 선택한 승인된 서버 관리 셸에서 exact 파일의 내용·경로를 확인한 뒤 제거한다.
+`SELECT ... INTO OUTFILE`에는 생성 파일 삭제 기능이 없다. 작업 전에 선택한 서버 관리 셸에서 exact 파일의 내용·경로를 확인한 뒤 제거한다.
 
 ```bash
 test "$(cat '/var/www/html/<UNIQUE_PROOF>.txt')" = 'db-file-write-proof' && rm -- '/var/www/html/<UNIQUE_PROOF>.txt'

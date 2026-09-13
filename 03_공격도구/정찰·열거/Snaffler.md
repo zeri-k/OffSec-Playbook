@@ -33,6 +33,8 @@ Snaffler.exe -s -d <DOMAIN> -o <OUTPUT_FILE> -v data
 
 ### 도메인 share 기본 credential hunting
 
+`<DOMAIN>`은 현재 Windows 세션이 연결된 AD DNS 또는 NetBIOS 도메인(예: `corp.example.test`)이다. `-o`의 `snaffler.log`는 이 실행 호스트에 새로 만드는 결과 파일이다.
+
 ```cmd
 C:\Users\Public>Snaffler.exe -s -d <DOMAIN> -o snaffler.log -v data
 ```

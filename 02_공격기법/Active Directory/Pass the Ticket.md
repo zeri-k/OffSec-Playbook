@@ -14,14 +14,6 @@ tags:
 
 Kerberos TGT 또는 특정 SPN의 TGS를 보유하고 ticket을 적용할 Windows·Linux 호스트에서 `<HOST_FQDN>:<SERVICE_PORT>`에 도달할 수 있으면, 현재 실행 세션에 ticket을 주입·지정해 ticket 주체가 허용된 SMB·WinRM·WMI·LDAP 접근 범위를 확인한다.
 
-## 사용할 때
-
-- 현재 보유 정보: `.kirbi`·`.ccache`·Rubeus base64 ticket의 principal, TGT/TGS 종류, SPN과 만료 시각을 알고 있다. ticket·key·서비스 SPN의 관계와 조건 해석은 [[Kerberos 인증 자료와 서비스 접근]]을 따른다.
-- 명령 실행 위치: Windows ticket은 적용할 로그온 세션에서 Rubeus·Mimikatz로 주입하고, Linux ticket은 ccache를 읽을 수 있는 셀에서 `KRB5CCNAME`으로 지정한 뒤 같은 환경에서 서비스 클라이언트를 실행한다.
-- 도달해야 하는 대상: TGT로 service ticket을 요청하려면 `<DC_FQDN>:88`, 서비스를 검증하려면 `<HOST_FQDN>:445`·`5985/5986`·WMI/LDAP 등 선택한 포트에 도달해야 한다.
-- 현재 계정·권한: 명령을 실행하는 로컬 계정과 ticket principal은 서로 다를 수 있다. ticket 주체의 서비스 권한이 실제 행동 범위를 결정한다.
-- 지금 가능한 행동·성공 범위: TGT는 추가 service ticket 요청, TGS는 표시된 SPN에 사용한다. ticket 주입·`klist` 표시, 서비스 인증, share·세션·원격 명령, 관리자·복제 권한을 각각 별도로 확인한다.
-
 ## 전제 조건
 
 | 확인할 것 | 필요한 상태 | 확인 방법 | 미충족 시 다음 확인 |
@@ -33,6 +25,8 @@ Kerberos TGT 또는 특정 SPN의 TGS를 보유하고 ticket을 적용할 Window
 | 필요한 파일·목록·주소 | `<TICKET.kirbi>` 또는 `/tmp/user.ccache`, `<DC_FQDN>`, `<HOST_FQDN>`, `<REALM>`, `<SHARE>` | 파일 경로, realm·FQDN·SPN 대응 확인 | ticket 파일·realm·FQDN·share 수정 |
 
 ## 실행
+
+`<TICKET.kirbi>`와 `<CCACHE_FILE>`은 ticket을 적용할 호스트의 파일이며, `<DC_FQDN>`·`<HOST_FQDN>`·`<REALM>`·`<SHARE>`는 TGT/TGS에 표시된 서비스 경계와 일치해야 한다. PID·LUID는 주입 출력에서, principal·SPN·만료 시각은 `klist`에서 다시 확인한다.
 
 ### Ticket 종류 선택
 

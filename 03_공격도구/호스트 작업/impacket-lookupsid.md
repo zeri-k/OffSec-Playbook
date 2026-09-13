@@ -20,8 +20,11 @@ tags:
 - 실행 위치: 대상 TCP/445와 관련 RPC에 접근 가능한 Impacket 설치 Linux 호스트.
 - 인증 입력: 대상이 허용하는 도메인·로컬 계정의 비밀번호·NT hash·Kerberos ticket. null session이 허용되면 빈 인증도 시도할 수 있다.
 - 결과 사용: 도메인 SID, 실제 사용자 이름과 RID를 ticket PAC·대상 계정 식별에 사용한다.
+- `<TARGET>`은 DC 또는 member host의 SMB/RPC 주소이고 `LMHASH:NTHASH`는 hash authentication 형식이다. null session과 계정 인증은 서로 다른 requester 상태이므로 출력 범위를 합쳐 해석하지 않는다.
 
 ## 표준 사용법
+
+`<TARGET>`은 DC 또는 member host SMB/RPC endpoint, `<DOMAIN>/<USER>`와 `LMHASH:NTHASH`는 authenticated requester input이다. null session block은 blank requester를 쓰며 returned SID/RID·name은 target과 requester policy의 결과로, ticket acceptance나 group privilege를 단정하지 않는다.
 
 ```bash
 impacket-lookupsid [options] '<DOMAIN>/<USER>:<PASSWORD>@<TARGET>'

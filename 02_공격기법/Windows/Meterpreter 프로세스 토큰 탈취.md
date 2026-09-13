@@ -13,12 +13,6 @@ tags:
 
 Windows Meterpreter 세션에서 다른 사용자로 실행 중인 프로세스의 PID와 접근 권한을 확인했으면 `steal_token`으로 그 프로세스 token을 현재 세션에 적용하고 `getuid`와 실제 자원 접근으로 권한 변화를 확인한다.
 
-## 사용할 때
-
-- `ps`에 현재 사용자와 다른 계정으로 실행 중인 프로세스가 보일 때.
-- 현재 Meterpreter 세션이 대상 프로세스 token에 접근할 수 있을 때.
-- 파일·서비스·네트워크 접근이 대상 사용자의 token에서 달라지는지 확인하려 할 때.
-
 ## 전제 조건
 
 | 확인할 것 | 필요한 상태 | 확인 방법 | 미충족 시 다음 확인 |
@@ -36,6 +30,8 @@ meterpreter > ps
 meterpreter > steal_token <TARGET_PID>
 meterpreter > getuid
 ```
+
+`<TARGET_PID>`는 같은 `ps` 출력에서 확인한 대상 프로세스의 현재 PID다. `<DOMAIN_OR_HOST>\\<USER>`는 `steal_token` 결과와 두 번째 `getuid`에서 관찰하는 출력 형식이며 입력으로 추측하지 않는다.
 
 확인할 출력:
 

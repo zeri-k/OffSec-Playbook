@@ -48,7 +48,7 @@ target이 인증을 수락해도 확보한 것은 그 service 안의 relay 계�
 | 관찰한 상태 | 확정할 수 있는 것 | 다음에 확인할 것 |
 |---|---|---|
 | `USER::DOMAIN:...` NetNTLMv2 line 저장 | 특정 NTLM 교환의 challenge-response 확보 | 전체 형식·계정 출처와 오프라인 복구 후보 |
-| Hashcat에서 평문 후보 복구 | 저장 response와 일치하는 password 후보 | 현재 계정 상태와 승인된 서비스의 실제 인증 |
+| Hashcat에서 평문 후보 복구 | 저장 response와 일치하는 password 후보 | 현재 계정 상태와 대상 서비스의 실제 인증 |
 | 계정 NT hash 확보 | NTLM 장기 key 후보 | [[Pass the Hash]]가 지원하는 대상 서비스·계정 범위와 권한 |
 | relay listener에 target 인증 성공 표시 | target service가 relay된 Identity를 수락 | service 안의 READ·WRITE·명령·enrollment 권한 |
 | relay 인증 뒤 작업 거부 | 인증과 target action 권한이 다름 | relay 계정 ACL·role과 target별 보호 설정 |

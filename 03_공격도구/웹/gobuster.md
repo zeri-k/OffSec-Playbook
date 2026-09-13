@@ -82,7 +82,7 @@ DNS 질의로 존재하는 서브도메인을 찾는다.
 확인할 출력:
 
 - `Found: <HOST>.<DOMAIN>` 형태의 DNS 결과를 확인한다.
-- 이 출력은 DNS 응답을 확정하지만 해당 이름의 HTTP(S) 포트, 애플리케이션 또는 평가 범위는 확정하지 않는다.
+- 이 출력은 DNS 응답을 확정하지만 해당 이름의 HTTP(S) 포트나 애플리케이션은 확정하지 않는다.
 
 ### FUZZ 위치 퍼징
 
@@ -136,7 +136,6 @@ Gobuster 요청은 대상 access log·WAF·rate limit 상태에 남을 수 있�
 ```shell
 rm -- "$GOBUSTER_OUT_DIR/dir.txt"
 rmdir -- "$GOBUSTER_OUT_DIR"
-test ! -e "$GOBUSTER_OUT_DIR"
 ```
 
 실행 실패로 결과 파일이 없으면 존재하지 않는 파일 오류와 scan 실패를 구분한다. 디렉터리가 비지 않으면 재귀 삭제하지 말고 추가 산출물을 확인한다. 이 문서는 `/etc/hosts`를 직접 변경하지 않는다.

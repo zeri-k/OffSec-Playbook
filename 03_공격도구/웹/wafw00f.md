@@ -20,6 +20,7 @@ tags:
 - 필요한 인증 정보: 아래 예시는 익명 응답을 비교한다. 로그인 뒤 경로와 역할별 WAF 정책은 인증 상태를 전달하지 않으면 관찰되지 않을 수 있다.
 - 선택 입력: proxy, 출력 형식과 대상 목록
 - 대상에서 필요한 서비스와 권한: 정상 요청과 탐지용 요청에 HTTP 응답이 있어야 한다. `401`·`403`·redirect 수신은 서비스 도달을 뜻할 수 있지만 애플리케이션 인증 성공이나 WAF 차단을 단독으로 확정하지 않는다.
+- `<TARGET_URL>`은 scheme·port·vhost·path를 포함한 URL(예: `https://site.example.invalid/`)이고 `<DOMAIN>`은 DNS lookup용 root domain이다. proxy URL과 output file은 실행 host 입력이며 WAF signature 발견과 버전·정책 범위는 구분한다.
 
 
 ## 표준 사용법
@@ -31,6 +32,8 @@ wafw00f <url_or_domain>
 스킴을 생략하면 기본 웹 요청으로 탐지하고, HTTPS 여부가 중요하면 `https://`를 명시한다.
 
 ## 대표 예시
+
+`<DOMAIN>`은 DNS lookup과 HTTP 요청에 쓸 루트 FQDN(예: `site.example.invalid`)이다. HTTPS·포트·vhost가 다르면 `<TARGET_URL>`처럼 스킴과 경로를 포함한 URL을 사용하며, 명령은 Linux 실행 호스트에서 실행한다.
 
 ### WAF 존재 여부 확인
 

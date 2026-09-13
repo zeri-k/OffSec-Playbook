@@ -32,7 +32,7 @@ tags:
 | 2 | TLS 호스트 이름과 SNI | `openssl s_client -connect <TARGET>:443 -servername <HOST>` | CN/SAN, 조직명과 접속해야 할 vhost 후보를 수집한다. |
 | 3 | 기술 스택과 WAF/CDN | `whatweb http://<TARGET>/`, `wafw00f http://<TARGET>/` | CMS·프레임워크·언어·버전과 응답 차단·변조 가능성을 구분한다. |
 | 4 | 숨은 경로와 상태 코드 | `gobuster dir -u http://<TARGET>/ -w <WORDLIST>` | 200/301/302/401/403, wildcard와 custom 404를 비교한다. |
-| 5 | 링크·JS·폼·단어 | `./finalrecon.py --headers --sslinfo --crawl --url https://<HOST>/`, `python3 ReconSpider.py http://<TARGET>/`, `cewl -d 2 -m 5 -w words.txt http://<TARGET>/` | API, 토큰, 내부 URL, 이메일, 폼 필드와 vhost·wordlist 후보를 수집한다. |
+| 5 | 링크·JS·폼·단어 | `./finalrecon.py --headers --sslinfo --crawl --url https://<HOST>/`, `python3 ReconSpider.py http://<TARGET>/`, `cewl -d 2 -m 5 -w words.txt http://<TARGET>/` | API, 서비스 인증 token, 내부 URL, 이메일, 폼 필드와 vhost·wordlist 후보를 수집한다. |
 | 6 | 알려진 파일·구성 후보 | `nikto -h http://<TARGET>/` | 기본 파일과 위험 설정 후보를 `curl` 또는 브라우저로 수동 재현한다. |
 | 7 | AD CS Web Enrollment | `curl -k -I https://<TARGET>/certsrv/` | `/certsrv`, NTLM 인증, redirect와 relay 보호 조건 확인 필요성을 판단한다. |
 
@@ -61,7 +61,7 @@ tags:
 | Server, title, 기술 스택 | [[웹 지문 확인과 공격면 분류]] | `curl`, `whatweb` | 제품·버전과 수동 검증할 기능 후보 |
 | CN/SAN, 301/302, Host 응답 차이 | [[웹 정찰과 경로 열거]] | `openssl`, `curl`, `gobuster` | 유효 vhost와 별도 애플리케이션 후보 |
 | 200/301/401/403 경로 또는 백업·설정 파일 | [[웹 숨은 경로와 민감 파일 열거]] | `gobuster`, `curl` | 접근 가능한 숨은 경로·민감 파일 또는 인증 경계 |
-| 링크, JS, 폼, API 단서 | [[웹 단서 기반 기능 열거]] | `FinalRecon`, `ReconSpider`, `cewl` | 엔드포인트·파라미터·토큰·계정 후보 |
+| 링크, JS, 폼, API 단서 | [[웹 단서 기반 기능 열거]] | `FinalRecon`, `ReconSpider`, `cewl` | 엔드포인트·파라미터·서비스 인증 token·계정 후보 |
 | `/certsrv` 또는 CA Web Enrollment | [[AD CS ESC8 NTLM Relay]] | `curl`, `impacket-ntlmrelayx` | 인증 방식·template·발급 주체 권한을 포함한 ESC8 후보 |
 | NTLM 인증 요구 | [[NTLM Relay 조건 검토]] | `curl`, `impacket-ntlmrelayx` | 보호 설정과 relay 계정 권한이 반영된 대상 후보 |
 | 로그인 화면·SSO·사용자별 권한 차이 | [[웹 단서 기반 기능 열거]] | 브라우저/프록시, `curl` | 인증 방식, 사용자 형식, 잠금 정책과 재현된 인가 경계 |

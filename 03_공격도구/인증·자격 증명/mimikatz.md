@@ -16,6 +16,8 @@ Mimikatz는 Windows의 LSASS·SAM·LSA·DPAPI 자료에서 자격 증명과 Kerb
 
 ## 필요한 입력과 실행 환경
 
+ticket·export 경로와 실행 파일 경로는 Mimikatz를 실행하는 Windows 호스트의 절대 경로다. 생성된 `.kirbi`와 추출 출력은 기존 파일과 구분해 기록한다.
+
 - 실행 위치: 대상 architecture에 맞는 Mimikatz를 실행할 수 있는 Windows 세션
 - 권한 조건: LSASS/SAM/LSA 접근은 보통 로컬 관리자, SeDebugPrivilege 또는 SYSTEM 권한이 필요하다.
 - 명령별 입력: Kerberos ticket 파일, NTLM hash, 도메인·사용자, DPAPI blob·master key 등 선택한 module이 요구하는 정확한 인증 자료
@@ -99,7 +101,7 @@ popd
 | `sekurlsa::tickets /export` | Kerberos 티켓 내보내기 |
 | `kerberos::ptt <ticket.kirbi>` | Kerberos 티켓 주입 |
 | `sekurlsa::pth ...` | Pass the Hash/Overpass 계열 새 프로세스 생성 |
-| `token::elevate` | 가능한 경우 SYSTEM 토큰으로 상승 |
+| `token::elevate` | 가능한 경우 SYSTEM Windows access token으로 상승. `token::elevate`는 Mimikatz command literal이며 primary/impersonation token type과 실제 process access는 `whoami /all` 등으로 별도 확인 |
 | `lsadump::sam` | 로컬 SAM 해시 덤프 |
 | `lsadump::lsa /patch` | LSA secret 확인 |
 | `lsadump::dcsync ...` | AD 복제 프로토콜을 이용한 계정 해시 요청 |
@@ -124,7 +126,7 @@ popd
 
 ## 변경 영향과 복구
 
-`sekurlsa::tickets /export`가 만든 `.kirbi`는 session key를 포함할 수 있는 민감한 인증 자료다. 후속 process의 ticket 사용을 종료한 뒤 `dir /a "<MIMIKATZ_TICKET_DIRECTORY>"`로 내용을 확인하고, 실행 출력에 기록된 각 `<EXPORTED_KIRBI_PATH>`만 반복해서 삭제한다.
+`<MIMIKATZ_EXE_PATH>`는 Mimikatz를 실행한 Windows 호스트의 실행 파일 절대 경로, `<MIMIKATZ_TICKET_DIRECTORY>`는 새 export 디렉터리(예: `C:\\Temp\\mimikatz-tickets`)다. `<EXPORTED_KIRBI_PATH>`는 `dir /b *.kirbi`에서 얻은 각 생성 파일 경로다. `sekurlsa::tickets /export`가 만든 `.kirbi`는 session key를 포함할 수 있는 민감한 인증 자료다. 후속 process의 ticket 사용을 종료한 뒤 `dir /a "<MIMIKATZ_TICKET_DIRECTORY>"`로 내용을 확인하고, 실행 출력에 기록된 각 `<EXPORTED_KIRBI_PATH>`만 반복해서 삭제한다.
 
 ```cmd
 del "<EXPORTED_KIRBI_PATH>"

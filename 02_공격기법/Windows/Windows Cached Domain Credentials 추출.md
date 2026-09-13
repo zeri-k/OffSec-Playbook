@@ -13,12 +13,6 @@ tags:
 
 대상 Windows 호스트에 원격 관리자급 SMB 작업을 수행할 수 있거나 SECURITY·SYSTEM hive를 확보했으면 캐시된 도메인 로그인 DCC2 hash를 추출해 오프라인 크래킹한다.
 
-## 사용할 때
-
-- 현재 보유 정보: 대상 호스트의 관리자급 요청자 credential 또는 [[Windows SAM SECURITY SYSTEM 덤프]]로 확보한 SECURITY·SYSTEM 파일이 있다.
-- 명령 실행 위치: 원격·오프라인 추출을 수행하는 Linux 호스트와 Hashcat 분석 환경이다.
-- 현재 가능한 행동과 결과: DCC2 hash를 얻어 평문 후보를 크래킹할 수 있지만 DCC2를 Pass-the-Hash에 직접 사용할 수 없다.
-
 ## 전제 조건
 
 | 확인할 것 | 필요한 상태 | 확인 방법 | 미충족 시 다음 확인 |
@@ -28,6 +22,8 @@ tags:
 | 크래킹 환경 | Hashcat mode 2100 입력 파일과 wordlist 준비 | hash 한 줄 형식과 장치 확인 | 사용자명·반복 횟수·구분자 형식 점검 |
 
 ## 실행
+
+`<REQUESTER>`는 원격 작업을 요청하는 계정이고 `$DCC2$` 출력의 계정과 같다고 가정하지 않는다. `<TARGET>`은 hive가 있는 Windows 호스트, `<DOMAIN>`은 requester의 인증 범위, `<CCACHE_FILE>`은 공격 호스트의 Kerberos 입력 파일이다.
 
 ### Linux 공격 호스트에서 원격 추출
 

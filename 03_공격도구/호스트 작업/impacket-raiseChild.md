@@ -23,8 +23,11 @@ tags:
 - 인증 입력: 자식 도메인 관리자 또는 자식 `krbtgt`를 DCSync할 수 있는 계정의 비밀번호·NT hash·AES key.
 - 기본 추출 대상: 부모 도메인의 RID 500 계정. `-targetRID`로 변경할 수 있다.
 - 선택적 원격 실행: `-target-exec`는 먼저 추출한 부모 대상 계정 credential을 사용해 지정 호스트에 접속한다.
+- `<CHILD_DOMAIN>`과 `<ROOT_DOMAIN>`은 trust 양 끝의 DNS domain이고 RID는 SID 뒤에 붙는 대상 account RID다. ccache·출력 파일은 Linux 실행 host의 경로이며 ticket 파일 생성은 부모 service 수락을 뜻하지 않는다.
 
 ## 표준 사용법
+
+`<CHILD_DOMAIN>`·`<ROOT_DOMAIN>`은 trust 양 끝의 DNS domain, `<USER>`·key는 child requester credential, `<TARGET_RID>`는 parent target account RID다. `<OUTPUT_CCACHE>`는 Linux host path이며 generated ticket·parent KDC request·optional remote execution result는 구분해 확인하고 cleanup은 기록한 output path만 대상으로 한다.
 
 ```bash
 impacket-raiseChild [options] '<CHILD_FQDN>/<CHILD_USER>:<PASSWORD>'

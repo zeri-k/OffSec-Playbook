@@ -15,10 +15,7 @@ tags:
 
 공격 호스트의 터미널에서 Linux Reverse Shell 또는 Bind Shell을 제어하고 있지만 `tty`가 `not a tty`를 반환한다면, 원격 pseudo-terminal과 로컬 터미널 모드를 맞춰 같은 사용자 권한의 안정적인 대화형 셸로 바꾼다. 이 과정만으로 사용자 권한은 상승하지 않는다.
 
-## 사용할 때
-
-- 제한된 Reverse Shell 또는 Bind Shell에서 작업 제어와 대화형 입력이 필요할 때.
-- `sudo`, 편집기, 전체 화면 프로그램이 TTY 부족으로 정상 동작하지 않을 때.
+제한된 Reverse Shell 또는 Bind Shell에서 작업 제어·대화형 입력이 필요하고 `sudo`·편집기·전체 화면 프로그램이 TTY 부족으로 동작하지 않을 때 사용한다.
 
 ## 전제 조건
 
@@ -73,6 +70,8 @@ reset
 export TERM=xterm-256color
 stty rows <ROWS> columns <COLUMNS>
 ```
+
+`<ROWS>`와 `<COLUMNS>`는 현재 로컬 terminal 크기이며, 각각 행·열의 양의 정수다(가상 예: `rows 40 columns 120`).
 
 로컬 터미널 크기는 별도 창에서 확인한다.
 

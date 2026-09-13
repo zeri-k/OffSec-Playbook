@@ -20,9 +20,12 @@ CrackMapExec은 여러 Windows 서비스의 인증·열거·원격 작업을 자
 - 실행 위치: 대상 SMB에 접근 가능한 Linux 호스트
 - 필요한 입력: 대상 호스트/대역, 도메인·사용자·비밀번호 또는 NTLM hash
 - spraying 입력: 사용자·비밀번호 목록과 사전에 확인한 계정 잠금 정책
+- `<TARGET>`은 SMB listener의 IP·CIDR 또는 Linux 실행 host의 한 줄 한 대상 목록 파일이고, `<DC>`는 domain controller 역할을 가진 SMB host다. `<DOMAIN>`은 AD domain, `<USER>`/`<PASSWORD>` 또는 목록 파일은 같은 account namespace의 credential 입력이며, 인증 성공은 command execution·LSA 접근을 뜻하지 않는다.
 - 기본 선택은 [[netexec]]이며, 이 문서는 CrackMapExec 문법을 그대로 재현해야 할 때만 사용한다.
 
 ## 표준 사용법
+
+`<target>`은 SMB listener의 IP·CIDR 또는 Linux 실행 host의 대상 목록 파일이고, `<user_or_list>`·`<password_or_list>`는 같은 account namespace의 한 사용자/비밀번호 또는 한 줄 목록이다. 예시의 `<DC>`는 domain controller SMB host, `<DOMAIN>`은 AD DNS/NetBIOS domain이며 blank credential은 anonymous session 확인에만 쓴다.
 
 ```bash
 crackmapexec smb <target> -u <user_or_list> -p <password_or_list>
@@ -39,6 +42,8 @@ crackmapexec smb <DC> -d <DOMAIN> -u '<SPRAY_USER_LIST>' -p '<PASSWORD>'
 이 예시는 도메인 계정에 단일 비밀번호를 시도한다. `--local-auth`는 대상 호스트의 로컬 계정 데이터베이스로 인증할 때만 사용하며, 로컬 관리자 비밀번호 재사용 검사는 [[원격 비밀번호 공격]]의 별도 분기다. AD Password Spraying에 `--local-auth`를 붙이면 의도한 도메인 계정이 아니라 로컬 계정을 검사하게 된다.
 
 ### SMB share 권한 확인
+
+`<TARGET>`은 앞 단계와 같은 SMB host 또는 목록 항목이다. 빈 `-u`·`-p`는 anonymous session 시도이며 share 표시가 file READ·WRITE 또는 command execution을 뜻하지 않는다.
 
 ```bash
 crackmapexec smb <TARGET> --shares -u '' -p ''
@@ -64,7 +69,7 @@ crackmapexec smb <TARGET> -u '<USER>' -p '<PASSWORD>' --lsa
 ```
 
 - `-x whoami`의 대상 계정 출력이 있어야 원격 명령 실행 성공이다. 인증 성공이나 관리자 표시만으로 명령 실행을 확정하지 않는다.
-- `--lsa`는 관리자급 원격 작업과 registry hive 접근이 가능한 경우에만 진행한다. `Dumping LSA Secrets` 뒤 실제 secret 유형을 확인하고, 출력은 Vault가 아닌 승인된 민감 자료 저장 위치에서 다룬다.
+- `--lsa`는 관리자급 원격 작업과 registry hive 접근이 가능한 경우에만 진행한다. `Dumping LSA Secrets` 뒤 실제 secret 유형을 확인하고, 출력은 Vault가 아닌 민감 자료 저장 위치에서 다룬다.
 
 
 ## 주요 옵션

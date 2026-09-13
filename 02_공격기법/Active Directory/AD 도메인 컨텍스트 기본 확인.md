@@ -14,13 +14,6 @@ tags:
 
 Windows·Linux 세션, AD 계정·Kerberos ticket 또는 AD 서비스 단서 중 하나가 있으면, 명령을 실행하는 호스트의 도메인 연결과 현재 운영체제 계정, ticket에 기록된 AD principal, DC 이름과 서비스 도달성을 따로 확인하여 실제 조건이 충족된 AD 기법을 선택한다.
 
-## 사용할 때
-
-- 현재 보유 정보: Windows·Linux 세션, 도메인 형식 계정·hash·ticket, 도메인명·DC·DNS·LDAP·Kerberos 응답 중 하나 이상이 있다.
-- 명령 실행 위치와 도달 대상: 로컬 확인은 현재 셸이 열린 호스트에서 수행하고, 원격 RootDSE 확인은 실행 호스트에서 DC LDAP에 닿을 때 수행한다.
-- 현재 계정과 권한: 현재 운영체제 계정으로 로컬 계정·통합 설정을 읽을 수 있으면 된다. 이 계정, `klist`의 ticket 주체와 원격 LDAP 인증 주체는 서로 다를 수 있다.
-- 지금 가능한 행동과 결과: domain, realm, DC, 현재 로그온 Identity, 사용 가능한 ticket과 AD 서비스 경로를 확정하고 그룹 멤버십·객체 권한 단서를 실제 원격 접근·복제 권한과 분리할 수 있다.
-
 ## 전제 조건
 
 | 확인할 것 | 필요한 상태 | 확인 방법 | 미충족 시 다음 확인 |
@@ -34,6 +27,8 @@ Windows·Linux 세션, AD 계정·Kerberos ticket 또는 AD 서비스 단서 중
 ## 실행
 
 ### 현재 세션의 AD·Kerberos 컨텍스트 확인
+
+`<DOMAIN>`은 DNS 도메인(예: `corp.example`)이며, `nltest`와 SRV 조회는 현재 명령을 실행하는 호스트에서 해당 도메인의 DC를 찾는다. 현재 OS 계정, `klist` principal, 후속 LDAP bind 주체는 서로 다른 값일 수 있다.
 
 #### Windows 실행 환경
 

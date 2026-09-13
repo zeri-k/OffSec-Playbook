@@ -20,6 +20,7 @@ tags:
 - 입력: SSH 피벗 호스트, 계정 또는 key와 내부 CIDR
 - 필요 권한: 공격 호스트에서 route/firewall 규칙을 만들 수 있는 sudo 권한
 - 버전 조건: 현재 1.3.2 공식 Requirements는 양쪽 Python 3.10 이상을 요구한다. 이전 배포판 버전은 조건이 다를 수 있으므로 `sshuttle --version`과 공격·피벗 호스트의 `python3 --version`을 먼저 확인한다.
+- `<USER>@<PIVOT_IP>`은 Linux 실행 호스트에서 SSH로 연결할 account와 route peer, `<INTERNAL_CIDR>`은 pivot 뒤 대역(예: `198.51.100.0/24`)이다. `<INTERNAL_IP>`는 route 설치 뒤 그 CIDR에서 별도로 식별한 final target이며, TCP/DNS route 설치는 UDP·ICMP 또는 application authentication을 보장하지 않는다.
 
 ## 표준 사용법
 

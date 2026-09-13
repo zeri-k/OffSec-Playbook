@@ -28,6 +28,8 @@ Named Pipe는 server process가 만든 이름 있는 IPC 객체이며 client가 
 
 ## 실행
 
+`<ACCESSCHK_PATH>`와 `<PIPELIST_PATH>`는 대상 Windows 호스트의 도구 절대 경로이며, `<PIPE_NAME>`은 앞 단계 목록에서 찾은 pipe 이름이다. pipe 이름·`RW` 표시는 입력 단서일 뿐 실제 write 권한은 현재 token과 DACL 결과로만 판단한다.
+
 ### 1. 현재 token과 pipe 목록 확인
 
 대상 Windows PowerShell에서 현재 token을 확인하고 pipe 이름을 나열한다.

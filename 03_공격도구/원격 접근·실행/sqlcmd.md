@@ -19,9 +19,12 @@ tags:
 - 입력: SQL Server 주소·인스턴스와 SQL 계정 또는 Windows 인증 세션
 - 다른 AD 계정 입력: `runas /netonly`로 만든 네트워크 로그온 프로세스와 해당 계정의 평문 비밀번호
 - 선택 입력: 기본 데이터베이스, 쿼리 또는 SQL 스크립트
+- `<SERVER>`는 `host,port` 또는 named instance(예: `database.example.invalid,1433`)이며, SQL 인증과 Windows 통합 인증의 계정 형식은 섞지 않는다. `.sql` 입력 파일은 sqlcmd 실행 호스트의 경로다.
 
 
 ## 표준 사용법
+
+`<SERVER>`는 local instance 또는 `FQDN,port` remote endpoint, `<DATABASE>`·`<QUERY>`·`<SCRIPT_FILE>`은 같은 sqlcmd process가 사용할 namespace·T-SQL·local file이다. SQL authentication과 `-E` Windows authentication은 account source가 다르며 netonly process의 credential은 `runas` block에서 만든 process를 재사용한다.
 
 ```bash
 sqlcmd -S <server> -U <user> -P <password>

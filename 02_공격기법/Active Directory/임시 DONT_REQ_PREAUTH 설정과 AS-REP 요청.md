@@ -5,7 +5,7 @@ tags:
   - 서비스/ldap
 시작조건: ["대상 사용자 객체의 userAccountControl 쓰기 권한 확인", "대상 계정이 Kerberos pre-authentication을 요구함"]
 필요권한: ["대상 사용자 객체의 userAccountControl 속성 쓰기 또는 GenericWrite·GenericAll"]
-필요조건: ["DC LDAP·Kerberos 접근", "ActiveDirectory PowerShell 모듈", "대상 사용자와 사용할 DC", "즉시 원복 가능한 변경 창"]
+필요조건: ["DC LDAP·Kerberos 접근", "ActiveDirectory PowerShell 모듈", "대상 사용자와 사용할 DC", "즉시 원복 가능한 연결"]
 결과: ["일시적으로 DONT_REQ_PREAUTH가 설정된 대상 계정", "대상 사용자의 AS-REP hash 또는 요청 실패", "복구 확인된 원래 pre-authentication 상태"]
 ---
 
@@ -29,6 +29,10 @@ tags:
 
 ## 실행
 
+> `DONT_REQ_PREAUTH` 변경은 제3자의 AS-REP 요청 가능성과 감사 흔적을 남긴다. 같은 DC의 대상 사용자와 원래 Boolean 값을 확인하고 성공·실패와 무관하게 먼저 복구한다.
+
+`<TARGET_USER>`는 UAC가 바뀌는 대상, `<DC_FQDN>`은 LDAP와 Kerberos 요청 모두에 쓰는 같은 DC다. `<ASREP_HASH_FILE>`은 Windows 실행 호스트의 새 exact 출력 경로이며 `$before`·`$after`는 변경 전후 조회 결과다.
+
 ### 1. 대상과 원래 값 기록
 
 ```powershell
@@ -45,7 +49,7 @@ $before | Select-Object SamAccountName,DistinguishedName,Enabled,DoesNotRequireP
 
 ### 2. 변경 preview와 짧은 활성화
 
-승인된 대상·시간 창에서 `-WhatIf`가 같은 사용자와 DC를 가리키는지 먼저 확인한다.
+`-WhatIf`가 같은 사용자와 DC를 가리키는지 먼저 확인한다.
 
 ```powershell
 Set-ADAccountControl -Identity '<TARGET_USER>' -Server '<DC_FQDN>' -DoesNotRequirePreAuth $true -WhatIf
@@ -87,11 +91,11 @@ $after | Select-Object SamAccountName,Enabled,DoesNotRequirePreAuth,userAccountC
 완료 기준:
 
 - 같은 대상의 `DoesNotRequirePreAuth = False`가 확인된다.
-- 이 cmdlet으로 건드리지 않은 다른 UAC bit는 원래 정수로 강제 덮어쓰지 않는다. 동시 관리 변경이 의심되면 `$before.userAccountControl`과 `$after.userAccountControl` 차이를 관리자와 대조한다.
+- 이 cmdlet으로 건드리지 않은 다른 UAC bit는 원래 정수로 강제 덮어쓰지 않는다. 동시 변경이 의심되면 `$before.userAccountControl`과 `$after.userAccountControl` 차이를 대조한다.
 - 여러 DC를 사용하는 환경에서는 지정 DC의 복구 뒤 필요한 replica에서도 값이 돌아왔는지 확인한다. 복제를 확인하지 못하면 `지정 DC 복구 확인, 다른 replica 미확인`으로 남긴다.
 - LDAP 변경·KDC 요청 감사 흔적과 변경 창 동안 제3자가 AS-REP를 요청했을 가능성은 되돌릴 수 없다.
 
-로컬 hash 파일은 필요한 인계 후 이번 작업에서 만든 exact 경로만 제거한다.
+로컬 hash 파일은 사용 후 이번 작업에서 만든 exact 경로만 제거한다.
 
 ```powershell
 if (Test-Path -LiteralPath '<ASREP_HASH_FILE>') { Remove-Item -LiteralPath '<ASREP_HASH_FILE>' -Force }

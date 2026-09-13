@@ -31,6 +31,8 @@ tags:
 
 서버 측 실제 module 경로를 알고 SSH·셸·마운트 등으로 정확한 proof 파일을 제거할 수 있을 때만 수행한다.
 
+`<TARGET>`은 rsync daemon의 IP 또는 FQDN(예: `192.0.2.10`), `<MODULE>`은 `#list` 또는 알려진 설정에서 확인한 모듈명(예: `public`)이다. `<RSYNC_MODULE_ROOT>`는 서버 측 실제 모듈 절대 경로(예: `/srv/rsync/public`)이며, 이 값은 정확한 proof 파일을 제거할 수 있는 별도 경로에서만 사용한다. 아래 hash 비교는 업로드 원본과 재수신본의 동일성이 WRITE 판단을 바꾸므로 유지한다.
+
 ```bash
 PROOF="rsync-proof-$(date -u +%Y%m%dT%H%M%SZ)-$$.txt"
 printf 'Rsync write proof: %s\n' "$PROOF" > "$PROOF"

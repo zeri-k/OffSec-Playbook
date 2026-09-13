@@ -19,9 +19,12 @@ tags:
 - 실행 위치: DC의 Kerberos 88번에 접근 가능한 Linux 호스트. 인증된 도메인 전체 조회 방식은 LDAP 389/636 경로도 필요하다.
 - 필요한 입력: 비인증 방식은 도메인명·DC 주소·사용자 목록, LDAP 조회 방식은 도메인 credential 또는 Kerberos cache
 - 출력 조건: 후속 cracker에 맞춰 `-format hashcat` 또는 John 형식을 선택한다.
+- 비인증 목록 파일은 Linux 실행 host의 한 줄 한 사용자 파일이고 `<DC_IP>`는 Kerberos endpoint다. LDAP credential을 쓰는 경우 목록에 없는 domain objects만 추가로 발견할 수 있으며 hash 출력은 인증 성공이 아니다.
 
 
 ## 표준 사용법
+
+`<DOMAIN>`·`<DC_IP>`는 Kerberos domain/KDC address, `<USER_LIST>`은 Linux host의 one-user-per-line input, `<OUTPUT_FILE>`은 새 hash output path다. credential block의 requester와 unauthenticated list block을 혼동하지 않으며 AS-REP hash output은 password recovery나 AD session이 아니다.
 
 ```bash
 impacket-GetNPUsers '<DOMAIN>/' -usersfile '<USER_LIST>' -dc-ip <DC_IP> -no-pass

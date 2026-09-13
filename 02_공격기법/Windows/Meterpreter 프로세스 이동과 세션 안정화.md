@@ -19,13 +19,6 @@ tags:
 
 Windows Meterpreter 세션의 현재 프로세스가 종료되기 쉽거나 후속 명령이 불안정하면 같은 아키텍처의 지속 중인 프로세스를 골라 `migrate`하고 세션 생존·사용자·권한을 다시 확인한다.
 
-## 사용할 때
-
-- Web Delivery나 일시적인 애플리케이션 프로세스에서 Meterpreter 세션이 열렸을 때.
-- 현재 프로세스 종료와 함께 세션이 끊길 가능성이 클 때.
-- 후속 열거·파일 전송·피벗 전에 더 오래 유지되는 프로세스로 세션을 옮기려 할 때.
-- SYSTEM Meterpreter 세션에서 `hashdump`가 `Operation failed: Incorrect function`으로 실패하고 세션과 대상 프로세스의 architecture를 맞춰 다시 시도할 때.
-
 `migrate`는 Meterpreter payload의 실행 프로세스를 바꾸는 명령이다. 다른 사용자의 token만 현재 세션에 적용하는 [[Meterpreter 프로세스 토큰 탈취]]의 `steal_token`과 같은 동작이 아니다.
 
 ## 전제 조건
@@ -41,6 +34,8 @@ Windows Meterpreter 세션의 현재 프로세스가 종료되기 쉽거나 후�
 ### 일반적인 세션 프로세스 이동
 
 Windows 대상의 Meterpreter 프롬프트에서 현재 프로세스와 후보를 확인한다.
+
+`<TARGET_PID>`는 바로 앞 `ps` 출력에서 고른 현재 실행 중인 대상 PID이며, `<OLD_PID>`와 `<LSASS_PID>`는 명령 입력이 아니라 관찰 출력의 PID다. PID는 재사용될 수 있으므로 이름·사용자·architecture와 함께 다시 대조한다.
 
 ```text
 meterpreter > getuid

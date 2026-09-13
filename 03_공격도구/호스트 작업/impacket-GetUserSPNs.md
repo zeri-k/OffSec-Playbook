@@ -19,9 +19,12 @@ tags:
 - 실행 위치: DC의 LDAP와 Kerberos에 접근 가능한 Linux 호스트
 - 필요한 입력: 도메인 credential 또는 `KRB5CCNAME` ticket, DC 주소/FQDN
 - hash 요청 입력: `-request`와 필요하면 특정 사용자, 출력 파일 및 cracking format
+- `<DOMAIN>/<USER>`는 LDAP requester, `<DC_FQDN>`은 Kerberos SPN과 일치하는 KDC 이름이며 `<OUTPUT_FILE>`은 Linux host의 새 파일이다. `-request` 결과는 서비스 ticket 후보일 뿐 password 복구나 service 접근을 확정하지 않는다.
 
 
 ## 표준 사용법
+
+`<DOMAIN>/<USER>`는 LDAP requester, `<DC_FQDN>`는 KDC/SPN과 일치하는 host, `<CCACHE_FILE>`·`<OUTPUT_FILE>`은 Linux host paths다. no-request enumeration, TGS request, trust target query는 각기 다른 결과이며 returned SPN·TGS hash는 service access를 뜻하지 않는다.
 
 ```bash
 impacket-GetUserSPNs '<DOMAIN>/<USER>:<PASSWORD>' -dc-ip <DC_IP> -request

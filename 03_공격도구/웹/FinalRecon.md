@@ -40,6 +40,8 @@ chmod +x ./finalrecon.py
 
 ## 대표 예시
 
+`<DOMAIN>`은 기준 URL의 DNS 호스트명(예: `site.example.invalid`)이고, 명령은 FinalRecon을 설치한 Linux 호스트에서 실행한다. `http://` 또는 `https://`는 실제 요청 스킴이며 포트·vhost가 다르면 기준 URL에 함께 넣는다.
+
 
 ### 헤더와 Whois 정보 수집
 
@@ -91,7 +93,7 @@ chmod +x ./finalrecon.py
 확인할 출력:
 
 - Subdomain Enumeration 결과에 호스트 이름 후보가 표시되는지 확인한다.
-- 공개 데이터 소스의 이름 발견만 확정하며, 현재 DNS 해석·HTTP 도달성·평가 범위 포함 여부는 별도로 확인한다.
+- 공개 데이터 소스의 이름 발견만 확정하며, 현재 DNS 해석·HTTP 도달성은 별도로 확인한다.
 
 ## 주요 옵션
 

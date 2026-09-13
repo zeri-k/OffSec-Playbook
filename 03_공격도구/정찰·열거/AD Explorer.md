@@ -43,7 +43,7 @@ ADExplorer.exe
 
 ### 오프라인 분석용 snapshot 생성
 
-`File -> Create Snapshot`에서 설명과 기존에 없던 exact 저장 경로 `<AD_EXPLORER_SNAPSHOT_PATH>`를 지정한다. 생성된 snapshot을 다시 열어 현재 AD 연결 없이 객체와 속성을 탐색한다.
+`File -> Create Snapshot`에서 설명과 기존에 없던 exact 저장 경로 `<AD_EXPLORER_SNAPSHOT_PATH>`를 지정한다. 이 값은 snapshot을 만드는 Windows 호스트의 절대 파일 경로이며, 가상 예시는 `C:\\Temp\\ad-20260914.snp`다. 생성된 snapshot을 다시 열어 현재 AD 연결 없이 객체와 속성을 탐색한다.
 
 확인할 출력:
 
@@ -70,7 +70,7 @@ ADExplorer.exe
 
 ## 변경 영향과 복구
 
-snapshot은 연결 계정이 읽을 수 있던 AD 객체·속성·권한을 포함할 수 있는 민감한 로컬 파일이다. 실행 전 `Test-Path -LiteralPath '<AD_EXPLORER_SNAPSHOT_PATH>'`가 `False`인지 확인하고, 생성한 exact 경로와 수집 시점을 Vault 밖의 승인된 작업 기록에 남긴다.
+snapshot은 연결 계정이 읽을 수 있던 AD 객체·속성·권한을 포함할 수 있는 민감한 로컬 파일이다. 생성한 exact 경로와 수집 시점은 Vault 밖의 작업 기록에 남긴다.
 
 AD Explorer에서 snapshot을 닫고 후속 분석이 끝난 뒤 다음처럼 이번 작업 파일만 제거한다.
 

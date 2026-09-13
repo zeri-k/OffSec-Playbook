@@ -22,7 +22,7 @@ tags:
 | 1 | MySQL 정보와 빈 비밀번호 | `nmap -sV -sC -p3306 --script mysql-info,mysql-empty-password <TARGET>` | 제품·버전·인증 정보와 빈 비밀번호 후보를 확인한다. |
 | 2 | 원격 DB 인증 | `mysql -h <TARGET> -u <USER> -p` | password prompt 후 MySQL prompt가 열리는지 확인하고, `Access denied for user '<USER>'@'<SOURCE_HOST>'`를 소스 호스트 조건과 함께 판독한다. |
 | 3 | 제시한 계정과 실제 인증 계정 | `SELECT USER(), CURRENT_USER();`, `SHOW GRANTS FOR CURRENT_USER;` | `USER()`의 client 입력·소스와 `CURRENT_USER()`의 grant 적용 `user@host`를 구분한다. |
-| 4 | TLS 오류 분리 | `mysql --version`, `mysql -h <TARGET> -u <USER> -p --ssl-mode=VERIFY_IDENTITY --ssl-ca=<CA_FILE>` | 현 client가 지원하는 옵션과 CA·호스트명 검증 실패를 인증 실패와 분리한다. 암호화 비활성화는 승인된 진단에서만 사용한다. |
+| 4 | TLS 오류 분리 | `mysql --version`, `mysql -h <TARGET> -u <USER> -p --ssl-mode=VERIFY_IDENTITY --ssl-ca=<CA_FILE>` | 현 client가 지원하는 옵션과 CA·호스트명 검증 실패를 인증 실패와 분리한다. 암호화 비활성화는 TLS 실패 원인을 분리할 때만 고려한다. |
 | 5 | DB 목록 | `SHOW DATABASES;` | 현재 인증된 계정으로 접근 가능한 DB를 확인한다. |
 | 6 | 권한과 파일 경로 | `SHOW VARIABLES LIKE 'secure_file_priv';`, `SHOW GRANTS FOR CURRENT_USER;` | `FILE` 등 실제 grant와 import/export 제한 경로를 연결한다. |
 

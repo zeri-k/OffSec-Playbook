@@ -11,7 +11,7 @@ tags:
 
 ## 한 줄 판단
 
-Oracle 8i~12c의 승인된 DB 세션에서 서버 release와 `SYS.USER$` 직접 조회 권한을 확인하고, 11g~12c에서는 대상 계정의 verifier version까지 확인했다면 `10G`·`11G`·`12C` component를 각각 Hashcat 입력으로 직렬화해 오프라인 복구 결과를 별도 인증 후보로 만든다.
+Oracle 8i~12c DB 세션에서 서버 release와 `SYS.USER$` 직접 조회 권한을 확인하고, 11g~12c에서는 대상 계정의 verifier version까지 확인했다면 `10G`·`11G`·`12C` component를 각각 Hashcat 입력으로 직렬화해 오프라인 복구 결과를 별도 인증 후보로 만든다.
 
 ## 지원 경계
 
@@ -27,10 +27,12 @@ Oracle 8i~12c의 승인된 DB 세션에서 서버 release와 `SYS.USER$` 직접 
 | 실행 위치 | Oracle listener에 도달하고 SQL*Plus를 실행할 수 있는 공격 호스트 | 현재 SQL*Plus session의 target·SID/service와 server banner 확인 | listener·SID/service·인증 문제를 먼저 해결 |
 | 현재 DB identity | 현재 user·authenticated identity와 관리 권한이 확인됨 | `sys_context`, `SESSION_PRIVS` | 일반 DB 로그인만으로 `SYS.USER$` 조회 가능성을 추정하지 않음 |
 | 대상 계정 version | 8i~10g는 server release, 11g~12c는 대상 사용자에 저장된 `10G`·`11G`·`12C` 조합 | `v$version`, 11g~12c의 `DBA_USERS.PASSWORD_VERSIONS` | 11g~12c에서 view가 거부되면 verifier 본문을 먼저 조회하지 않음 |
-| 내부 필드 범위 | 서버가 8i~12c이고 direct `SYS.USER$` 조회가 승인됨 | `v$version`, 최소 대상 사용자 query | 18c+·권한 거부·field 불일치는 미지원으로 유지 |
+| 내부 필드 범위 | 서버가 8i~12c이고 direct `SYS.USER$` 조회가 가능함 | `v$version`, 최소 대상 사용자 query | 18c+·권한 거부·field 불일치는 미지원으로 유지 |
 | 분석 경로 | 민감 verifier를 분리할 새 local directory | `mktemp -d`, `umask 077` | shared file·shell history에 verifier를 저장하지 않음 |
 
 ## 실행
+
+`<TARGET_DB_USER>`는 version·권한 확인을 마친 대상 Oracle 사용자명(가상 예시 `APPUSER`)이고, `<PASSWORD_HEX>`·`<SPARE4_HEX>`는 해당 한 행 query에서 반환된 민감 hex field다. `<WORKDIR>`·`<HASH_FILE>`·`<POTFILE>`·`<WORDLIST>`는 공격 호스트의 새 분석 경로와 입력 목록이며, SQL은 Oracle session에서, 파일 직렬화·Hashcat은 공격 호스트 셸에서 실행한다.
 
 ### 1. 서버·session·계정별 version 확인
 
@@ -56,7 +58,7 @@ where username = upper('<TARGET_DB_USER>');
 
 ### 2. 대상 계정 하나의 내부 필드만 조회
 
-8i~10g 공개 구현 범위에서는 `PASSWORD`를, 11g~12c에서는 계정별 `PASSWORD_VERSIONS`와 함께 `PASSWORD`·`SPARE4`를 확인한다. 전체 사용자 dump 대신 승인된 `<TARGET_DB_USER>` 한 행으로 제한한다.
+8i~10g 공개 구현 범위에서는 `PASSWORD`를, 11g~12c에서는 계정별 `PASSWORD_VERSIONS`와 함께 `PASSWORD`·`SPARE4`를 확인한다. 전체 사용자 dump 대신 `<TARGET_DB_USER>` 한 행으로 제한한다.
 
 ```sql
 select name, password
@@ -136,7 +138,7 @@ hashcat -m 12300 -a 0 "$ORACLE_WORKDIR/oracle-12c.hash" '<WORDLIST>' --potfile-p
 
 ## 변경 영향과 정리
 
-SQL query는 DB 계정·설정을 바꾸지 않지만 민감 verifier를 client 출력과 DB audit에 남길 수 있다. 분석 호스트에는 hash·potfile·restore·복구 평문이 생성되므로 인계가 끝나면 이번 작업 디렉터리의 exact 파일만 정리한다.
+SQL query는 DB 계정·설정을 바꾸지 않지만 민감 verifier를 client 출력과 DB audit에 남길 수 있다. 분석 호스트에는 hash·potfile·restore·복구 평문이 생성되므로 분석이 끝나고 보존이 필요하지 않으면 이번 작업 디렉터리의 exact 파일만 정리한다.
 
 ```bash
 rm -f -- "$ORACLE_WORKDIR/oracle-10g.hash" "$ORACLE_WORKDIR/oracle-11g.hash" "$ORACLE_WORKDIR/oracle-12c.hash"

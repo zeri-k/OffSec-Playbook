@@ -21,8 +21,11 @@ pyWhisker는 AD 사용자·컴퓨터 객체의 `msDS-KeyCredentialLink`를 추�
 - 입력: 도메인, DC 주소, 인증 계정과 비밀번호·hash, 대상 사용자 또는 컴퓨터 객체
 - 권한 조건: 대상 객체의 `msDS-KeyCredentialLink` 쓰기 권한
 - 후속 입력: 생성된 PFX와 password를 사용할 PKINIT 도구
+- `<AUTH_USER>`는 requester credential의 owner, `<TARGET_OBJECT>`는 KeyCredential을 변경할 user/computer object로 서로 다를 수 있다. DC address·domain·PFX·DeviceID는 출력에서 기록하고 remove는 같은 DeviceID만 대상으로 한다.
 
 ## 표준 사용법
+
+`<AUTH_USER>`·password/hash는 KeyCredential write requester, `<TARGET_OBJECT>`은 변경 대상 user/computer object, `<DC_IP>`·`<DOMAIN>`은 directory endpoint/namespace다. generated `<PFX_FILE>`·password·`<DEVICE_ID>`는 output에서 기록하고 remove/clear는 same target·DeviceID를 exact하게 재사용한다.
 
 ```bash
 pywhisker --dc-ip <DC_IP> -d <DOMAIN> -u <USER> -p '<PASSWORD>' --target <TARGET> --action add

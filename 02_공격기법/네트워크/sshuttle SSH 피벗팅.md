@@ -14,14 +14,7 @@ tags:
 
 공격 호스트에서 `<PIVOT_IP>:22`에 SSH 인증할 수 있고 피벗 호스트에서 `<INTERNAL_IP>:<PORT>`에 연결할 수 있으면, 공격 호스트의 `<INTERNAL_CIDR>` TCP 트래픽을 피벗으로 전달해 ProxyChains 없이 내부 서비스에 도달한다.
 
-## 사용할 때
-
-- 현재 네트워크 위치: 공격 호스트에서는 `<INTERNAL_IP>:<PORT>`에 직접 연결할 수 없지만 `<PIVOT_IP>:22`에는 연결할 수 있고, 피벗 호스트에서는 `<INTERNAL_CIDR>`의 목표 TCP 서비스에 연결할 수 있다.
-- 명령 실행 위치: `sshuttle`, `nmap`, `curl`, `xfreerdp` 같은 최종 클라이언트는 공격 호스트에서 실행하며, SSH 서버는 `<PIVOT_IP>`에서 트래픽을 내부 대역으로 전달한다. 애플리케이션 SOCKS 설정이 아니라 로컬 firewall interception이 적용되는 범위와 TUN·kernel route와의 차이는 [[피벗과 터널의 연결 경계]]를 따른다.
-- 보유 계정·인증 자료: password 또는 private key는 피벗 SSH 인증용이다. 내부 RDP·DB·웹 서비스에는 해당 서비스에서 유효한 별도 인증 자료가 필요하다.
-- 현재 권한: 피벗 계정의 관리자/root 권한은 필수가 아니지만, 공격 호스트에서는 방화벽·라우팅 규칙을 만들 sudo 권한이 필요하다.
-- 지금 가능한 행동: 이 문서의 기본 `auto` 방식으로 `<INTERNAL_CIDR>`의 여러 TCP 호스트·포트를 일반 클라이언트로 반복 확인한다. 일반 ICMP는 전달되지 않으며, UDP는 Linux TPROXY 방식과 추가 조건을 명시적으로 선택한 별도 범위이므로 기본 절차의 성공으로 간주하지 않는다.
-- 성공 범위: 공격 호스트에서 `<INTERNAL_IP>:<PORT>`의 TCP 응답 또는 로그인 단계까지 도달한다. 내부 서비스 인증, 원격 세션과 관리자 권한은 별도로 확인한다.
+공격 호스트 firewall interception, SSH 채널, 피벗의 `<INTERNAL_CIDR>` egress와 최종 TCP 서비스 연결은 [[피벗과 터널의 연결 경계]]처럼 분리해 확인한다.
 
 ## 전제 조건
 
@@ -54,6 +47,8 @@ tags:
 `--method auto`는 공격 호스트에서 사용 가능한 firewall backend를 고릅니다. 이 문서의 완료 기준은 선택된 방식으로 TCP 연결이 전달되는지까지입니다. UDP는 Linux의 TPROXY 방식에서만 지원되며, 해당 방식이 선택되면 자동으로 활성화됩니다. TPROXY에는 root 권한과 별도 route·policy rule이 필요하므로 아래 기본 명령의 범위에 포함하지 않습니다.
 
 현재 sshuttle 1.3.2 공식 Requirements는 공격 호스트와 피벗 호스트 모두 Python 3.10 이상을 요구합니다. 배포판에 포함된 이전 sshuttle은 요구 버전이 다를 수 있으므로 명령을 실행하기 전에 `sshuttle --version`과 양쪽 `python3 --version`을 확인하고 설치된 버전의 문서를 따릅니다.
+
+`<USER>@<PIVOT_IP>`는 피벗 SSH 인증 대상(예: `<USER>@203.0.113.25`)이고, `<INTERNAL_CIDR>`은 피벗 뒤 TCP 대역(예: `192.0.2.0/24`)이다. 이 명령은 방화벽 규칙을 만드는 공격 호스트에서 실행하며, 내부 서비스 계정은 이 SSH 계정과 별도로 사용한다.
 
 ```bash
 sudo sshuttle -r <USER>@<PIVOT_IP> <INTERNAL_CIDR> -v

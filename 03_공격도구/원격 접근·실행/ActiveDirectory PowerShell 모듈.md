@@ -19,9 +19,12 @@ ActiveDirectory PowerShell 모듈은 `Get-AD*` cmdlet으로 도메인·사용자
 
 - 실행 환경: ActiveDirectory 모듈이 설치된 도메인 가입 또는 관리용 Windows 호스트의 PowerShell
 - 입력: 현재 도메인 컨텍스트, 객체 filter, 사용자·그룹 identity와 필요한 property
+- `<DC_FQDN>`은 현재 도메인의 DNS 이름(예: `directory.example.invalid`)이고, 그룹 identity는 표시 이름·DN·SID 중 cmdlet이 해석하는 값을 쓴다. 값의 출처는 현재 AD 세션 또는 앞 단계의 객체 조회 결과다.
 - 권한 조건: 도메인 인증 세션이 필요하며 반환 범위는 현재 사용 중인 계정의 AD 객체 읽기 권한에 따라 달라짐
 
 ## 표준 사용법
+
+`<OBJECT>`는 `User`·`Computer`·`Group`처럼 실제 `Get-AD` cmdlet suffix이며, `[options]`에는 현재 PowerShell session이 읽을 수 있는 filter·property·server만 넣는다. 아래 `-Server <DC_FQDN>`의 값은 앞서 `Get-ADDomain` 출력의 `ReplicaDirectoryServers` 또는 DNS 확인에서 얻은 FQDN이고, 가상 예시는 `directory.example.invalid`다.
 
 ```powershell
 Import-Module ActiveDirectory
@@ -77,6 +80,8 @@ Get-ADTrust -Filter *
 
 ### 특정 그룹의 직접 구성원 확인
 
+`<GROUP>`은 직전 객체 조회에서 얻은 display name·DN·SID 중 하나이며, 가상 예시는 `Domain Admins`다. 이 block은 직접 구성원만 반환하므로 중첩 구성원이나 해당 그룹의 실제 권한을 추가로 단정하지 않는다.
+
 ```powershell
 Get-ADGroupMember -Identity "<GROUP>"
 ```
@@ -93,7 +98,7 @@ Get-ADGroupMember -Identity "<GROUP>"
 | `Get-ADDomain` | 현재 또는 지정한 도메인의 기본 속성 반환 | 도메인 SID, 기능 수준, DC와 하위 도메인 확인 |
 | `Get-ADUser` | AD 사용자 조회 | SPN, 계정 상태와 사용자 property 열거 |
 | `Get-ADComputer` | AD 컴퓨터 조회 | DNS hostname, 운영체제와 마지막 로그온 단서 열거 |
-| `Set-ADAccountControl` | 특정 UAC Boolean flag 변경 | 승인된 객체 제어 기법에서 원래 값 기록·즉시 복구와 함께 사용 |
+| `Set-ADAccountControl` | 특정 UAC Boolean flag 변경 | 객체 제어 기법에서 원래 값 기록·즉시 복구와 함께 사용 |
 | `Get-ADTrust` | 도메인 트러스트 조회 | 트러스트 방향과 범위 확인 |
 | `Get-ADGroupMember` | 지정한 그룹 구성원 조회 | 고권한 또는 운영 그룹의 직접 구성원 확인 |
 | `Get-ADGroup` | 그룹 객체와 SID 조회 | 다른 도메인의 Enterprise Admins 등 그룹 SID 확인 |

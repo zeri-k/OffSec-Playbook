@@ -4,7 +4,7 @@ tags:
   - 환경/windows
 시작조건: ["Hyper-V 호스트의 Windows 세션 확보", "Hyper-V Administrators 그룹이 현재 token에 반영됨"]
 필요권한: ["대상 Hyper-V 호스트의 Hyper-V Administrators 또는 동등한 VM export·disk 관리 권한", "분석 호스트의 VHD read-only mount 권한"]
-필요조건: ["대상 VM과 연결 VHDX 식별", "export 전체를 저장할 빈 전용 경로와 충분한 공간", "민감한 VM 복제·분석이 승인된 범위"]
+필요조건: ["대상 VM과 연결 VHDX 식별", "export 전체를 저장할 빈 전용 경로와 충분한 공간"]
 결과: ["VM 구성·checkpoint·가상 디스크의 export 사본", "read-only mount에서 확보한 NTDS.dit·SYSTEM 또는 SAM·SECURITY·SYSTEM 후보", "오프라인 credential 분석 입력"]
 ---
 
@@ -12,7 +12,7 @@ tags:
 
 ## 한 줄 판단
 
-현재 token에 Hyper-V Administrators 권한이 반영되고 승인된 VM을 관리할 수 있다면, 실행 중인 원본 VHDX를 직접 조작하지 않고 VM을 전용 경로로 export한 뒤 사본 디스크만 read-only로 mount하여 오프라인 credential 자료를 수집한다.
+현재 token에 Hyper-V Administrators 권한이 반영되고 VM을 관리할 수 있다면, 실행 중인 원본 VHDX를 직접 조작하지 않고 VM을 전용 경로로 export한 뒤 사본 디스크만 read-only로 mount하여 오프라인 credential 자료를 수집한다.
 
 ## 전제 조건
 
@@ -20,8 +20,8 @@ tags:
 |---|---|---|---|
 | 실행 위치 | 대상 VM을 관리하는 Hyper-V 호스트의 PowerShell | `hostname`, `Get-VM -Name '<VM_NAME>'` | 관리 호스트와 guest VM을 구분하고 필요한 CIM session 확인 |
 | 현재 계정 | Hyper-V Administrators SID가 현재 token에 반영됨 | `whoami /groups`, `Get-VM` 실제 성공 | 그룹에 추가된 직후라면 새 로그온 token으로 재확인 |
-| 대상 VM | 승인 범위의 VM 이름·ID와 연결 VHDX 경로 식별 | `Get-VM`, `Get-VMHardDiskDrive` | 이름 중복, checkpoint disk와 base disk 관계를 확인 |
-| 저장 공간 | export 전체를 담을 빈 전용 directory와 충분한 free space | 대상 path 부재와 volume free space 확인 | 운영 volume 고갈 위험이 있으면 중단하고 승인된 별도 volume 사용 |
+| 대상 VM | VM 이름·ID와 연결 VHDX 경로 식별 | `Get-VM`, `Get-VMHardDiskDrive` | 이름 중복, checkpoint disk와 base disk 관계를 확인 |
+| 저장 공간 | export 전체를 담을 빈 전용 directory와 충분한 free space | 대상 path 부재와 volume free space 확인 | 운영 volume 고갈 위험이 있으면 중단하고 별도 volume 사용 |
 | 분석 안전성 | export된 사본 VHDX를 read-only로 mount | export path 아래 exact VHDX 선택, `Mount-VHD -ReadOnly` | 실행 중인 원본 VHDX를 mount·copy하지 않음 |
 | guest 역할 | DC인지 member/workstation인지 식별 | VM 이름만 믿지 말고 mounted Windows tree와 파일 존재 확인 | NTDS와 로컬 SAM 경로를 혼용하지 않음 |
 
@@ -101,7 +101,7 @@ Get-Item -LiteralPath '<MOUNTED_WINDOWS_DRIVE>:\Windows\System32\config\SECURITY
 | SAM·SECURITY·SYSTEM 세트 확인 | 로컬 계정·LSA secret 분석 입력 확보 | 로컬 credential 후보 파일 | [[Windows SAM SECURITY SYSTEM 덤프]]에서 같은 시점 hive 세트 검증 |
 | `Get-VM` 접근 거부 | 그룹이 현재 token에 없거나 VM ACL·관리 경로 미충족 | Hyper-V 관리 미확인 | 그룹 디렉터리 상태와 새 로그온, 대상 host를 확인 |
 | export 공간 부족·부분 파일 | export 완료 전 실패 | 불완전 사본 | 분석하지 말고 exact partial export를 정리한 뒤 저장 공간 재평가 |
-| mount는 성공했으나 Windows volume을 읽지 못함 | encryption·filesystem·checkpoint chain 조건 미충족 | guest 파일 미확인 | volume 상태와 승인된 복호화 입력을 확인하고 우회 성공으로 기록하지 않음 |
+| mount는 성공했으나 Windows volume을 읽지 못함 | encryption·filesystem·checkpoint chain 조건 미충족 | guest 파일 미확인 | volume 상태와 필요한 복호화 입력을 확인하고 우회 성공으로 기록하지 않음 |
 
 ## 변경 영향과 복구
 

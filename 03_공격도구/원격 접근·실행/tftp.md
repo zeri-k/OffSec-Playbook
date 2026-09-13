@@ -19,8 +19,11 @@ tags:
 - 입력: 대상 TFTP 서버, 추정한 원격 파일명, 다운로드 경로 또는 업로드할 로컬 파일
 - 실행 환경: TFTP 클라이언트가 설치된 Linux 호스트
 - TFTP에는 디렉터리 목록 명령이 없으므로 원격 파일명을 미리 알아야 한다.
+- `<REMOTE_FILE>`은 TFTP server가 export한 파일명(예: `config.bin`)이고 `<LOCAL_FILE>`은 client 실행 호스트의 생성 또는 수신 경로다. get과 put의 성공은 server 설정의 READ/WRITE 허용 여부를 각각 나타낸다.
 
 ## 표준 사용법
+
+`<TARGET>`은 TFTP server, `<REMOTE_FILE>`은 server export 이름, `<LOCAL_FILE>`은 client host의 수신·업로드 path다. get·put은 각각 읽기·쓰기 정책 결과이며 TFTP는 directory listing을 제공하지 않으므로 원격 파일명은 앞 단계 단서에서 얻는다.
 
 ```bash
 tftp <TARGET>

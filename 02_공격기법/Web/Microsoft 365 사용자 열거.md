@@ -32,6 +32,8 @@ tags:
 
 ### 도메인 사용 여부 확인
 
+이 block은 공격 호스트에서 실행한다. `<DOMAIN>`은 Microsoft 365 tenant 도메인(가상 예: `example.test`)이며 validation 성공은 사용자 존재·비밀번호·MFA·서비스 권한을 뜻하지 않는다.
+
 ```bash
 python3 o365spray.py --validate --domain <DOMAIN>
 ```
@@ -42,12 +44,16 @@ python3 o365spray.py --validate --domain <DOMAIN>
 
 ### 사용자 후보 열거
 
+이 block도 공격 호스트에서 실행한다. `users.txt`는 한 줄에 하나의 이메일 또는 UPN 후보를 둔 파일이며, `<O365_OUTPUT_DIR>`은 작업 전 존재하지 않는 결과 디렉터리다.
+
 ```bash
 python3 o365spray.py --version
 test ! -e '<O365_OUTPUT_DIR>'
 install -d -m 700 '<O365_OUTPUT_DIR>'
 python3 o365spray.py --enum --enum-module office -U users.txt --domain <DOMAIN> --output '<O365_OUTPUT_DIR>'
 ```
+
+`<DOMAIN>`은 검증할 tenant 도메인(가상 예: `example.test`)이고, `users.txt`는 한 줄에 하나의 이메일 또는 UPN 후보를 둔 공격 호스트 파일이다. `<O365_OUTPUT_DIR>`은 기존 결과를 덮어쓰지 않는 새 전용 디렉터리다.
 
 확인할 출력:
 

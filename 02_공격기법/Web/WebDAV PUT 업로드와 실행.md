@@ -92,7 +92,7 @@ curl -i -X MOVE -H 'Destination: http://<TARGET>/<PATH>/<UNIQUE_PROOF>.php' 'htt
 
 ## 변경 영향과 복구
 
-업로드 전 대상 URL에 같은 이름이 없는지 확인하고 `<UNIQUE_PROOF>`를 사용한다. `MOVE`를 사용했다면 원래 이름이 아니라 조회로 실제 존재를 확인한 최종 destination을 제거한다. 아래 `<FINAL_REMOTE_NAME>`은 MOVE를 쓰지 않았거나 MOVE가 실패했으면 `<UNIQUE_PROOF>.txt`, MOVE와 새 URL 조회가 성공했으면 `<UNIQUE_PROOF>.php`다.
+업로드 전 대상 URL에 같은 이름이 없는지 확인하고 `<UNIQUE_PROOF>`를 사용한다. `<TARGET>`은 WebDAV 서버의 IP 또는 FQDN(가상 예: `192.0.2.20`), `<PATH>`는 해당 서버의 URL 경로(가상 예: `dav`), `<LOCAL_PROOF>`는 실행 호스트의 새 파일 경로다. `MOVE`를 사용했다면 원래 이름이 아니라 조회로 실제 존재를 확인한 최종 destination을 제거한다. 아래 `<FINAL_REMOTE_NAME>`은 MOVE를 쓰지 않았거나 MOVE가 실패했으면 `<UNIQUE_PROOF>.txt`, MOVE와 새 URL 조회가 성공했으면 `<UNIQUE_PROOF>.php`다.
 
 ```bash
 curl -i -X DELETE 'http://<TARGET>/<PATH>/<FINAL_REMOTE_NAME>'

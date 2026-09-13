@@ -14,12 +14,6 @@ tags:
 
 요청자 도메인 계정으로 DC의 SYSVOL을 읽을 수 있으면 GPP XML의 공격 대상 계정명, `cpassword`와 autologon 값을 찾아 평문 비밀번호 후보로 복호화하고 적용 GPO·호스트 범위를 확인한다.
 
-## 사용할 때
-
-- 현재 보유 정보: SYSVOL을 읽을 요청자 도메인 계정의 인증 수단과 DC·도메인명을 알고 있다.
-- 명령 실행 위치와 도달성: Windows 호스트에서 UNC 경로를 읽거나 Linux 호스트에서 SMB 도구로 DC 445/TCP에 접근할 수 있다.
-- 현재 가능한 행동과 결과: 요청자 계정으로 `Groups.xml`·`Registry.xml`을 읽고 GPP 자격 증명 후보를 수집할 수 있지만 XML에 기록된 공격 대상 계정과 요청자 계정을 구분하고 현재 유효성을 별도로 검증한다.
-
 ## 전제 조건
 
 | 확인할 것 | 필요한 상태 | 확인 방법 | 미충족 시 다음 확인 |
@@ -32,6 +26,8 @@ tags:
 ## 실행
 
 ### SYSVOL 요청자 인증 방식 선택
+
+`<DC>`와 `<DC_FQDN>`은 SYSVOL을 제공하는 DC, `<DOMAIN>`은 share 아래 도메인 경로다. `<REQUESTER>`의 password·NT hash·ccache는 SYSVOL을 읽는 요청자에게 속하며, XML의 `<CPASSWORD>`와 대상 autologon 계정은 별도 값이다.
 
 | 현재 보유 상태 | 사용할 방식 | 추가로 확인할 조건 |
 |---|---|---|

@@ -79,7 +79,7 @@ manspider <TARGET> --sharenames '<SHARE>' -f '<FILENAME_REGEX>' -c '<CONTENT_REG
 
 ## 변경 영향과 정리
 
-MANSPIDER는 원격 공유를 읽고 `<MANSPIDER_OUTPUT_DIR>`에 log와, `-n`이 없으면 match 파일 사본을 만든다. 원격 파일을 수정하지는 않지만 SMB·AD 감사 흔적은 남을 수 있다. 검토·인계 후 출력 파일의 경로·크기·소유자를 확인하고, 이번 실행이 만든 고유 디렉터리 안의 파일·빈 디렉터리만 정리한다.
+MANSPIDER는 원격 공유를 읽고 `<MANSPIDER_OUTPUT_DIR>`에 log와, `-n`이 없으면 match 파일 사본을 만든다. `<MANSPIDER_OUTPUT_DIR>`은 Linux 실행 호스트의 새 고유 디렉터리이고, `<TARGET>`·`<SHARE>`는 각각 SMB 호스트와 검색할 공유(예: `fileserver.example.test`, `Public`)다. `<USER>`·`<PASSWORD>`는 SMB 인증 입력, `<FILENAME_REGEX>`·`<CONTENT_REGEX>`는 도구가 적용할 정규식이다. 원격 파일을 수정하지는 않지만 SMB·AD 감사 흔적은 남을 수 있다. 필요한 분석 뒤 이번 실행이 만든 고유 디렉터리 안의 파일·빈 디렉터리만 정리한다.
 
 ```bash
 find "$MANSPIDER_OUTPUT_DIR" -xdev -depth -type f -delete

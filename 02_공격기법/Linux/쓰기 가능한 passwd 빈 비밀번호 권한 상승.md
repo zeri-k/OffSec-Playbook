@@ -62,7 +62,7 @@ printf 'modified_sha256=%s\n' "$PASSWD_MODIFIED_SHA256"
 
 확인할 출력:
 
-- regular file로 확인된 작업 전 root 행, `/etc/passwd` owner·mode·mtime, `<PASSWD_BEFORE_SHA256>`, 새 `<PASSWD_WORKDIR>`와 `<PASSWD_MODIFIED_SHA256>`.
+- regular file로 확인된 작업 전 root 행, `/etc/passwd` owner·mode·mtime, `$PASSWD_BEFORE_SHA256`, 새 `$PASSWD_WORKDIR`와 `$PASSWD_MODIFIED_SHA256`.
 - `passwd.modified`는 root 행의 두 번째 필드만 빈 값이고 나머지 행·필드가 보존되어야 한다.
 - `awk`가 42 또는 nonzero로 끝나면 원본에 쓰지 않고 후보 파일을 확인한다.
 
@@ -103,27 +103,27 @@ id
 
 ## 변경 영향과 복구
 
-빈 root password 필드가 적용된 동안 다른 local 인증 주체도 이를 악용할 수 있고 계정 관리 도구와 서비스 동작에 영향을 줄 수 있다. 성공했으면 새 root 셸에서, 실패했으면 유지한 원래 셸에서 즉시 복구한다. 현재 hash가 작업에서 쓴 `<PASSWD_MODIFIED_SHA256>`와 같을 때만 전체 원본 사본을 되쓴다.
+빈 root password 필드가 적용된 동안 다른 local 인증 주체도 이를 악용할 수 있고 계정 관리 도구와 서비스 동작에 영향을 줄 수 있다. 성공했으면 새 root 셸에서, 실패했으면 유지한 원래 셸에서 즉시 복구한다. 현재 hash가 작업에서 쓴 `$PASSWD_MODIFIED_SHA256`와 같을 때만 전체 원본 사본을 되쓴다.
 
 ```bash
-test "$(sha256sum /etc/passwd | awk '{print $1}')" = '<PASSWD_MODIFIED_SHA256>' || exit 1
-cp -- '<PASSWD_WORKDIR>/passwd.before' /etc/passwd
-test "$(sha256sum /etc/passwd | awk '{print $1}')" = '<PASSWD_BEFORE_SHA256>'
+test "$(sha256sum /etc/passwd | awk '{print $1}')" = "$PASSWD_MODIFIED_SHA256" || exit 1
+cp -- "$PASSWD_WORKDIR/passwd.before" /etc/passwd
+test "$(sha256sum /etc/passwd | awk '{print $1}')" = "$PASSWD_BEFORE_SHA256"
 grep '^root:' /etc/passwd
 stat -c '%n %U:%G %a %s %y' /etc/passwd
 pwck -r
 ```
 
 - hash와 root 행, owner·mode가 기준선과 같고 `pwck -r`에서 이번 변경으로 생긴 형식 오류가 없어야 파일 복구 완료다. 기존 mtime은 내용 복구 뒤 달라질 수 있으므로 원래 값으로 임의 조작하지 않고 변경 이력의 잔여 영향으로 기록한다.
-- 현재 hash가 `<PASSWD_MODIFIED_SHA256>`와 다르면 다른 변경을 덮어쓰지 않는다. root 셸을 확보했다면 `diff -u '<PASSWD_WORKDIR>/passwd.before' /etc/passwd`로 차이를 확인하고 `vipw`에서 root 행의 원래 password 필드만 병합한 뒤 `pwck -r`로 검증한다. 자동 전체 복구는 미완료로 기록한다.
+- 현재 hash가 `$PASSWD_MODIFIED_SHA256`와 다르면 다른 변경을 덮어쓰지 않는다. root 셸을 확보했다면 `diff -u "$PASSWD_WORKDIR/passwd.before" /etc/passwd`로 차이를 확인하고 `vipw`에서 root 행의 원래 password 필드만 병합한 뒤 `pwck -r`로 검증한다. 자동 전체 복구는 미완료로 기록한다.
 - root 셸을 사용한 작업을 마친 뒤 `exit`하고 실제 EUID가 원래 사용자로 돌아왔는지 확인한다. `/etc/passwd` 변경과 `su` 시도는 audit·authentication log에 남을 수 있으며 이를 삭제해 원상복구했다고 표현하지 않는다.
 
 파일 복구를 확인한 뒤 이번 작업 디렉터리의 exact 파일만 제거한다.
 
 ```bash
-rm -- '<PASSWD_WORKDIR>/passwd.modified' '<PASSWD_WORKDIR>/passwd.before'
-rmdir -- '<PASSWD_WORKDIR>'
-test ! -e '<PASSWD_WORKDIR>'
+rm -- "$PASSWD_WORKDIR/passwd.modified" "$PASSWD_WORKDIR/passwd.before"
+rmdir -- "$PASSWD_WORKDIR"
+test ! -e "$PASSWD_WORKDIR"
 ```
 
 ## 관찰과 상태 전환

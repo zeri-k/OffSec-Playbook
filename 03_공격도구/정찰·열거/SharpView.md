@@ -44,6 +44,8 @@ SharpView는 PowerView 기능을 .NET 실행 파일 형태로 제공해 AD 객�
 .\SharpView.exe Get-DomainUser -Identity <USER>
 ```
 
+`<USER>`는 현재 도메인에서 조회할 사용자명(예: `alice`)이며, 명령은 `SharpView.exe`가 있는 Windows 호스트에서 실행한다.
+
 확인할 출력:
 
 - `[Get-DomainSearcher] search base`와 `[Get-DomainUser] filter string`.

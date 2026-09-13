@@ -19,8 +19,11 @@ SharpHound는 Windows에서 AD 객체·ACL·세션·원격 접근 관계를 수�
 - 실행 환경: DC와 도메인 호스트에 접근 가능한 Windows 호스트
 - 필요한 입력: 현재 도메인 사용자 세션 또는 명시한 domain
 - 수집 영향: collection method에 따라 LDAP 조회와 다수 호스트 접속이 발생하므로 필요한 method와 대상 목록을 먼저 정한다.
+- collection method와 output ZIP basename은 Windows collector host의 값이고 domain은 AD DNS domain(예: `directory.example.invalid`)이다. graph edge·finding은 collection 시점의 후보이며 실제 ACL/권한은 별도 확인한다.
 
 ## 표준 사용법
+
+`<COLLECTION_METHODS>`는 current collector가 지원하는 method 목록, `<OUTPUT_PREFIX>`는 Windows collector host의 새 ZIP basename, `<DOMAIN>`은 AD DNS domain이다. collection output의 graph edge·finding은 수집 시점 후보이며 실제 ACL·object READ/WRITE 권한은 해당 object에서 별도로 확인한다.
 
 ```powershell
 .\SharpHound.exe -c <COLLECTION_METHODS> --zipfilename <OUTPUT_NAME>

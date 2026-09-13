@@ -13,12 +13,6 @@ tags:
 
 공격 호스트에서 도메인 컨트롤러의 Kerberos·LDAP·SMB 서비스에 연결할 수 있고 일반 도메인 계정으로 컴퓨터 객체를 만들고 이름을 바꿀 수 있다면, 패치되지 않은 CVE-2021-42278·CVE-2021-42287 체인을 검증해 가장한 계정의 Kerberos ticket 또는 도메인 컨트롤러의 SYSTEM 세션을 얻는다.
 
-## 사용할 때
-
-- 패치 상태를 확인할 수 있는 통제된 레거시 AD 실습 환경일 때.
-- 일반 도메인 credential과 DC 접근은 있지만 현재 권한이 제한적일 때.
-- 컴퓨터 객체 생성·이름 변경·삭제 실패가 남길 영향을 확인했을 때.
-
 ## 전제 조건
 
 | 구분 | 조건 | 확인 방법 |
@@ -28,6 +22,10 @@ tags:
 | 입력·환경 | 영향받는 DC와 일치하는 이름·IP, 기존에 없는 `<NEW_COMPUTER_NAME>$` | 패치 상태, DC FQDN, 시간·DNS와 exact LDAP 조회 |
 
 ## 실행
+
+> 컴퓨터 객체 생성·이름 변경·ticket·service 실행은 AD와 DC 상태에 영향을 남길 수 있다. exact DN·objectGUID·원래 이름·ccache와 service log를 구분해 복구하며, 패치·도구 동작은 정적으로 미확인이다.
+
+`<USER>`는 인증 요청자, `<IMPERSONATE_USER>`는 가장할 계정, `<NEW_COMPUTER_NAME>`은 새 객체 이름이다. DC FQDN·IP, Base DN, ccache와 log 경로는 각 단계의 실행 호스트와 출력 출처를 유지한다.
 
 ### 방식 선택
 
@@ -94,7 +92,7 @@ NoPac에서 ccache가 저장되면 컴퓨터 객체 복구를 확인한 뒤 [[Pa
 | semi-interactive shell과 `nt authority\system` | DC에서 SYSTEM 명령 실행 확인 | 고권한 세션 확보 | 원복 확인 후 [[고권한 세션 확보 후 후속 판단]] |
 | ccache만 저장 | 고권한 계정의 Kerberos ticket 확보 | ticket 확보 | 원복 확인 후 [[Pass the Ticket]]에서 티켓에 표시된 계정·서비스 범위 검증 |
 | `MachineAccountQuota`만 표시 | 컴퓨터 생성 정책 단서일 뿐 취약성 미확정 | 시작 상태 유지 | PAC TGT와 실제 exploit 결과를 추가 확인 |
-| 컴퓨터 계정 삭제 실패 | AD 객체가 잔존함 | 복구 필요 상태 | 추가 실행을 중단하고 정확한 객체 DN을 관리자에게 인계 |
+| 컴퓨터 계정 삭제 실패 | AD 객체가 잔존함 | 복구 필요 상태 | 추가 실행을 중단하고 기록한 정확한 객체 DN·objectGUID로 복구 미완료를 남김 |
 
 ## 확인할 출력과 권한
 
@@ -119,7 +117,7 @@ impacket-addcomputer '<DOMAIN>/<USER>' -dc-ip <DC_IP> -computer-name '<NEW_COMPU
 ldapsearch -LLL -x -H ldap://<DC_IP> -D '<USER>@<DOMAIN>' -W -b '<BASE_DN>' '(sAMAccountName=<NEW_COMPUTER_NAME>$)' distinguishedName sAMAccountName objectGUID
 ```
 
-이름 복원이 실패해 객체가 `<DC_HOST>`처럼 다른 `sAMAccountName`을 사용 중이면 이름만으로 삭제하지 않는다. 실행 출력에서 기록한 exact DN·objectGUID를 관리자에게 인계해 원래 `<NEW_COMPUTER_NAME>$`로 복원한 뒤 삭제하고, 실제 DC의 `<DC_HOST>$` 객체와 구분한다.
+이름 복원이 실패해 객체가 `<DC_HOST>`처럼 다른 `sAMAccountName`을 사용 중이면 이름만으로 삭제하지 않는다. 실행 출력에서 기록한 exact DN·objectGUID로 원래 `<NEW_COMPUTER_NAME>$` 복원 여부를 대조한 뒤 삭제하며, 실제 DC의 `<DC_HOST>$` 객체와 구분한다.
 
 공격 호스트에서는 작업 전 없었던 것으로 확인된 두 ccache만 정확한 경로에서 제거하고 환경 변수를 해제한다.
 

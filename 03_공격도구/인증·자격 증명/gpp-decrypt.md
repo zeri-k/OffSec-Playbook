@@ -19,6 +19,10 @@ tags:
 - 필요한 입력: `Groups.xml` 등에서 직접 확인한 `cpassword` 값
 - 연결 정보: XML의 사용자명과 정책 적용 대상을 함께 보존한다.
 
+`<CPASSWORD>`는 `Groups.xml` 등에서 얻은 XML attribute의 암호문 문자열이며, 예시는 실제 값을 쓰지 않고 `<CPASSWORD>` 전체를 해당 attribute 값으로 치환한다.
+
+명령은 XML을 확보한 Linux 분석 호스트에서 실행하며, 복호화 출력은 같은 XML의 사용자명·정책 적용 대상과 함께 해석한다.
+
 ## 표준 사용법
 
 ```bash

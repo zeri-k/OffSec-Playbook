@@ -18,9 +18,12 @@ tags:
 - 실행 환경: Telnet client가 설치된 Linux 또는 Windows 호스트
 - 입력: 대상 호스트와 평문 TCP 포트
 - 프로토콜 입력: 서비스에 맞는 텍스트 명령
+- `<TARGET>`은 TCP listener의 IP/FQDN(예: `mail.corp.example`), `<PORT>`는 서비스 포트(예: `25`)다. 연결 성공은 TCP 도달성일 뿐 서비스 인증·권한·명령 수락을 의미하지 않는다.
 
 
 ## 표준 사용법
+
+`<TARGET>`은 client에서 도달하는 TCP listener IP/FQDN, `<PORT>`는 서비스 port(예: `23` 또는 `25`)이며 이후 입력하는 text command는 그 protocol 문법을 따른다. TCP connect 성공과 prompt·authentication·command acceptance는 별도 결과다.
 
 ```bash
 telnet <target> <port>

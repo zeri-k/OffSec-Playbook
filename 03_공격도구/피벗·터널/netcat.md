@@ -17,6 +17,7 @@ Netcat은 TCP·UDP 연결을 열거나 수신해 포트 도달성, 평문 배너
 - 실행 환경: `nc`, `netcat` 또는 Ncat이 설치된 Linux/Windows 호스트
 - 입력: 접속할 호스트와 포트 또는 열어 둘 로컬 listen 포트
 - 프로토콜: 기본 TCP, 필요한 경우 `-u`로 UDP
+- `<TARGET>`은 connect할 service host, `<PORT>`는 그 service 포트이며 `-l`의 포트는 현재 실행 host에 여는 listener다. 연결·PID·listener 존재 확인은 session, authentication 또는 command execution을 보장하지 않는다.
 
 ## 표준 사용법
 
@@ -28,6 +29,8 @@ nc -lvnp <port>
 Netcat은 배포판에 따라 OpenBSD netcat, traditional netcat, Ncat 등 옵션 차이가 있다. 아래 `nc` 예시는 Linux의 OpenBSD/traditional 계열 문법이며 실행 전에 `nc -h`로 확인한다. Nmap Ncat은 connect mode `ncat <HOST> <PORT>`, listen mode `ncat -l [<LISTEN_ADDR>] <PORT>`를 사용한다. `-e`, `-c`, `-q`, listen 시 `-p` 같은 option은 구현마다 지원·의미가 다르다.
 
 ## 대표 예시
+
+`<TARGET>`은 connect·scan할 서비스 호스트(예: `service.example.test`)이고, `<LISTEN_PORT>`는 현재 실행 호스트에 열 listener TCP 포트(예: `4444`)다. `$NC_LISTENER_PID`는 바로 앞 background 명령의 `$!` 출력이며, 이후 정리에서도 같은 PID를 재사용한다.
 
 ### 포트 연결 확인
 

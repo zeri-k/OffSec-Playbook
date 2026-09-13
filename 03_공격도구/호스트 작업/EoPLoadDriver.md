@@ -20,8 +20,11 @@ tags:
 - 첫 입력: `System\CurrentControlSet\<DRIVER_SERVICE_NAME>` 형식의 service registry path.
 - 둘째 입력: target Windows host에서 읽을 수 있는 exact `.sys` path.
 - 권한·정책: 현재 token의 `SeLoadDriverPrivilege`, driver signature·architecture와 Code Integrity·HVCI·blocklist 허용.
+- `<DRIVER_SERVICE_NAME>`은 현재 사용자 hive 아래의 고유 service key 이름이고 `.sys`는 대상 Windows host의 절대 경로(예: `C:\\Temp\\driver.sys`)다. registry path와 파일 path는 같은 문자열이 아니며 기존 key·driver와 충돌하지 않아야 한다.
 
 ## 표준 사용법
+
+`<DRIVER_SERVICE_NAME>`은 현재 user hive의 새 service key 이름, `<DRIVER_PATH>`는 target Windows host의 exact `.sys` path다. privilege·signature·CI 조건은 load 이전 조건이며 registry key 생성과 driver load·exploit process 결과를 분리해 확인한다. 복구는 이 같은 service name·path만 대상으로 한다.
 
 ```cmd
 EoPLoadDriver.exe <REGISTRY_SERVICE_PATH> <DRIVER_IMAGE_PATH>
@@ -46,7 +49,7 @@ EoPLoadDriver.exe System\CurrentControlSet\<DRIVER_SERVICE_NAME> <VULNERABLE_DRI
 | 인자 | 의미 | 사용하는 상황 |
 |---|---|---|
 | `<REGISTRY_SERVICE_PATH>` | 현재 사용자 hive 아래에 만들 driver service key의 상대 경로 | exact key를 사전 확인하고 이후 정리할 때 |
-| `<DRIVER_IMAGE_PATH>` | load할 `.sys`의 absolute path | hash·signature·architecture를 확인한 승인 driver에만 사용 |
+| `<DRIVER_IMAGE_PATH>` | load할 `.sys`의 absolute path | 식별한 build의 hash·signature·architecture를 확인한 driver에만 사용 |
 
 ## 도구 고유 출력
 
@@ -57,7 +60,7 @@ EoPLoadDriver.exe System\CurrentControlSet\<DRIVER_SERVICE_NAME> <VULNERABLE_DRI
 | privilege 활성화 실패 | 현재 token에 privilege가 없거나 활성화 불가 | 그룹 상태·새 token과 현재 Identity 확인 |
 | Code Integrity block | driver policy·signature·blocklist 조건 미충족 | 정책을 비활성화하지 말고 현재 경로 중단 |
 
-도구가 만든 registry key를 삭제해도 이미 loaded된 driver가 unload되지는 않는다. driver별 unload routine이나 승인된 재부팅 전까지 host 영향이 남을 수 있다.
+도구가 만든 registry key를 삭제해도 이미 loaded된 driver가 unload되지는 않는다. driver별 unload routine이나 재부팅 전까지 host 영향이 남을 수 있다.
 
 ## 관련 공격기법
 
@@ -67,4 +70,3 @@ EoPLoadDriver.exe System\CurrentControlSet\<DRIVER_SERVICE_NAME> <VULNERABLE_DRI
 
 - [Tarlogic Security: EoPLoadDriver](https://github.com/TarlogicSecurity/EoPLoadDriver)
 - [Microsoft Learn: Privilege Constants](https://learn.microsoft.com/en-us/windows/win32/secauthz/privilege-constants)
-

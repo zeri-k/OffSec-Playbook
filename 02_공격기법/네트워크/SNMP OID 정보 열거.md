@@ -13,12 +13,6 @@ tags:
 
 유효한 SNMPv1/v2c community와 대상 UDP 161 경로가 있으면 해당 community가 반환하는 Object Identifier(OID) view를 조회하여 호스트·프로세스·소프트웨어·인터페이스 단서를 수집하고, community 후보 대입은 원격 비밀번호 공격으로 분리한다.
 
-## 사용할 때
-
-- `onesixtyone` 등으로 실제 응답을 반환하는 community를 이미 확인했을 때.
-- 네트워크 장비·프린터·서버가 공개하는 시스템·프로세스·인터페이스 정보를 조사할 때.
-- community 유효성과 특정 OID view 접근 범위를 구분해야 할 때.
-
 ## 전제 조건
 
 | 확인할 것 | 필요한 상태 | 확인 방법 | 미충족 시 다음 확인 |
@@ -28,6 +22,8 @@ tags:
 | 조회 범위 | community로 읽을 수 있는 OID view | OID별 값 또는 authorization 오류 | 특정 OID 거부와 community 전체 실패를 구분 |
 
 ## 실행
+
+`<TARGET>`은 SNMP agent 주소(가상 예시 `192.0.2.161`), `<COMMUNITY>`는 응답을 확인한 community string이고, `<OID>`는 그 community가 허용하는 MIB view의 OID다. 아래 명령은 agent에 도달하는 공격 호스트에서 실행하며, community 응답·OID view 접근·반환 정보는 각각 구분한다.
 
 ### 주요 OID 조회
 

@@ -20,8 +20,11 @@ tags:
 - 입력: 사용할 로컬 또는 도메인 계정과 실행할 프로그램
 - 인증 입력: 대화형으로 입력할 계정 비밀번호
 - `/netonly` 조건: 지정 계정을 사용할 네트워크 서비스와 해당 서비스로의 도달성
+- `/user:<DOMAIN>\\<USER>`는 새 프로세스의 자격 증명 형식이며, 예시는 `/user:CORP\\analyst cmd.exe`다. `/netonly`는 로컬 token을 바꾸지 않고 네트워크 인증에만 이 값을 사용하므로 대상 서비스의 인증 결과를 별도로 확인한다.
 
 ## 표준 사용법
+
+`<DOMAIN>\\<USER>`는 새 process가 사용할 account namespace, `<PROGRAM>`은 Windows host의 executable·argument다. `/netonly` block의 credential은 network authentication에만 쓰이며 local process token과 target service의 authentication result를 구분한다.
 
 ```cmd
 runas /user:<domain\user> <program>
@@ -67,7 +70,7 @@ runas /netonly /user:<DOMAIN>\<USER> "powershell.exe"
 | password incorrect | credential 오류 | 도메인/로컬 계정 형식과 비밀번호 재확인 |
 | logon type 제한 | 정책 또는 권한 문제 | interactive/network logon 권한과 UAC 상태 확인 |
 | 프로세스는 뜨지만 접근 실패 | `/netonly` 동작 오해 또는 권한 부족 | 로컬/네트워크 인증 차이와 대상 서비스 권한 확인 |
-| UAC 영향 | 관리자 토큰 미상승 | 관리자 권한 실행 여부와 UAC 상태 확인 |
+| UAC 영향 | Administrators membership은 있지만 current process가 UAC filtered access token으로 실행됨 | elevated access token으로 실행됐는지와 UAC 상태 확인 |
 
 ## 관련 공격기법
 

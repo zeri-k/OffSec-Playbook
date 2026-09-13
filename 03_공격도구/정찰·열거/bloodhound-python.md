@@ -19,7 +19,8 @@ tags:
 ## 필요한 입력과 실행 환경
 
 - 실행 환경: 대상 DC와 DNS에 접근 가능한 Linux 호스트
-- 필요한 입력: 도메인명, 사용자와 비밀번호 또는 NTLM hash, DNS 서버/DC
+- 필요한 입력: 도메인명, 사용자와 비밀번호 또는 NTLM hash, DNS 서버/DC. `<USER>@<DOMAIN>`은 UPN(예: `alice@corp.example.test`), `<DC_IP>`는 이름 해석에 쓸 DC/DNS 주소(예: `directory.example.test`), `<OUTPUT_PREFIX>`는 Linux 실행 호스트의 새 출력 접두사(예: `./bh-corp`)다.
+- cross-trust 예시에서 `<SOURCE_DOMAIN>`·`<SOURCE_DC_FQDN>`·`<SOURCE_DNS_IP>`는 credential의 source domain과 그 DC/DNS이고, `<TARGET_TRUST_DOMAIN>`·`<TARGET_DC_FQDN>`·`<TARGET_DNS_IP>`는 별도 target trust domain의 조회 경로다. 두 명령의 `<USER>@<SOURCE_DOMAIN>`은 같은 요청자 credential을 재사용한다.
 - 권한 조건: 일반 도메인 사용자의 읽기 권한으로 시작하며 수집 방법별 원격 접근 제한을 구분한다.
 
 ## 표준 사용법

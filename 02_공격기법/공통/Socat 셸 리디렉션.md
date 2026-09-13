@@ -14,13 +14,7 @@ tags:
 
 공격 호스트와 내부 대상이 직접 연결되지 않지만 셸을 보유한 `<PIVOT_IP>`가 양쪽 TCP 구간에 연결할 수 있으면, 피벗 호스트에서 Socat listener를 열어 한쪽 연결을 `<DESTINATION_IP>:<DESTINATION_PORT>`로 전달한다.
 
-## 사용할 때
-
-- 현재 네트워크 위치: 연결 시작점은 `<PIVOT_IP>:<LISTEN_PORT>`에 도달하고, 피벗 호스트는 `<DESTINATION_IP>:<DESTINATION_PORT>`에 도달한다.
-- 명령 실행 위치: `socat`은 셸을 보유한 피벗 호스트에서 실행한다.
-- 현재 계정·권한: 현재 셸 계정으로 Socat을 실행하고 선택한 포트를 수신할 수 있어야 한다.
-- 지금 가능한 행동: SOCKS나 대역 route가 필요하지 않고 하나의 TCP 포트만 양방향 중계한다.
-- 성공 범위: Socat listener와 목적지 사이의 TCP 전달만 확인한다. payload 생성, handler 구성과 셸 획득은 [[Reverse Shell 획득]] 또는 [[Bind Shell 획득]]에서 판단한다.
+연결 시작점이 `<PIVOT_IP>:<LISTEN_PORT>`에 도달하고 피벗 호스트가 `<DESTINATION_IP>:<DESTINATION_PORT>`에 도달할 때, 셸을 보유한 피벗 호스트에서 실행한다. 이 문서는 SOCKS·대역 route가 아닌 단일 TCP 중계만 확인하며 payload·handler·셸 획득은 [[Reverse Shell 획득]] 또는 [[Bind Shell 획득]]에서 판단한다.
 
 ## 전제 조건
 

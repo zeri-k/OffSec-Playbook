@@ -15,12 +15,6 @@ tags:
 
 도메인·DC와 사용할 AD 계정을 확인했으면 Windows 도메인 세션 또는 Linux 공격 호스트에서 컴퓨터 객체를 조회하여 hostname·FQDN·DN과 운영체제 단서를 수집하고, DNS와 서비스 응답으로 현재 활성 호스트인지 다시 확인한다.
 
-## 사용할 때
-
-- 도메인에 등록된 Windows 호스트와 서버 후보 목록이 필요할 때.
-- DNS·서비스 스캔, 로그온 사용자 또는 원격 접근 권한을 확인할 대상을 좁힐 때.
-- 디렉터리 객체 존재와 현재 호스트 활성 상태를 구분해야 할 때.
-
 ## 전제 조건
 
 | 확인할 것 | 필요한 상태 | 확인 방법 | 미충족 시 다음 확인 |
@@ -32,6 +26,8 @@ tags:
 ## 실행
 
 ### Linux 공격 호스트에서 실행
+
+`<DC_IP>`는 LDAP를 제공하는 DC IP, `<USER>@<DOMAIN>`과 `<PASSWORD>`는 LDAP bind 요청자다. `<DC_FQDN>`은 Windows AD module이 조회할 DC FQDN이며, `<OU_DN>`과 `<MAX_OBJECTS>`는 선택적인 검색 범위와 양의 정수 제한이다.
 
 ```bash
 python3 windapsearch.py --dc-ip <DC_IP> -u '<USER>@<DOMAIN>' -p '<PASSWORD>' -C

@@ -20,6 +20,7 @@ ptunnel-ng는 TCP 스트림을 ICMP 패킷 안에 캡슐화해 양단 사이에 
 - 권한 조건: 양쪽에서 raw socket을 열 수 있는 권한
 - SSH 연계 입력: 피벗 호스트의 SSH 계정 또는 private key
 - 준비 방법: 공식 source를 사용하는 경우 `./autogen.sh` 또는 `./configure && make` 뒤 생성된 `ptunnel-ng`를 양쪽 OS·아키텍처에 맞게 준비한다. 기존 설치 파일과 새 전송 파일의 경로를 구분한다.
+- `<PIVOT_IP>`는 ICMP peer, `<SSH_HOST>`는 tunnel 뒤의 SSH destination이며 local listen 포트는 공격 host에 열린다. raw socket 권한과 ICMP 응답은 해당 SSH account 인증이나 final command 결과를 뜻하지 않는다.
 
 ## 표준 사용법
 

@@ -12,12 +12,6 @@ tags:
 
 명령 실행 호스트에서 대상 Oracle TNS 1521/TCP에 도달할 수 있으면 listener가 받아들이는 System Identifier(SID) 또는 service name 후보를 확인하고, 계정 추측과 인증 후 데이터 조회는 별도 기법으로 넘긴다.
 
-## 사용할 때
-
-- Oracle listener는 응답하지만 접속에 사용할 SID 또는 service name을 모를 때.
-- `ORA-12505`, `ORA-12514`처럼 접속 식별자 오류와 계정 인증 오류를 분리해야 할 때.
-- 계정 후보를 반복 검증하기 전에 정확한 DB 인스턴스 이름을 좁힐 때.
-
 ## 전제 조건
 
 | 확인할 것 | 필요한 상태 | 확인 방법 | 미충족 시 다음 확인 |
@@ -27,6 +21,8 @@ tags:
 | 입력 후보 | 기본 SID·환경에서 얻은 service name 또는 도구 wordlist | 후보 출처와 대소문자 확인 | 설정 파일·웹·배포 단서에서 후보 보강 |
 
 ## 실행
+
+`<TARGET>`은 Oracle listener 주소(가상 예시 `192.0.2.152`)이고, `<SID_WORDLIST>`·`<SERVICE_WORDLIST>`는 공격 호스트에서 준비한 후보 목록 경로다. `<SID>`·`<SERVICE>`는 아래 열거 출력에서 확인한 서로 다른 접속 식별자이며, SID와 service name을 같은 값으로 가정하지 않는다. 명령은 listener에 도달하는 공격 호스트에서 실행한다.
 
 Oracle 계정을 입력하지 않고 listener가 받아들이는 SID 또는 service name 후보를 확인한다. Nmap 절차는 SID를, ODAT의 두 module은 SID와 service name을 각각 확인하므로 현재 필요한 식별자에 맞는 경로를 선택한다.
 
@@ -55,7 +51,7 @@ odat snguesser -s <TARGET> -p 1521 --service-name-file <SERVICE_NAME_WORDLIST>
 확인할 출력:
 
 - `sidguesser`의 valid SID와 `snguesser`의 valid Service Name을 따로 기록한다.
-- `ORA-12519`나 연결 포화 단서가 보이면 더 많은 재시도를 즉시 늘리지 말고 listener 상태와 승인된 시도 속도를 확인한다.
+- `ORA-12519`나 연결 포화 단서가 보이면 더 많은 재시도를 즉시 늘리지 말고 listener 상태와 현재 시도 속도를 확인한다.
 - 반환된 식별자는 인증 대상 후보일 뿐이다. 유효한 DB 계정·role·데이터 접근은 다음 절차에서 확인한다.
 
 ## 관찰과 상태 전환

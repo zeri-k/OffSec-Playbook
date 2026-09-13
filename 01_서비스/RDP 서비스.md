@@ -26,7 +26,7 @@ tags:
 | 3 | 보안 레벨 | `rdp-sec-check.pl <TARGET>` | NLA와 RDP security 설정을 확인한다. |
 | 4 | credential과 RDP 권한 | `xfreerdp /u:<USER> /v:<TARGET> /cert:tofu /dynamic-resolution` | 비밀번호는 prompt에 입력하고, 인증 성공과 실제 GUI 세션 생성을 확인한다. |
 | 5 | 드라이브 공유 | `xfreerdp /v:<TARGET> /u:<USER> /drive:<SHARE>,<LOCAL_PATH> /cert:tofu` | 로그인 세션에서 로컬 드라이브 매핑이 되는지 확인한다. |
-| 6 | 구형 Windows의 CVE-2019-0708 적용 후보 | 승인된 자산·패치 inventory에서 정확한 Windows 제품·버전·적용 업데이트 확인 | 3389 오픈·RDP handshake만으로 BlueKeep 취약을 확정하지 않는다. 충돌 위험이 있는 exploit은 기본 식별에서 제외한다. |
+| 6 | 구형 Windows의 CVE-2019-0708 적용 후보 | 자산·패치 inventory에서 정확한 Windows 제품·버전·적용 업데이트 확인 | 3389 오픈·RDP handshake만으로 BlueKeep 취약을 확정하지 않는다. 충돌 위험이 있는 exploit은 기본 식별에서 제외한다. |
 
 ## 단서별 다음 경로
 
@@ -48,7 +48,9 @@ tags:
 
 ### CVE-2019-0708 판정 경계
 
-CVE-2019-0708(BlueKeep)은 사용자 인증 전 RDP 연결 처리에서 발생하는 RCE다. 취약한 구형 Remote Desktop Services가 조작된 요청을 처리할 때 메모리 손상이 커널·LocalSystem 콘텍스트의 코드 실행으로 이어질 수 있다. 따라서 위험도는 포트 노출이 아니라 `정확한 제품·버전 + 보안 업데이트 미적용 + RDP 도달성`으로 판정한다. exploit으로 발생하는 세션과 SYSTEM 권한은 패치 적용 여부를 안전하게 확인하는 방법이 아니며, 시스템 충돌 위험 때문에 별도 승인 없이 실행하지 않는다.
+> BlueKeep exploit은 시스템 충돌이나 서비스 중단을 일으킬 수 있다. 이 문서의 기본 식별에서는 exploit을 실행하지 않는다.
+
+CVE-2019-0708(BlueKeep)은 사용자 인증 전 RDP 연결 처리에서 발생하는 RCE다. 취약한 구형 Remote Desktop Services가 조작된 요청을 처리할 때 메모리 손상이 커널·LocalSystem 콘텍스트의 코드 실행으로 이어질 수 있다. 따라서 위험도는 포트 노출이 아니라 `정확한 제품·버전 + 보안 업데이트 미적용 + RDP 도달성`으로 판정한다. exploit으로 발생하는 세션과 SYSTEM 권한은 패치 적용 여부를 안전하게 확인하는 방법이 아니다.
 
 ## 참고 링크
 

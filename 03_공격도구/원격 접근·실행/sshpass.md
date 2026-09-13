@@ -17,9 +17,12 @@ tags:
 
 - 실행 환경: `sshpass`와 SSH 계열 client가 설치된 Linux 호스트
 - 입력: SSH 비밀번호와 함께 실행할 `ssh`, `scp` 또는 `rsync` 명령
+- 비밀번호는 `-f`의 Linux 파일 또는 `SSHPASS` 환경 변수에서 읽으며, `<USER>@<HOST>`와 remote path는 뒤따르는 SSH 계열 명령의 입력이다. 명령행 비밀번호는 process 목록에 노출될 수 있어 표준 문법으로 사용하지 않는다.
 
 
 ## 표준 사용법
+
+`<PASSWORD_FILE>`은 Linux client의 권한 제한 file, `SSHPASS`는 같은 shell process 환경 변수이며 `<USER>@<HOST>`와 remote path는 뒤따르는 SSH/SCP command input이다. 자동 입력 성공은 SSH authentication·file transfer·remote command 결과를 각각 대신하지 않는다.
 
 ```bash
 sshpass -p '<password>' ssh <user>@<target>

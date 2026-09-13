@@ -14,14 +14,6 @@ tags:
 
 공격 호스트의 Metasploit에 `<PIVOT_IP>` Meterpreter 세션이 유지되고 해당 호스트에서 `<INTERNAL_IP>:<PORT>`로 연결할 수 있으면, 공격 호스트에서 `autoroute`·SOCKS 또는 세션 내 `portfwd`를 구성해 내부 TCP 경로를 얻는다.
 
-## 사용할 때
-
-- 현재 보유 접근: 공격 호스트의 `msfconsole`에 `<PIVOT_IP>`에서 실행 중인 `<SESSION_ID>` Meterpreter 세션이 유지된다.
-- 명령 실행 위치: `route`·SOCKS 모듈은 공격 호스트의 Metasploit console에서, `ipconfig`·`portfwd`는 피벗 호스트의 Meterpreter 세션에서 실행한다.
-- 도달해야 하는 대상: 피벗 호스트에서는 `<INTERNAL_IP>:<PORT>`가 응답하지만 공격 호스트에서는 직접 도달하지 못한다.
-- 현재 계정·권한: `getuid`로 피벗 세션의 실행 계정을 확인하며, 세션 확보 자체는 피벗 호스트의 관리자 권한이나 내부 대상의 서비스 권한을 의미하지 않는다.
-- 지금 가능한 행동·성공 범위: 전체 `<INTERNAL_CIDR>`이 필요하면 route와 SOCKS, 특정 `<INTERNAL_IP>:<PORT>`만 필요하면 `portfwd`를 구성한다. Metasploit route가 자동 적용되는 모듈과 외부 client가 별도 SOCKS hook을 필요로 하는 이유는 [[피벗과 터널의 연결 경계]]를 따른다. 성공해도 TCP 경로만 확보하며 인증·원격 실행·관리자 권한은 최종 서비스에서 별도로 검증한다.
-
 ## 전제 조건
 
 | 확인할 것 | 필요한 상태 | 확인 방법 | 미충족 시 다음 확인 |
@@ -33,6 +25,8 @@ tags:
 | 필요한 파일·목록·주소 | `<SESSION_ID>`, `<INTERNAL_CIDR>`, `<INTERNAL_IP>`, `<PORT>` | 세션 목록과 피벗 호스트의 라우팅 테이블을 대조 | 잘못된 CIDR·session ID·주소 수정 |
 
 ## 실행
+
+`<SESSION_ID>`는 공격 호스트 `sessions -l`에서 확인한 피벗 Meterpreter 세션 ID, `<INTERNAL_CIDR>`은 그 피벗의 `ipconfig`·route 출력으로 정한 내부 대역, `<INTERNAL_IP>:<PORT>`는 피벗에서만 확인할 최종 TCP 서비스다. `<INTERNAL_SUBNET>/<NETMASK>`는 같은 CIDR의 모듈 입력 형식이고, route·SOCKS 명령은 공격 호스트 msfconsole에서, `portfwd`는 해당 Meterpreter prompt에서 실행한다.
 
 ### 선택 기준
 | 단서 | 의미 | 다음 행동 |

@@ -13,12 +13,6 @@ tags:
 
 현재 명령 실행 위치에서 대상의 `rlogin`·`rsh`·`rexec` 서비스에 연결할 수 있고 사용자·source 호스트 trust 후보 또는 R-Services 비밀번호가 있다면, trust 기반 셸·trust 기반 단일 명령·비밀번호 기반 명령 실행을 각각 확인한다.
 
-## 사용할 때
-
-- 512/513/514가 열려 있고 오래된 Unix 원격 서비스가 보일 때.
-- `rusers` 또는 이미 수신 중인 `rwhod` 정보에서 사용자/호스트 관계가 노출될 때.
-- `.rhosts` 또는 `/etc/hosts.equiv`에 과도한 trust 설정이 의심될 때.
-
 ## 전제 조건
 
 | 조건 | 확인 방법 | 충족 기준 |
@@ -31,6 +25,8 @@ tags:
 다른 경로에서 trust 파일을 읽었다면 각 행은 `<SOURCE_HOST> [<SOURCE_USER>]` 순서로 해석한다. 첫 필드는 접속을 시작하는 호스트이고, 둘째 필드는 그 호스트의 사용자다. 대상 로컬 계정은 `rlogin`·`rsh`의 `-l <USER>`와 `.rhosts`가 놓인 대상 계정의 홈 디렉터리로 결정된다. 교육자료의 `<username> <ip address>` 설명처럼 필드 순서를 뒤집지 않으며, `/etc/hosts.equiv`와 사용자별 `.rhosts`의 세부 허용 범위는 대상 구현에서 다시 확인한다.
 
 ## 실행
+
+`<TARGET>`은 rlogin·rsh·rexec 서버 주소(가상 예시 `192.0.2.61`), `<USER>`는 대상 로컬 계정, `<SOURCE_HOST>`·`<SOURCE_USER>`는 `.rhosts` 또는 `hosts.equiv`에서 확인한 신뢰 원본이다. `<PASSWORD>`는 trust와 별개인 rexec 인증 자료이며, 아래 명령은 대상 R-Services 포트에 도달하는 공격 호스트에서 실행한다.
 
 ### 방식 선택
 

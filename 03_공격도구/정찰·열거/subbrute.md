@@ -24,7 +24,7 @@ tags:
 ./subbrute.py <DOMAIN> -s <NAMES_FILE> -r <RESOLVERS_FILE>
 ```
 
-`-s`에는 서브도메인 후보 목록, `-r`에는 사용할 resolver 목록을 지정한다.
+`<DOMAIN>`은 루트 도메인(예: `corp.example.test`)이고, `<NAMES_FILE>`은 Linux 실행 호스트의 줄바꿈 이름 목록, `<RESOLVERS_FILE>`은 같은 호스트의 resolver IP/FQDN 목록이다. `<DNS_HOST>`는 그 resolver 목록에 쓸 단일 서버 예시다. `-s`에는 서브도메인 후보 목록, `-r`에는 사용할 resolver 목록을 지정한다.
 
 ## 대표 예시
 
@@ -34,6 +34,8 @@ tags:
 echo "<DNS_HOST>" > ./resolvers.txt
 ./subbrute.py <DOMAIN> -s ./names.txt -r ./resolvers.txt
 ```
+
+`<DNS_HOST>`는 내부 resolver IP/FQDN의 가상 값(예: `dns.example.test`)이다.
 
 확인할 출력:
 

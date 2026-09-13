@@ -20,8 +20,11 @@ tags:
 - 실행 위치: 대상 RPC 서비스에 접근 가능한 Windows PowerShell
 - 필요한 입력: `SecurityAssessment.ps1` 파일과 대상 컴퓨터 FQDN
 - 권한 조건: 현재 도메인 사용자 세션에서 함수가 원격 상태를 확인할 수 있어야 함
+- `<TARGET_FQDN>`은 spooler/RPC target, `<DC_FQDN>`은 domain controller FQDN이며 둘은 다른 역할일 수 있다. `Status: True`는 함수의 확인 결과이지 relay·인증·권한 상승 결과가 아니다.
 
 ## 표준 사용법
+
+`<TARGET_FQDN>`은 remote spooler/RPC target, `<DC_FQDN>`은 domain controller FQDN이며 PowerShell 실행 host에서 각각 해석한다. 둘은 같은 host일 필요가 없고 function의 `Status` output은 remote state 확인 결과일 뿐 relay·authentication·권한 변경 결과가 아니다.
 
 ```powershell
 Import-Module .\SecurityAssessment.ps1

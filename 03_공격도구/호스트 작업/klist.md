@@ -20,9 +20,12 @@ tags:
 - 실행 위치: ticket를 사용하는 현재 Windows 또는 Linux 세션
 - 필요한 입력: 현재 ticket cache, 지정 ccache 또는 keytab; Linux에서는 필요하면 `KRB5CCNAME`
 - 확인 기준: `Default principal`에 표시된 계정, `Service principal`에 표시된 서비스, 암호화 형식, 시작/만료/갱신 시간을 함께 본다. 시간 범위와 현재 시각을 비교하고 실제 사용은 Kerberos 지원 서비스의 응답으로 별도 확인한다.
+- `<CCACHE_FILE>`은 앞 단계가 만든 Linux cache의 절대 경로이며 `KRB5CCNAME`은 그 file을 가리킨다. cache 존재·principal 표시는 KDC ticket 발급이나 service access를 대신하지 않는다.
 
 
 ## 표준 사용법
+
+Windows default cache와 Linux `<CCACHE_FILE>`은 current session 또는 `KRB5CCNAME`이 가리키는 서로 다른 cache source다. `Default principal`·`Service principal`·expiry는 cache state literal이며 ticket file 존재·listing은 KDC validation이나 target service acceptance를 뜻하지 않는다.
 
 ```bash
 klist [options]

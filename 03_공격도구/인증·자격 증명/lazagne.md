@@ -15,6 +15,10 @@ tags:
 
 ## 필요한 입력과 실행 환경
 
+`<LAZAGNE_OUTPUT_DIRECTORY>`는 LaZagne를 실행하는 호스트의 새 출력 디렉터리(예: `/tmp/lazagne-output`)이며 `<LAZAGNE_OUTPUT_FILE>`은 바로 앞 `find` 출력에서 얻은 생성 파일명이다. `<UPLOADED_LAZAGNE_PATH>`는 대상 Windows 호스트에 올린 실행 파일의 정확한 경로다.
+
+출력 경로와 파일명은 LaZagne를 실행하는 Linux 또는 Windows 호스트 기준이다. 전송해 분석하는 파일은 생성 파일과 구분하고, 새 결과 파일만 정리 대상으로 기록한다.
+
 - 실행 위치: 초기 접근을 얻은 Windows, Linux 또는 macOS 호스트의 로컬 세션
 - 필요한 입력: 대상 OS에 맞는 LaZagne 실행 파일/스크립트와 검사할 module
 - 권한 조건: 현재 사용자 profile을 읽을 수 있어야 하며, 다른 사용자나 시스템 저장소는 추가 권한이 필요하다.

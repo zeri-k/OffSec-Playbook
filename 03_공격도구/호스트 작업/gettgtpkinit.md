@@ -20,9 +20,12 @@ tags:
 - 실행 위치: PKINITtools가 설치되고 DC의 Kerberos에 접근 가능한 Linux 호스트
 - 필요한 입력: PFX 파일과 비밀번호, `<DOMAIN>/<USER>`, DC 주소 또는 FQDN, 출력 ccache 경로
 - 환경 조건: 공격 호스트와 DC의 시간을 동기화하고 이후 사용할 `KRB5CCNAME` 경로를 정한다.
+- `<DOMAIN>/<USER>`는 PFX subject와 연결되는 principal, `<DC_FQDN>`은 Kerberos KDC의 FQDN(예: `directory.example.invalid`)이며 `<CCACHE_FILE>`은 Linux 실행 host에서 생성할 새 경로다.
 
 
 ## 표준 사용법
+
+`<PFX_FILE>`·`<CCACHE_FILE>`은 Linux execution host의 input/output path, `<DOMAIN>/<USER>`는 PFX subject와 연결되는 Kerberos principal, `<DC_FQDN>`은 KDC endpoint다. ccache 생성·AS-REP key output은 TGT acquisition 결과이며 서비스 ticket·target authentication은 후속 Kerberos request에서 별도로 확인한다.
 
 ```bash
 python3 gettgtpkinit.py -cert-pfx <ACCOUNT>.pfx -dc-ip <DC_IP> '<DOMAIN>/<ACCOUNT>' /tmp/account.ccache

@@ -13,14 +13,7 @@ tags:
 
 ## 한 줄 판단
 
-Windows 도메인 사용자 세션에서 도메인 호스트의 SMB에 연결할 수 있으면 Snaffler로 현재 계정이 읽을 수 있는 공유를 순회하여 자격 증명·키·설정과 민감 파일 후보의 UNC 경로를 선별한다.
-
-## 사용할 때
-
-- 현재 가진 정보: 현재 Windows 세션의 도메인 계정, 검색할 AD 도메인명과 DC를 알고 있다.
-- 명령 실행 위치와 도달성: Snaffler를 실행할 Windows 호스트에서 도메인 DNS와 대상 호스트의 SMB 445/TCP에 연결할 수 있다.
-- 현재 계정과 권한: 현재 도메인 계정으로 호스트와 공유를 열거할 수 있으며, 실제 파일 내용은 해당 공유·파일 ACL이 허용하는 범위에서만 읽을 수 있다.
-- 성공 결과: Snaffler rule에 일치한 UNC 파일 경로를 얻고, 실제 내용을 읽어 자격 증명인지 수동으로 검증할 대상을 좁힌다.
+Windows 도메인 사용자 세션에서 도메인 호스트의 SMB에 연결할 수 있으면 Snaffler로 공유 metadata와 rule hit UNC 경로를 선별한다. 반환 경로는 실제 파일 내용 READ 또는 자격 증명 존재의 증거가 아니므로, 해당 공유·파일 ACL과 별도 읽기 결과를 확인한다.
 
 ## 전제 조건
 
@@ -33,6 +26,8 @@ Windows 도메인 사용자 세션에서 도메인 호스트의 SMB에 연결할
 | 필요한 파일·목록·주소 | `Snaffler.exe`, `<DOMAIN>`, `<OUTPUT_FILE>` | 실행 파일과 출력 경로의 쓰기 가능 여부 확인 | 파일 반입·실행 차단과 로그 경로 ACL 확인 |
 
 ## 실행
+
+`<DOMAIN>`은 현재 AD DNS 도메인, `<DC>`는 그 DC, `<OUTPUT_FILE>`은 Windows 실행 호스트의 새 결과 파일(예: `C:\\Temp\\snaffler.txt`)이다. 출력의 `\\<HOST>\\<SHARE>\\<PATH>`는 rule hit 경로이며 파일 내용을 읽을 권한을 보장하지 않는다.
 
 ### 1. Windows 공격 호스트의 계정과 도메인 경로 확인
 
@@ -64,9 +59,9 @@ if (Test-Path -LiteralPath '<OUTPUT_FILE>') { throw 'Output file already exists'
 - rule에 일치한 `\\<HOST>\<SHARE>\<PATH>` 형식의 파일 경로와 분류.
 - `<OUTPUT_FILE>`에 저장된 동일한 결과와 실행 중 발생한 접근 오류.
 
-### 3. 후보 파일의 접근과 내용을 수동 검증
+### 3. 후보 파일의 metadata와 내용을 수동 검증
 
-Snaffler 결과에서 우선순위가 높은 파일 하나를 선택해 실제 ACL과 내용을 확인한다.
+Snaffler 결과에서 우선순위가 높은 파일 하나를 선택해 현재 계정으로 metadata를 조회하고 내용을 READ할 수 있는지 확인한다. 이 두 명령은 ACL 전체를 열거하거나 별도 권한을 증명하지 않는다.
 
 ```powershell
 Get-Item '\\<HOST>\<SHARE>\<PATH>'
@@ -75,7 +70,7 @@ Get-Content -LiteralPath '\\<HOST>\<SHARE>\<PATH>'
 
 확인할 출력:
 
-- 현재 계정으로 파일 metadata와 내용을 실제로 읽을 수 있는지.
+- `Get-Item`으로 경로 metadata를 조회하고 `Get-Content`으로 내용 READ가 되는지.
 - 사용자명과 비밀번호, token, private key, connection string 또는 내부 서비스 주소가 함께 있는지.
 - rule hit만 있고 파일을 읽지 못하면 자격 증명 확보로 기록하지 않는다.
 
@@ -98,7 +93,7 @@ Get-Content -LiteralPath '\\<HOST>\<SHARE>\<PATH>'
 
 ## 변경 영향과 로컬 산출물 정리
 
-Snaffler는 원격 공유를 읽고 `<OUTPUT_FILE>`에 민감 경로·match를 남긴다. `-m`으로 파일 사본을 저장하는 모드는 이 문서의 대표 절차에서 사용하지 않았으므로 복구 대상에 추가하지 않는다. 후속 검증·인계 후 생성 전 부재를 확인한 정확한 log만 삭제한다.
+Snaffler는 원격 공유를 읽고 `<OUTPUT_FILE>`에 민감 경로·match를 남긴다. `-m`으로 파일 사본을 저장하는 모드는 이 문서의 대표 절차에서 사용하지 않았으므로 복구 대상에 추가하지 않는다. 사용 후 생성 전 부재를 확인한 정확한 log만 삭제한다.
 
 ```powershell
 Remove-Item -LiteralPath '<OUTPUT_FILE>' -Force

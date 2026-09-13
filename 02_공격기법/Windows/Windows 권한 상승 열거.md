@@ -13,13 +13,6 @@ tags:
 
 대상 Windows 호스트의 현재 사용자 프로세스에서 로컬 명령을 실행하여 token·그룹·운영체제 정보와 서비스·예약 작업·저장된 비밀번호·key·소프트웨어 단서를 수집하고, 현재 사용자가 실제로 제어할 수 있는 객체만 관리자 또는 SYSTEM 권한 상승 후보로 남긴다.
 
-## 사용할 때
-
-- 현재 보유 정보: WinRM, RDP, Web Shell 또는 Meterpreter로 대상 Windows 호스트의 셸·세션을 확보했고 현재 사용자 이름을 확인할 수 있다.
-- 명령 실행 위치와 도달성: 명령은 원격 공격 호스트가 아니라 권한을 평가할 대상 Windows 호스트의 현재 세션 안에서 실행한다.
-- 현재 계정과 권한: 현재 프로세스 토큰이 일반 사용자이거나 권한 범위를 아직 모른다. 그룹 구성원 자격과 현재 토큰의 활성 privilege·무결성은 별도로 확인한다.
-- 지금 가능한 행동과 결과: 시스템 상태를 조회해 현재 사용자가 수정할 수 있고 고권한 주체가 소비하는 서비스·작업·파일·설정 후보를 찾는다. 단서 발견은 권한 상승 완료가 아니다.
-
 ## 전제 조건
 
 | 확인할 것 | 필요한 상태 | 확인 방법 | 미충족 시 다음 확인 |
@@ -135,8 +128,8 @@ icacls '<EXECUTABLE_OR_SCRIPT_PATH>'
 | 현재 token에 `SeDebugPrivilege`가 표시됨 | 보호 process 접근 또는 SYSTEM parent 기반 process 생성의 privilege 후보 | SeDebugPrivilege 선택 단서 | LSASS 자료가 목표면 [[LSASS 메모리 덤프]], SYSTEM 명령 실행이 목표면 [[SeDebugPrivilege로 SYSTEM 자식 프로세스 생성]]에서 privilege 활성화·대상 process handle·실제 자식 Identity를 확인한다. `Disabled`를 미보유로 처리하지 않고 이름만으로 성공을 판정하지 않는다. |
 | 현재 token에 `SeLoadDriverPrivilege`가 표시됨 | kernel driver load 권한 상승 전제 조건 후보 | SeLoadDriverPrivilege 선택 단서 | [[SeLoadDriverPrivilege로 취약 드라이버 권한 상승]]에서 privilege 활성화, driver signature·architecture, Code Integrity·blocklist, 실제 driver load와 SYSTEM child Identity를 확인한다. `Disabled` 또는 Print Operators 멤버십만으로 성공을 판정하지 않는다. |
 | 현재 token에 Event Log Readers가 표시되고 event log에서 자격 증명 단서를 찾는 것이 목표임 | 채널별 event read 후보 | event log 가시성 단서 | [[Windows 이벤트 로그에서 민감 명령줄 검색]]에서 Security·PowerShell channel read, audit 설정과 실제 명령줄 값을 확인한다. |
-| 현재 token에 DnsAdmins가 표시되고 관리 대상 Windows DNS 서버가 확인됨 | DNS server-level 설정·zone record 권한 후보 | DNS 서비스 설정 단서 | service account 실행 목표면 [[DnsAdmins DNS 서버 플러그인 DLL 실행]], WPAD 인증 유도 목표면 [[DnsAdmins WPAD DNS 레코드로 NTLM 인증 유도]]에서 현재 token, 기존 설정과 영향 승인을 확인한다. |
-| 현재 token에 Hyper-V Administrators가 표시되고 승인된 VM을 관리할 수 있음 | VM export·disk 접근 후보 | guest 가상 디스크 수집 단서 | [[Hyper-V VM 내보내기와 가상 디스크 오프라인 수집]]에서 VM ID·disk chain·export 경로와 read-only 사본 분석을 확인한다. |
+| 현재 token에 DnsAdmins가 표시되고 관리 대상 Windows DNS 서버가 확인됨 | DNS server-level 설정·zone record 권한 후보 | DNS 서비스 설정 단서 | service account 실행 목표면 [[DnsAdmins DNS 서버 플러그인 DLL 실행]], WPAD 인증 유도 목표면 [[DnsAdmins WPAD DNS 레코드로 NTLM 인증 유도]]에서 현재 token, 기존 설정과 영향을 확인한다. |
+| 현재 token에 Hyper-V Administrators가 표시되고 VM을 관리할 수 있음 | VM export·disk 접근 후보 | guest 가상 디스크 수집 단서 | [[Hyper-V VM 내보내기와 가상 디스크 오프라인 수집]]에서 VM ID·disk chain·export 경로와 read-only 사본 분석을 확인한다. |
 | 그 밖의 흥미로운 privilege가 표시됨 | privilege 기반 권한 상승 전제 조건 후보 | 토큰 권한 단서 | privilege의 활성 상태, 대상 서비스·객체와 해당 세부 기법의 조건을 직접 확인 |
 | 관리자 또는 SYSTEM으로 실행되는 서비스·작업에서 현재 사용자가 제어 가능한 파일, 경로 또는 설정이 발견된다. | 실행 주체와 제어 지점 확인 | 권한 상승 단서 | 변경 가능한 객체와 trigger를 확인해 해당 권한 상승 기법으로 분기 |
 | localhost listener와 service PID가 대응됨 | 같은 호스트에서만 접근할 수 있는 서비스 후보 | 로컬 서비스 공격면 단서 | service의 계정·version·인증·protocol과 실제 연결 결과 확인 |

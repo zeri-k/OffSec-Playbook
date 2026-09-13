@@ -14,12 +14,6 @@ tags:
 
 신뢰 대상 도메인의 LDAP 객체를 읽을 수 있으면 대상 도메인 그룹에 포함된 외부 도메인 SID를 조회하고 실제 계정·그룹 이름으로 변환하여 교차 도메인 권한 관계 후보를 확인한다.
 
-## 사용할 때
-
-- 도메인 또는 포리스트 trust가 확인됐고 상대 도메인의 그룹에 현재 도메인 계정이 포함됐는지 조사할 때.
-- BloodHound의 외부 그룹 관계를 현재 LDAP 조회 결과와 교차 확인할 때.
-- 외부 SID가 어느 도메인의 사용자·그룹인지 확인해야 할 때.
-
 ## 전제 조건
 
 | 확인할 것 | 필요한 상태 | 확인 방법 | 미충족 시 다음 확인 |
@@ -31,6 +25,8 @@ tags:
 ## 실행
 
 ### Windows 공격 호스트에서 실행
+
+`<TARGET_FQDN>`은 trust의 상대 대상 도메인 DNS FQDN(예: `child.corp.example`)이며 현재 Source 도메인이 아니다. PowerView 경로는 이 Windows 실행 호스트의 파일 경로다.
 
 ```powershell
 Import-Module .\PowerView.ps1

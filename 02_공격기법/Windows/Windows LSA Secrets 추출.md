@@ -13,12 +13,6 @@ tags:
 
 대상 Windows 호스트에 원격 관리자급 SMB 작업을 수행할 수 있거나 SECURITY·SYSTEM hive를 확보했으면 서비스 계정 secret, DPAPI_SYSTEM 값과 저장된 AutoLogon 평문 자격 증명 후보를 추출한다.
 
-## 사용할 때
-
-- 현재 보유 정보: 대상 호스트의 관리자급 요청자 credential 또는 [[Windows SAM SECURITY SYSTEM 덤프]]로 확보한 SECURITY·SYSTEM 파일이 있다.
-- 명령 실행 위치: SMB로 대상에 접근하는 Linux 공격 호스트 또는 hive 파일이 있는 Linux 분석 호스트다.
-- 현재 가능한 행동과 결과: LSA secret과 DPAPI_SYSTEM을 얻을 수 있지만 그 값에 연결된 계정의 원격 로그인·관리자 권한은 별도 확인한다.
-
 ## 전제 조건
 
 | 확인할 것 | 필요한 상태 | 확인 방법 | 미충족 시 다음 확인 |
@@ -104,7 +98,7 @@ impacket-secretsdump -security security.save -system system.save LOCAL
 1. 정상 종료 로그의 `Cleaning up...` 뒤 Remote Registry 상태·시작 유형을 `impacket-services ... status -name RemoteRegistry`와 `config -name RemoteRegistry`로 다시 조회해 실행 전 기준과 대조한다.
 2. client가 중단됐을 때만 `impacket-smbclient`로 `ADMIN$`, `cd Temp`, `ls ????????.tmp`를 다시 조회한다. 실행 전 목록에 없고 실행 시간대와 일치하는 `<EXACT_TEMP_HIVE_NAME>`을 하나로 확정할 수 있을 때만 `rm <EXACT_TEMP_HIVE_NAME>`을 실행하고 다시 목록을 확인한다. wildcard 삭제는 사용하지 않는다.
 3. Remote Registry가 실행 전 `STOPPED`였다면 이번 실행 뒤 남아 있는 경우 `impacket-services '<DOMAIN>/<REQUESTER>:<PASSWORD>@<TARGET>' stop -name RemoteRegistry`로 중지한다. 실행 전 시작 유형이 `DISABLED`였다면 중지 확인 뒤 `impacket-services '<DOMAIN>/<REQUESTER>:<PASSWORD>@<TARGET>' change -name RemoteRegistry -start_type 4`로 복원하고 `status`·`config`를 다시 확인한다. 실행 전부터 실행 중이었다면 중지하지 않는다.
-4. 터미널 출력을 파일로 별도 저장했다면 생성 전 부재를 확인한 exact 경로만 승인된 보존·폐기 정책으로 처리한다. 원격 입력으로 사용한 ccache와 오프라인 SECURITY·SYSTEM 원본은 이 문서가 만든 자원이 아니므로 삭제하지 않는다.
+4. 터미널 출력을 파일로 별도 저장했다면 생성 전 부재를 확인한 exact 경로만 처리한다. 원격 입력으로 사용한 ccache와 오프라인 SECURITY·SYSTEM 원본은 이 문서가 만든 자원이 아니므로 삭제하지 않는다.
 
 NetExec·CrackMapExec `--lsa`의 내부 수집 방식과 정리 로그는 버전에 따라 달라질 수 있다. 해당 경로를 선택했다면 도구 버전과 첫 변경 출력을 기준으로 생성 자원을 확인하기 전에는 복구 완료로 판정하지 않는다. 원격 연결이 끊겨 임시 hive나 서비스 상태를 대조할 수 없으면 `원격 복구 미확인`이며, 이미 표시·저장된 LSA secret과 인증·감사 기록은 process 종료로 되돌릴 수 없다.
 

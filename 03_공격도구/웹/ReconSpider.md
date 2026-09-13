@@ -42,6 +42,8 @@ python3 ReconSpider.py <url>
 
 ### 웹사이트 크롤링
 
+`<RECONSPIDER_WORKDIR>`은 Linux 실행 호스트의 새 절대 작업 디렉터리(예: `/tmp/reconspider-example`)이고, `<RECONSPIDER_PATH>`는 배포 원본에서 확보한 `ReconSpider.py`의 절대 경로다. `<DOMAIN>`은 스킴과 함께 요청할 가상 호스트명(예: `site.example.invalid`)이며, 이후 블록의 `results.json`은 이 작업 디렉터리에서 생성한 값을 재사용한다.
+
 ```bash
 test ! -e '<RECONSPIDER_WORKDIR>'
 mkdir -m 700 -- '<RECONSPIDER_WORKDIR>'
@@ -99,13 +101,12 @@ grep -i '"links"' -A 20 results.json
 | 예상 키가 비었거나 결과가 적음 | 익명 응답, redirect, 인증, 크롤링 범위 또는 동적 콘텐츠 때문에 수집이 제한됐을 수 있음 | 기능 부재로 단정하지 말고 로그인 필요 여부, vhost, `robots.txt`, sitemap과 수동 탐색으로 보완한다. |
 | Python 예외·timeout 또는 새 결과 파일 미생성 | 스크립트·의존성·TLS·redirect·rate limit 문제로 실행 실패 | 기존 `results.json`을 이번 결과로 사용하지 말고 `curl`과 브라우저로 기준 응답 및 로컬 쓰기 권한을 확인한다. |
 
-필요한 후보를 승인된 작업 기록으로 옮긴 뒤에는 이번 실행 전에 없었던 전용 디렉터리와 그 안의 `results.json`만 확인해 정리한다. 다른 위치의 같은 이름 파일은 제거하지 않는다.
+필요한 후보를 별도 기록으로 옮긴 뒤에는 이번 실행 전에 없었던 전용 디렉터리와 그 안의 `results.json`만 확인해 정리한다. 다른 위치의 같은 이름 파일은 제거하지 않는다.
 
 ```bash
 find '<RECONSPIDER_WORKDIR>' -maxdepth 1 -printf '%P\n'
 rm -- '<RECONSPIDER_WORKDIR>/results.json'
 rmdir -- '<RECONSPIDER_WORKDIR>'
-test ! -e '<RECONSPIDER_WORKDIR>'
 ```
 
 스크립트가 예상하지 않은 파일을 더 만들었거나 보존할 결과가 남아 있으면 `rmdir` 실패를 우회하지 말고 내용을 확인한다. 원본 `ReconSpider.py`와 기존 결과 파일은 이 정리 대상이 아니다.

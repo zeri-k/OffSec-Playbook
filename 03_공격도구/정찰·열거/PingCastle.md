@@ -36,6 +36,8 @@ PingCastle.exe
 
 PingCastle은 command line 실행 시 현재 디렉터리에 HTML·XML 보고서를 생성한다. 기존 파일과 섞이지 않는 전용 디렉터리를 만든 뒤 현재 지원 버전의 명시적 healthcheck 명령을 사용하고, 출력된 exact 파일명을 기록한다.
 
+`<PINGCASTLE_RUN_DIRECTORY>`는 실행 Windows 호스트의 새 절대 작업 디렉터리(예: `C:\\Temp\\pingcastle-20260914`)다. `<PINGCASTLE_EXE_PATH>`는 같은 호스트의 실행 파일 절대 경로, `<DOMAIN_FQDN>`은 조회할 AD DNS 도메인(예: `corp.example.test`)이다. `<PINGCASTLE_HTML_PATH>`·`<PINGCASTLE_XML_PATH>`·`<PINGCASTLE_LOG_PATH>`는 이 실행이 해당 작업 디렉터리에 만든 정확한 보고서 경로다.
+
 ```powershell
 if (Test-Path -LiteralPath '<PINGCASTLE_RUN_DIRECTORY>') { throw 'run directory already exists' }
 New-Item -ItemType Directory -Path '<PINGCASTLE_RUN_DIRECTORY>' | Out-Null

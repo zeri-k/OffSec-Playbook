@@ -14,13 +14,7 @@ tags:
 
 공격 호스트에서 `<INTERNAL_IP>:<PORT>`에 직접 도달하지 못하지만 셀을 보유한 `<PIVOT_IP>`에서 해당 TCP 서비스에 연결할 수 있으면, Chisel server/client를 각 호스트에서 실행해 공격 호스트에 SOCKS 프록시와 내부 TCP 경로를 만든다.
 
-## 사용할 때
-
-- 현재 보유 정보·접근: 공격 호스트에서는 `<INTERNAL_IP>:<PORT>`가 닫히지만, 피벗 호스트의 셀에서는 `nc -vz <INTERNAL_IP> <PORT>`가 성공한다.
-- 명령 실행 위치: Chisel server는 선택한 연결 방향의 listener 호스트에서, client는 그 listener로 연결할 호스트에서 실행한다. listener·SOCKS·최종 서비스 연결은 [[피벗과 터널의 연결 경계]]처럼 별도 상태로 판단한다.
-- 현재 계정·권한: 피벗 호스트에 SSH 계정이 없어도 되지만, 현재 셀 계정으로 OS·아키텍처에 맞는 Chisel 바이너리를 실행할 수 있어야 한다.
-- 지금 가능한 행동: 공격 호스트가 `<PIVOT_IP>:1234/TCP`로 연결할 수 있으면 forward, 피벗 호스트만 `<ATTACKER_IP>:1234/TCP`로 나갈 수 있으면 reverse SOCKS를 사용한다.
-- 성공 범위: 공격 호스트의 SOCKS 포트에서 `<INTERNAL_IP>:<PORT>`까지 TCP를 전달할 수 있게 되며, 내부 서비스 인증·원격 명령 실행·관리자 권한은 별도로 검증해야 한다.
+forward와 reverse의 listener 위치, 피벗 호스트 egress, 공격 호스트 SOCKS listener와 최종 TCP 연결은 [[피벗과 터널의 연결 경계]]처럼 각각 확인한다.
 
 ## 전제 조건
 
@@ -52,6 +46,8 @@ tags:
 ### 작업 전 상태와 식별값 기록
 
 실행 전에 공격 호스트와 피벗 호스트에서 사용할 바이너리의 절대 경로, 기존 파일 여부, Chisel 프로세스와 예정 포트의 listener를 확인한다. `<ATTACK_CHISEL_PATH>`, `<PIVOT_CHISEL_PATH>`, `<CHISEL_PROXYCHAINS_CONF>`는 이번 작업에서 선택한 실제 절대 경로로 바꾸고, 기존 파일과 겹치면 덮어쓰지 않는다.
+
+`<ATTACKER_IP>`와 `<PIVOT_IP>`는 각각 공격·피벗 호스트의 연결 가능한 주소(예: `198.51.100.8`, `203.0.113.25`)이며, `<INTERNAL_IP>:<PORT>`는 피벗에서 확인한 최종 TCP 대상(예: `192.0.2.10:445`)이다. 아래 Linux 명령은 각각 표시한 공격 호스트 또는 피벗 호스트 셸에서 실행한다.
 
 공격 호스트의 Linux 셸:
 

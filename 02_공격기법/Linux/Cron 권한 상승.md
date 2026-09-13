@@ -26,6 +26,8 @@ tags:
 ## 실행
 ### cron 확인
 
+이 블록은 대상 Linux 호스트의 현재 셸에서 실행한다. `<TARGET_SCRIPT>`는 cron 항목이 실제로 호출하는 절대 script 경로(가상 예: `/opt/backup/run.sh`)이며, 같은 이름의 다른 파일이나 symbolic link를 대체하지 않는다.
+
 ```bash
 cat /etc/crontab
 ls -la /etc/cron.d /etc/cron.hourly /etc/cron.daily 2>/dev/null
@@ -44,7 +46,7 @@ test -f '<TARGET_SCRIPT>' && test -w '<TARGET_SCRIPT>' && test -O '<TARGET_SCRIP
 
 ### 저영향 proof 명령으로 실행 주체 확인
 
-먼저 현재 사용자가 소유하고 삭제할 수 있는 directory 아래에서 공백과 shell metacharacter가 없는 고유한 `<CRON_PROOF_PATH>`를 정한다. 그 뒤 원본과 metadata를 고유 backup directory에 보존한다. 이 변수 값과 출력은 현재 terminal에만 두고 Vault에 작업 기록을 저장하지 않는다.
+먼저 현재 사용자가 소유하고 삭제할 수 있는 directory 아래에서 공백과 shell metacharacter가 없는 고유한 `<CRON_PROOF_PATH>`를 정한다. `<CURRENT_USER_OWNED_DIRECTORY>`는 대상 Linux 호스트에서 현재 계정이 소유한 절대 디렉터리(가상 예: `/tmp/alice-proof`)이고 `<UNIQUE_ID>`는 이번 실행을 구별하는 짧은 문자열(가상 예: `20260914a`)이다. 그 뒤 원본과 metadata를 고유 backup directory에 보존한다. 이 변수 값과 출력은 현재 terminal에만 두고 Vault에 작업 기록을 저장하지 않는다.
 
 ```bash
 TARGET_SCRIPT='<TARGET_SCRIPT>'
@@ -63,7 +65,7 @@ if command -v getfacl >/dev/null; then getfacl -p -- "$TARGET_SCRIPT" > "$CRON_B
 if command -v getfattr >/dev/null; then getfattr -d -m- -- "$TARGET_SCRIPT" > "$CRON_BACKUP_DIR/xattr.before"; fi
 ```
 
-두 hash가 같고 `<CRON_PROOF_PATH>`가 없을 때만 한 줄을 추가한다. 이 예시는 고권한 명령 실행만 검증하며 shell 획득을 의미하지 않는다.
+원본-백업 hash가 같고 `<CRON_PROOF_PATH>`가 없을 때만 한 줄을 추가한다. 이 비교는 복원할 원본과 작업 중 script가 같은지 판단하므로 유지한다. 이 예시는 고권한 명령 실행만 검증하며 shell 획득을 의미하지 않는다.
 
 ```bash
 printf '\numask 077; id > %s\n' "$CRON_PROOF_PATH" >> "$TARGET_SCRIPT"

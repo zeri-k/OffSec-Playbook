@@ -13,12 +13,6 @@ tags:
 
 Windows 서비스 계정 셸에서 `SeImpersonatePrivilege`가 활성화되어 있고 실행 파일을 둘 수 있다면, 대상 호스트에서 PrintSpoofer로 SYSTEM token을 가장해 `nt authority\system` 명령 실행을 확인한다.
 
-## 사용할 때
-
-- SQL Server·IIS 같은 서비스 계정으로 Windows 명령을 실행할 수 있을 때.
-- `whoami /priv`에서 `SeImpersonatePrivilege`가 `Enabled`로 확인될 때.
-- 먼저 짧은 `whoami` 명령으로 권한 상승 성공 여부를 확인한 뒤 후속 세션을 열 때.
-
 ## 전제 조건
 
 현재 token에 privilege가 할당·활성화된 상태와 impersonation token·SYSTEM child process 생성은 [[Windows 액세스 토큰과 특권 활성화]]처럼 서로 다른 단계다. 아래 조건을 모두 확인하며 `Enabled`만으로 성공을 단정하지 않는다.
@@ -27,8 +21,10 @@ Windows 서비스 계정 셸에서 `SeImpersonatePrivilege`가 활성화되어 �
 |---|---|---|---|
 | 현재 명령 실행 위치 | 대상 Windows 호스트의 셸 또는 명령 실행 채널 | `hostname & whoami` | 목표 호스트와 현재 실행 계정을 먼저 확정 |
 | 현재 token 특권 | `SeImpersonatePrivilege Enabled` | `whoami /priv` | Disabled·Absent이면 다른 권한 상승 기법 선택 |
-| 실행 파일 | 대상 arch와 맞는 PrintSpoofer | 파일 크기와 SHA-256 비교 | [[Certutil로 Windows HTTP 파일 반입]] 등으로 다시 반입 |
+| 실행 파일 | 대상 arch와 맞는 PrintSpoofer | 실행 파일 경로·architecture 확인 | [[Certutil로 Windows HTTP 파일 반입]] 등으로 다시 반입 |
 | 저장·실행 경로 | 현재 계정이 쓰고 실행할 수 있고 기존 파일과 충돌하지 않는 `<PRINTSPOOFER_PATH>` | `Test-Path -LiteralPath '<PRINTSPOOFER_PATH>'`가 반입 전에 `False`인지 확인 | 고유 경로를 다시 정하고 ACL·AppLocker·AV 차단 단계 확인 |
+
+`<PRINTSPOOFER_PATH>`는 대상 Windows의 arch와 맞는 실행 파일의 절대 경로(예: `C:\\Temp\\PrintSpoofer64.exe`)다. SHA-256은 신뢰할 수 있는 원본 기준값과 비교할 때만 사용하며, 단순 반입 성공을 위한 조건은 아니다.
 
 ## 실행
 
@@ -67,7 +63,7 @@ SYSTEM 컨텍스트로 후속 명령을 실행해야 할 때는 검증한 같은
 |---|---|---|---|
 | `CreateProcessAsUser() OK`와 `nt authority\system` 출력 | SYSTEM token 가장과 명령 실행 성공 | SYSTEM 명령 실행 | [[고권한 세션 확보 후 후속 판단]] |
 | 특권은 `Enabled`지만 프로세스 생성 실패 | 현재 환경에서 PrintSpoofer 실행 실패 | 일반 서비스 계정 명령 실행 유지 | Windows build·arch, token 유형과 실행 차단 원인을 확인 |
-| 파일 실행 자체가 차단됨 | 반입 파일·경로·정책 문제 | 파일 반입만 완료 | 파일 hash, MOTW·AppLocker·AV와 쓰기·실행 ACL 확인 |
+| 파일 실행 자체가 차단됨 | 반입 파일·경로·정책 문제 | 파일 반입만 완료 | MOTW·AppLocker·AV와 쓰기·실행 ACL 확인 |
 
 ## 확인할 출력과 권한
 
@@ -78,7 +74,7 @@ SYSTEM 컨텍스트로 후속 명령을 실행해야 할 때는 검증한 같은
 
 | 변경 대상 | 예상 영향 | 검증 방법 | 복구 절차 |
 |---|---|---|---|
-| 대상에 반입한 PrintSpoofer 파일 | 디스크에 도구 파일이 남음 | 반입 전 부재를 확인한 exact `<PRINTSPOOFER_PATH>`·hash·수정 시각 기록 | 후속 작업 완료 후 아래 명령으로 이번 작업에서 반입한 exact 파일만 제거 |
+| 대상에 반입한 PrintSpoofer 파일 | 디스크에 도구 파일이 남음 | 반입 전 부재를 확인한 exact `<PRINTSPOOFER_PATH>`·수정 시각 기록 | 후속 작업 완료 후 아래 명령으로 이번 작업에서 반입한 exact 파일만 제거 |
 | SYSTEM으로 실행한 후속 명령 | 명령 내용에 따라 계정·파일·서비스가 변경될 수 있음 | 각 후속 기법의 변경 전후 상태 확인 | 변경을 수행한 기법의 복구 절차 적용 |
 
 ```powershell

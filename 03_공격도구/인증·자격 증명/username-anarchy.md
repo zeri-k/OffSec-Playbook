@@ -17,6 +17,8 @@ tags:
 - 입력: 이름과 성이 포함된 목록 또는 실명 목록
 - 실행 환경: `username-anarchy` 스크립트를 실행할 수 있는 Linux 호스트
 
+`<FIRST_NAME>`·`<LAST_NAME>`은 가상 이름 입력(예: `Alice`, `Smith`), `<NAMES_FILE>`은 Linux 호스트의 newline 이름 목록, `<USER_LIST>`은 새 Linux 출력 파일(예: `./users.txt`)이다. Hydra 예시의 `<TARGET>`은 SSH 호스트, `<PASSWORD>`는 단일 평문 후보이며 생성 결과는 실제 계정 존재를 뜻하지 않는다.
+
 ## 표준 사용법
 
 ```bash
@@ -77,7 +79,7 @@ hydra -L '<USER_LIST>' -p '<PASSWORD>' ssh://<TARGET>
 
 ## 변경 영향과 로컬 산출물 정리
 
-`<USER_LIST>`는 이번 실행이 만든 사용자명 후보 파일이며 실제 계정 존재를 확정하지 않는다. 조직 실명을 포함할 수 있으므로 Vault에 저장하지 않고 승인된 작업 경로에서만 다룬다. 후속 검증과 인계가 끝나면 생성 전에 부재를 확인한 정확한 파일만 삭제한다.
+`<USER_LIST>`는 이번 실행이 만든 사용자명 후보 파일이며 실제 계정 존재를 확정하지 않는다. 조직 실명을 포함할 수 있으므로 Vault에 저장하지 않고 작업 경로에서만 다룬다. 후속 검증이 끝나면 생성 전에 부재를 확인한 정확한 파일만 삭제한다.
 
 ```bash
 rm -- '<USER_LIST>'

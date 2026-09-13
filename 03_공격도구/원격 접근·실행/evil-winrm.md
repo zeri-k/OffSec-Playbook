@@ -18,10 +18,13 @@ tags:
 
 - 실행 위치: 대상 WinRM TCP/5985 또는 TCP/5986에 접근 가능한 Linux 호스트
 - 필요한 입력: 대상 주소, 사용자와 비밀번호/NTLM hash 또는 Kerberos ticket
+- `<TARGET>`은 WinRM listener의 IP 또는 Kerberos를 쓸 때 FQDN(예: `workstation.example.invalid`)이다. `<DOMAIN>\\<USER>`·UPN·`LM:NT` hash·Linux의 ccache 경로는 인증 방식에 맞춰 하나만 사용하며, ticket 파일은 앞 단계가 만든 현재 세션 호스트의 경로다.
 - HTTPS/Kerberos 조건: TLS 사용 여부, 도메인 형식, SPN/FQDN, 시간 동기화를 맞춘다.
 
 
 ## 표준 사용법
+
+비밀번호 block의 `<TARGET>`은 WinRM TCP listener IP/FQDN이고 `<USER>`는 domain 또는 local account 이름이다. hash block의 `<NTLM_HASH>`는 `-H`가 받는 NT hash이며, Kerberos block의 `<TARGET_FQDN>`·`<DOMAIN_FQDN>`·`<CCACHE_OR_KIRBI_FILE>`은 각각 HTTP SPN host, realm, Linux 실행 host의 ticket file을 뜻한다.
 
 ```bash
 evil-winrm -i <TARGET> -u <USER>
@@ -38,6 +41,8 @@ evil-winrm -i <TARGET> -u <USER>
 ```
 
 ### Pass the Hash로 접속
+
+`Administrator`는 가상 account label이며 실제 `<USER>`와 바꾸어 쓴다. `-H` 성공은 WinRM authentication 결과이고 PowerShell prompt·remote command 권한은 출력에서 별도로 확인한다.
 
 ```bash
 evil-winrm -i <TARGET> -u Administrator -H <NTLM_HASH>

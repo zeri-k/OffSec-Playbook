@@ -30,6 +30,8 @@ FTP 로그인과 명령 응답은 제어 채널에서 오가지만 `LIST`·`RETR
 
 FTP 세션에서 파일 쓰기를 확인해야 할 때는 기존 파일과 겹치지 않는 `<UNIQUE_PROOF>`를 사용한다. 업로드 파일을 다시 내려받아 내용이나 hash를 확인하고, 같은 세션에서 정확한 파일 하나를 삭제할 수 있을 때만 수행한다.
 
+`<LOCAL_PROOF>`는 공격 호스트에 만들 상대 파일 경로(예: `./ftp-proof.txt`)이고, `<TARGET>`은 FTP 서버 IP 또는 FQDN(예: `192.0.2.10`)이다. `<UNIQUE_PROOF>`는 원격 현재 경로에 새로 만드는 파일명(예: `ftp-proof-20260914.txt`)이며, `<DOWNLOADED_PROOF>`는 공격 호스트의 재수신 파일 경로(예: `./ftp-proof-returned.txt`)다.
+
 ```bash
 printf 'ftp write proof\n' > <LOCAL_PROOF>
 ftp <TARGET>

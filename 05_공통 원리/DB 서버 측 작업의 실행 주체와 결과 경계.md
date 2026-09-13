@@ -41,7 +41,7 @@ MSSQL `xp_cmdshell`은 실행 주체가 고정돼 있지 않은 대표 예입니
 | file function이 실제 내용을 반환 | DB 기능과 OS context가 해당 server path를 읽음 | 자료 분류와 후속 사용, 다른 파일·쓰기 권한은 별도 |
 | 고유 proof file 존재 | 지정 OS context로 exact server file 생성 | HTTP mapping, static 제공과 handler 실행 |
 | URL에서 proof 원문 반환 | web server가 해당 file을 정적으로 제공 | extension handler와 server-side command output |
-| `hostname`·`whoami`가 query 결과로 반환 | 표시된 host·OS Identity로 command 실행 | token privilege, 관리자/root 여부와 별도 session 획득 |
+| `hostname`·`whoami`가 query 결과로 반환 | 표시된 host·OS Identity로 command 실행 | Windows 프로세스 액세스 토큰의 privilege, 관리자/root 여부와 별도 session 획득 |
 | callback 또는 새 shell 연결 | 해당 network path와 process 실행 결과 | 원격 Identity·권한, 생성 process·file·listener 정리 |
 
 제품별 query, 성공 출력, 실패 분기와 복구 명령은 [[DB 서버 파일 수집]], [[DB 서버 파일 쓰기 검증]], [[MSSQL xp_cmdshell 명령 실행]], [[Oracle TNS 서비스]]와 [[웹 파일 업로드와 Web Shell]]에 둡니다.

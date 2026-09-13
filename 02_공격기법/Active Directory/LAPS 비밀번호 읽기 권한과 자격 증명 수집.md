@@ -14,18 +14,10 @@ tags:
 
 인증된 AD 계정으로 배포가 legacy Microsoft LAPS인지 Windows LAPS인지 구분하고, 구현에 맞는 cmdlet으로 위임 주체와 실제 비밀번호 반환을 확인한다. 현재 사용 중인 계정에 비어 있지 않은 비밀번호가 반환될 때만 해당 컴퓨터의 로컬 관리자 credential을 확보한 것으로 판정한다.
 
-## 사용할 때
-
-- 도메인에서 LAPS가 배포된 컴퓨터와 비밀번호 읽기 위임 범위를 확인할 때.
-- 현재 보유 정보: 제어 중인 AD 계정으로 인증된 Windows PowerShell 세션과 대상 도메인·OU 또는 컴퓨터 후보. 비밀번호·NT hash·Kerberos ticket만 따로 보유했다면 먼저 그 자료가 속한 계정의 실행·LDAP 인증 컨텍스트를 준비해야 한다.
-- 명령 실행 위치: DC 또는 LDAP Global Catalog가 아니라, 도메인 DNS와 LDAP/LDAPS에 접근해 현재 AD Identity로 조회할 수 있는 PowerShell 호스트.
-- 현재 권한과 대상: 현재 계정 또는 중첩 그룹에 `All Extended Rights` 같은 단서가 있더라도, 대상 컴퓨터 객체의 LAPS 비밀번호 속성 읽기 권한은 별도로 확인한다.
-- 획득 결과: 실제 `Password` 값은 그 컴퓨터의 LAPS 로컬 관리자 평문 비밀번호다. 도메인 계정 비밀번호나 다른 컴퓨터의 관리자 권한은 아니다.
-
 ## 전제 조건
 
 | 확인할 것 | 필요한 상태 | 확인 방법 | 미충족 시 다음 확인 |
-|---|---|---|
+|---|---|---|---|
 | 명령 실행 위치와 LDAP 경로 | PowerShell 호스트에서 도메인 DNS와 DC LDAP/LDAPS에 접근 가능 | [[AD 도메인 컨텍스트 기본 확인]]과 LDAP 조회 | DNS, Kerberos/LDAP 포트와 현재 네트워크 위치 확인 |
 | 현재 인증 수단 | LAPSToolkit을 실행하는 PowerShell의 현재 Windows Identity로 LDAP 인증 가능 | `whoami`, 현재 Windows logon과 LDAP 조회 결과 | 별도로 보유한 비밀번호·NT hash·ticket을 함수 인자로 직접 넣는 것으로 해석하지 말고 해당 계정의 실행 컨텍스트부터 준비 |
 | 기본 조회 | OU, 컴퓨터와 ACL을 읽을 수 있음 | LDAP 또는 LAPSToolkit 열거 결과 | 대상 OU 범위와 기본 읽기 권한 확인 |
@@ -34,7 +26,11 @@ tags:
 
 ## 실행
 
+> LAPS 비밀번호가 화면에 표시되면 노출 자체는 되돌릴 수 없다. legacy Microsoft LAPS와 Windows LAPS, 조회 요청자와 반환된 컴퓨터 로컬 관리자 비밀번호를 구분한다.
+
 LAPSToolkit의 함수와 Windows LAPS cmdlet은 `<NT_HASH>` 또는 `<CCACHE_FILE>`을 직접 받는 명령이 아니다. `-Credential`을 명시하지 않으면 `whoami`에 표시되는 현재 Windows Identity가 LDAP 요청자이며, 위임 그룹·ACL과 실제 LAPS 비밀번호 읽기 권한도 이 요청자 기준으로 판정한다.
+
+`<OU_DN>`은 대상 OU DN(예: `OU=Servers,DC=corp,DC=example`)이고 `<COMPUTER>`는 컴퓨터 sAMAccountName 또는 DNS hostname이다. 반환된 `Password`는 그 컴퓨터의 로컬 관리자 비밀번호이며 명령 입력이나 다른 컴퓨터의 권한 증명이 아니다.
 
 ### 1. 구현과 로컬 도구 구분
 
@@ -95,7 +91,7 @@ Get-LapsADPassword -Identity '<COMPUTER_NAME>' -AsPlainText
 
 ## 민감 자료와 잔여 영향
 
-이 절차는 AD 객체를 변경하지 않지만, 비밀번호를 화면에 표시한 뒤에는 노출 자체를 되돌릴 수 없다. PowerShell transcript·화면 녹화·원격 관리 로그가 활성화된 세션에서는 `-AsPlainText` 실행 전 승인된 증적 취급 경로를 확인하고 출력을 파일이나 clipboard로 리디렉션하지 않는다. LDAP password attribute 조회와 인증 감사 기록도 로컬 화면을 닫는 것으로 제거되지 않는다.
+이 절차는 AD 객체를 변경하지 않지만, 비밀번호를 화면에 표시한 뒤에는 노출 자체를 되돌릴 수 없다. PowerShell transcript·화면 녹화·원격 관리 로그가 활성화된 세션에서는 `-AsPlainText` 실행 전 출력 취급 경로를 확인하고 출력을 파일이나 clipboard로 리디렉션하지 않는다. LDAP password attribute 조회와 인증 감사 기록도 로컬 화면을 닫는 것으로 제거되지 않는다.
 
 ## 관찰과 상태 전환
 

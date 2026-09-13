@@ -13,13 +13,6 @@ tags:
 
 현재 제어하는 AD 사용자 또는 그룹과 그 SID를 알고 DC LDAP에 닿는 Windows PowerShell 세션이 있으면, 해당 SID에 허용된 ACE와 대상 객체를 조회하여 별도로 검증할 권한 상승·내부 이동 경로 후보를 얻는다.
 
-## 사용할 때
-
-- 현재 보유 정보: 제어 중인 도메인 사용자 또는 그룹 이름, 해당 Identity로 인증할 수 있는 자격 증명·ticket·Windows 세션 중 하나가 있다.
-- 명령 실행 위치와 도달 대상: PowerView를 불러올 수 있는 Windows PowerShell에서 DC의 LDAP 서비스에 접근할 수 있다.
-- 현재 계정과 권한: 조회에 사용하는 인증 주체가 도메인 객체와 ACL을 읽을 수 있다. 이 읽기 권한은 객체를 변경할 권한과 별개다.
-- 지금 가능한 행동과 결과: BloodHound의 outbound control rights 또는 `GenericAll`, `GenericWrite`, `WriteDACL`, `ForceChangePassword`, 복제 권한 단서를 현재 SID의 ACE 및 실제 대상 객체와 연결해 후속 검증 대상을 좁힐 수 있다.
-
 ## 전제 조건
 
 | 확인할 것 | 필요한 상태 | 확인 방법 | 미충족 시 다음 확인 |
@@ -33,6 +26,8 @@ tags:
 ## 실행
 
 ### 1. 현재 계정 SID 확인
+
+`<CONTROLLED_USER>`는 ACE를 찾을 현재 제어 주체의 도메인 사용자명(예: `corp.example\\operator`) 또는 그룹명이며, 조회 PowerShell 계정과 다를 수 있다. 아래 `Import-Module` 경로는 Windows 실행 호스트에 있는 PowerView 파일이다.
 
 ```powershell
 Import-Module .\PowerView.ps1
@@ -57,7 +52,7 @@ Get-DomainObjectACL -ResolveGUIDs -Identity * |
 - GUID 대신 `User-Force-Change-Password`처럼 해석된 권한명.
 - access denied이면 현재 인증 주체의 ACL 읽기 범위를 확인한다. 결과가 비어 있으면 SID 필터, 상속 ACE와 그룹 SID를 확인한 뒤 권한 부재를 판정한다.
 
-이 조회는 입력한 SID에 직접 연결된 ACE만 보여 준다. 실제 접근 검사는 사용자 SID뿐 아니라 현재 인증 주체에 적용되는 활성 그룹 SID의 allow·deny ACE도 함께 평가하므로, 사용자 SID 결과가 비어 있거나 권한 하나만 보이면 [[Windows 액세스 토큰과 특권 활성화]]의 SID·token 경계를 확인하고 해당 사용자의 유효 그룹 SID를 같은 방식으로 조회한다. 여러 allow 권한은 사용자·그룹 SID에 나뉘어 있을 수 있고, 적용되는 deny ACE나 제한된 token이 있으면 목록만으로 최종 성공을 확정할 수 없다.
+이 조회는 입력한 SID에 직접 연결된 ACE만 보여 준다. 실제 LDAP·서비스 요청의 인가는 요청 인증 컨텍스트에 포함된 사용자·유효 그룹 SID 집합과 allow·deny ACE를 함께 평가하므로, 사용자 SID 결과가 비어 있거나 권한 하나만 보이면 해당 요청자의 유효 그룹 SID를 같은 방식으로 조회한다. Windows 통합 인증을 현재 프로세스에서 수행하는 경우에만 [[Windows 액세스 토큰과 특권 활성화]]의 SID·token 경계를 `whoami /groups`로 대조한다. 여러 allow 권한은 사용자·그룹 SID에 나뉘어 있을 수 있고, 적용되는 deny ACE나 대상 DC·서비스의 인가 결과가 다르면 목록만으로 최종 성공을 확정할 수 없다.
 
 ### 3. 그룹 중첩과 다음 제어권 확인
 
@@ -90,7 +85,7 @@ Get-DomainObjectACL -ResolveGUIDs -Identity * |
 | 사용자·컴퓨터에 대한 `GenericAll`·`GenericWrite` | 대상 객체의 속성 변경 가능 | Shadow Credentials 등 후보 | 대상 객체와 변경 목적에 따라 [[Shadow Credentials]] 등 별도 기법 선택 |
 | 도메인 객체에 복제 관련 권한 | DCSync 가능성 | 도메인 자격 증명 복제 후보 | [[AD 계정의 디렉터리 복제 권한 확인]]에서 요청자의 사용자·유효 그룹 SID 집합에 두 필수 권한이 적용되는지 확인하고, 충족하면 [[DCSync]] |
 | GPO 객체에 `WriteProperty`·`WriteDacl` | 정책 변경 가능성 | 쓰기 가능한 GPO 후보 | [[AD GPO 쓰기 권한과 영향 범위 열거]]로 표시 이름과 적용 범위 확인 |
-| BloodHound 경로와 PowerView 결과가 일치 | 제어 관계 신뢰도 상승 | 원자 공격기법 선택 가능 | 각 edge를 상태 변경 기법으로 하나씩 검증 |
+| BloodHound 경로와 PowerView 결과가 일치 | 제어 관계 신뢰도 상승 | 개별 공격기법 선택 가능 | 각 edge를 상태 변경 기법으로 하나씩 검증 |
 | ACL 결과가 지나치게 많음 | 전체 덤프는 판단 비용이 큼 | 우선순위 미확정 | 제어 중인 사용자·그룹 SID와 고가치 객체로 범위 축소 |
 | GUID가 해석되지 않음 | 권한 종류 미확정 | ACE 후보 | `-ResolveGUIDs` 또는 Extended Rights 역조회로 이름 확인 |
 

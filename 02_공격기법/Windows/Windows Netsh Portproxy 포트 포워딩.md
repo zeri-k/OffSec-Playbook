@@ -13,15 +13,6 @@ tags:
 
 공격 호스트에서 `<PIVOT_IP>:<LISTEN_PORT>`에 연결할 수 있고 Windows 피벗 호스트에서 `<INTERNAL_IP>:<PORT>`에 연결할 수 있으면, 피벗의 상승된 관리자 세션에서 `netsh interface portproxy`를 실행해 두 TCP 구간을 연결한다.
 
-## 사용할 때
-
-- 현재 네트워크 위치: 공격 호스트에서는 `<INTERNAL_IP>:<PORT>`에 직접 연결할 수 없지만 `<PIVOT_IP>:<LISTEN_PORT>`에는 연결할 수 있고, 피벗 호스트에서는 최종 내부 포트에 연결할 수 있다.
-- 명령 실행 위치: `netsh interface portproxy`는 Windows 피벗 호스트의 상승된 명령 프롬프트에서, `xfreerdp`와 최종 서비스 클라이언트는 공격 호스트에서 실행한다.
-- 보유 계정·세션: 피벗 호스트에는 단순히 관리자 credential만 보유한 상태가 아니라, 해당 credential로 연 상승된 로컬 관리자 명령 실행 또는 세션이 필요하다.
-- 현재 권한: Administrators 그룹 멤버십과 실제 elevated token을 구분한다. UAC로 제한된 세션에서는 rule 추가가 거부될 수 있다.
-- 보유 인증 자료: portproxy는 TCP만 전달한다. `<INTERNAL_IP>`의 RDP·웹·DB 서비스에는 최종 대상에서 유효한 별도 계정이나 인증 수단이 필요하다.
-- 성공 범위: 공격 호스트에서 `<PIVOT_IP>:<LISTEN_PORT>`로 연결해 `<INTERNAL_IP>:<PORT>`의 배너나 로그인 단계까지 도달한다. 최종 인증, 원격 명령 실행과 관리자 권한은 별도로 확인한다.
-
 ## 전제 조건
 
 | 확인할 것 | 필요한 상태 | 확인 방법 | 미충족 시 다음 확인 |
@@ -51,8 +42,14 @@ tags:
 
 ### Windows 피벗 호스트에서 portproxy 추가
 
+`<PIVOT_IP>`는 공격 호스트가 도달할 피벗의 IPv4 주소, `<LISTEN_PORT>`는 피벗에서 비어 있는 TCP listen 포트, `<INTERNAL_IP>`와 `<PORT>`는 피벗에서만 도달하는 최종 서비스의 IPv4 주소와 TCP 포트다. 아래 `8080 → 3389`은 RDP용 완성 가상 예시이며 일반 문법의 고정값이 아니다.
+
 ```cmd
-netsh.exe interface portproxy add v4tov4 listenport=8080 listenaddress=<PIVOT_IP> connectport=3389 connectaddress=<INTERNAL_IP>
+netsh.exe interface portproxy add v4tov4 listenport=<LISTEN_PORT> listenaddress=<PIVOT_IP> connectport=<PORT> connectaddress=<INTERNAL_IP>
+```
+
+```cmd
+netsh.exe interface portproxy add v4tov4 listenport=8080 listenaddress=192.0.2.25 connectport=3389 connectaddress=198.51.100.15
 ```
 
 확인할 출력:
@@ -72,12 +69,12 @@ netsh.exe interface portproxy show v4tov4
 ### Linux 공격 호스트에서 내부 RDP 접속
 
 ```bash
-xfreerdp /v:<PIVOT_IP>:8080 /u:<USER> /p:'<PASSWORD>'
+xfreerdp /v:<PIVOT_IP>:<LISTEN_PORT> /u:<USER> /p:'<PASSWORD>'
 ```
 
 확인할 출력:
 
-- 공격 호스트의 `<PIVOT_IP>:8080` 접속이 `<INTERNAL_IP>:3389`로 전달되어 RDP 인증 단계에 도달한다.
+- 공격 호스트의 `<PIVOT_IP>:<LISTEN_PORT>` 접속이 `<INTERNAL_IP>:<PORT>`로 전달되어 RDP 인증 단계에 도달한다.
 - RDP 인증 단계는 서비스 접근, GUI 세션은 `<USER>` 인증과 Remote Desktop 로그온 권한 확인이며 관리자 권한은 세션 안에서 별도로 확인한다.
 
 ## 관찰과 상태 전환

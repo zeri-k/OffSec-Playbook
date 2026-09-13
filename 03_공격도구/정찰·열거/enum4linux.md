@@ -28,6 +28,8 @@ enum4linux <OPTIONS> <TARGET>
 
 ## 대표 예시
 
+`<DC_IP>`는 정책·도메인 RPC를 제공하는 DC의 주소(예: `directory.example.test`)이고, `<TARGET>`은 일반 SMB/RPC 호스트(예: `smb.example.test`)다. 둘을 같은 역할로 해석하지 않는다.
+
 ### 비밀번호 정책 조회
 
 ```bash

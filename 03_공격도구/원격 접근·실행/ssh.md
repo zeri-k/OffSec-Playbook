@@ -19,9 +19,12 @@ tags:
 - 입력: SSH 서버, 포트와 사용자명
 - 인증 입력: 비밀번호, private key 또는 사용 가능한 GSSAPI/Kerberos 컨텍스트
 - 포워딩 입력: 로컬·원격 listen 포트와 목적지 주소·포트
+- `<USER>@<HOST>`는 SSH server 계정과 접속 호스트이고, key 파일은 client 실행 호스트의 경로다. `-L`·`-R`·`-D`의 listen 주소와 목적지 주소는 서로 다른 네트워크 관점일 수 있으므로 예시의 포트를 앞 단계 값으로 재사용할 때 그 값을 명시한다.
 
 
 ## 표준 사용법
+
+`<USER>@<HOST>`는 SSH server account·endpoint, `<KEY_FILE>`은 client host file path다. forwarding block의 `<LOCAL_PORT>`는 client listen port, `<DESTINATION_HOST>:<DESTINATION_PORT>`는 SSH server 관점 destination이며 SOCKS listener는 final service authentication과 별도다.
 
 ```bash
 ssh <user>@<target>

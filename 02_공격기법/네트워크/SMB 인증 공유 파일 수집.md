@@ -14,12 +14,6 @@ tags:
 
 대상 SMB 호스트에 사용할 계정·인증 자료와 읽을 공유·파일 경로를 알고 있다면, `smbclient`로 해당 공유에 인증하고 파일을 공격 호스트로 내려받아 크기와 내용을 확인한다.
 
-## 사용할 때
-
-- 로컬 또는 도메인 계정으로 일반 공유나 `C$`에 접근할 수 있을 때.
-- 이미 경로를 아는 파일을 회수하거나 공유 안에서 실제 읽기 가능 범위를 확인할 때.
-- SMB 인증 성공과 특정 파일 읽기 성공을 분리해 기록할 때.
-
 ## 전제 조건
 
 | 확인할 것 | 필요한 상태 | 확인 방법 | 미충족 시 다음 확인 |
@@ -30,6 +24,8 @@ tags:
 | 파일 읽기 | 대상 경로에 READ | `allinfo`, `get` | 파일 경로와 NTFS ACL 확인 |
 
 ## 실행
+
+`<TARGET>`·`<TARGET_FQDN>`은 SMB 서버 주소와 Kerberos FQDN(가상 예시 `192.0.2.45`, `files.example.test`), `<SHARE>`·`<REMOTE_FILE>`은 읽을 공유·파일 경로다. `<LOCAL_FILE>`은 공격 호스트의 새 `$LOOT_DIR`에 저장할 이름이며, `<USER>`·`<PASSWORD>`·`<NT_HASH>`·`<CCACHE_FILE>`은 같은 SMB 요청자 인증 자료다.
 
 먼저 공격 호스트에서 이번 수집 전용 디렉터리를 만들고, 같은 이름의 로컬 파일을 덮어쓰지 않는지 확인한다. 아래 명령은 같은 shell에서 이어서 실행한다.
 
@@ -55,7 +51,6 @@ smbclient //<TARGET>/C$ -W WORKGROUP -U '<LOCAL_USER>%<PASSWORD>' -c "cd Users\\
 ```bash
 smbclient //<TARGET_FQDN>/<SHARE> --use-kerberos=required -N -c "get <REMOTE_FILE> $LOOT_DIR/<LOCAL_FILE>"
 stat -c '%n %s bytes' "$LOOT_DIR/<LOCAL_FILE>"
-sha256sum "$LOOT_DIR/<LOCAL_FILE>"
 ```
 
 확인할 출력:
@@ -63,7 +58,7 @@ sha256sum "$LOOT_DIR/<LOCAL_FILE>"
 - 공유 접속 뒤 `getting file ...`과 로컬 파일 생성·크기를 확인한다.
 - `NT_STATUS_LOGON_FAILURE`는 계정·도메인·인증 자료 단계, `NT_STATUS_ACCESS_DENIED`는 공유 또는 파일 ACL 단계부터 확인한다.
 - 목록 조회 성공만으로 파일 읽기 성공을 확정하지 않는다.
-- 로컬 `stat`과 SHA-256은 수집본의 존재·크기·식별값을 남긴다. 원격 원본과 같은 hash를 직접 구할 수 있을 때만 전송 무결성까지 확정한다.
+- 로컬 `stat`은 수집본의 경로·크기를 확인한다. 원격 원본과 비교할 기준이 있을 때만 전송 동일성을 별도로 검증한다.
 
 ## 관찰과 상태 전환
 
@@ -81,7 +76,7 @@ sha256sum "$LOOT_DIR/<LOCAL_FILE>"
 
 ## 변경 영향과 복구
 
-이 절차는 대상 SMB 파일을 변경하지 않지만 공격 호스트의 `$LOOT_DIR`에 수집본을 만든다. 수집본을 보존할 때는 Vault 밖의 승인된 증적 위치로 옮기고, 폐기할 때는 기록한 전용 경로만 처리한다. 디렉터리가 이번 `mktemp`로 생성된 것이고 비어 있음을 확인한 뒤에만 제거한다.
+이 절차는 대상 SMB 파일을 변경하지 않지만 공격 호스트의 `$LOOT_DIR`에 수집본을 만든다. 수집본을 보존할 때는 Vault 밖의 접근이 제한된 위치로 옮기고, 폐기할 때는 기록한 전용 경로만 처리한다. 디렉터리가 이번 `mktemp`로 생성된 것이고 비어 있음을 확인한 뒤에만 제거한다.
 
 ```bash
 find "$LOOT_DIR" -maxdepth 1 -type f -printf '%f %s bytes\n'

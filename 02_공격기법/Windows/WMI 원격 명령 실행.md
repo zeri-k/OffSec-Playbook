@@ -14,15 +14,6 @@ tags:
 
 공격 호스트에서 `<TARGET>`의 RPC·SMB 경로에 연결할 수 있고 확보한 plaintext password, NT hash 또는 Kerberos ccache가 대상의 원격 WMI 실행이 가능한 로컬 관리자 계정에 해당하면, WMI로 그 호스트에서 명령을 실행하거나 shell을 연다.
 
-## 사용할 때
-
-- 현재 네트워크 위치: 공격 호스트에서 `<TARGET>:135/RPC`, 필요한 동적 RPC 포트와 도구가 사용하는 `445/SMB` 경로에 연결할 수 있다.
-- 명령 실행 위치: `impacket-wmiexec`와 NetExec은 공격 호스트에서 실행하고, 성공한 명령과 shell은 `<TARGET>`에서 인증된 Windows 계정 컨텍스트로 실행된다.
-- 보유 계정·인증 자료: `<TARGET>`에서 유효할 가능성이 있는 plaintext password, NT hash 또는 Kerberos ccache를 보유한다. NetNTLM challenge-response는 `-hashes` 입력에 사용할 NT hash가 아니며, credential 보유나 SMB 인증 성공만으로 WMI 실행을 확정하지 않는다.
-- 현재 권한: 대상 호스트의 로컬 관리자 권한과 원격 WMI 실행 허용이 필요하다. `Pwn3d!`는 관리자급 실행 가능성 신호이며, 실제 WMI 명령 출력과 원격 `whoami`로 확인한다.
-- 지금 가능한 행동: PsExec 서비스 설치에 의존하지 않고 WMI/RPC로 단일 명령을 실행하거나 반대화형 shell을 연다.
-- 성공 범위: `<TARGET>`에서 현재 계정 Identity로 명령 출력이나 shell을 얻는다. SMB 인증 성공, WMI 실행 성공, 관리자 token과 도메인 권한은 각각 별도로 판정한다.
-
 ## 전제 조건
 
 | 확인할 것 | 필요한 상태 | 확인 방법 | 미충족 시 다음 확인 |
@@ -34,6 +25,8 @@ tags:
 | 필요한 파일·목록·주소 | `<DOMAIN>`, `<USER>`, credential, `<TARGET>`, Kerberos 사용 시 `<CCACHE_FILE>`, `<HOST_FQDN>`, `<DC_IP>` | 로컬·도메인 계정 표기, 대상 주소와 ccache의 principal·SPN 확인 | 인증 범위, 대상 FQDN·realm과 ticket 파일 수정 |
 
 ## 실행
+
+`<TARGET>`은 RPC·SMB에 도달하는 대상 주소, `<DOMAIN>/<USER>`·`<PASSWORD>` 또는 `<NTLM_HASH>`는 같은 원격 실행 요청자 입력이다. Kerberos 분기에서는 `<CCACHE_FILE>`이 공격 호스트의 ticket 파일이고 `<HOST_FQDN>`은 ticket SPN과 맞는 대상 FQDN, `<DC_IP>`는 TGS 요청에 쓰는 domain controller 주소다. 아래 client 명령은 모두 공격 호스트에서 실행한다.
 
 ### 인증 방식 선택
 
@@ -122,7 +115,7 @@ CrackMapExec 버전에 따라 `-x`의 내부 실행 방법이 달라질 수 있�
 | 생성 항목 | 기존 상태·식별값 | 종료·정리 | 완료 확인 |
 |---|---|---|---|
 | Impacket WMI shell | 대상·계정, 공격 호스트 client PID와 terminal | 원격 prompt에서 `exit` | 공격 호스트 client가 끝나고 새 명령이 실행되지 않음 |
-| 원격 command output 임시 파일 | 실행 시작 시각, 실행 전 `ADMIN$\__*` 이름 목록, 중단 시 새로 생긴 `<WMI_OUTPUT_NAME>` | WMI 연결이 살아 있으면 먼저 shell을 종료한다. 별도 승인된 SMB 관리자 session에서 `ADMIN$`의 `<WMI_OUTPUT_NAME>`을 exact 이름으로 제거 | 실행 전 목록과 대조해 이번 실행의 새 파일이 없고, 기존 `ADMIN$\__*`는 그대로 존재 |
+| 원격 command output 임시 파일 | 실행 시작 시각, 실행 전 `ADMIN$\__*` 이름 목록, 중단 시 새로 생긴 `<WMI_OUTPUT_NAME>` | WMI 연결이 살아 있으면 먼저 shell을 종료한다. 별도 SMB 관리자 session에서 `ADMIN$`의 `<WMI_OUTPUT_NAME>`을 exact 이름으로 제거 | 실행 전 목록과 대조해 이번 실행의 새 파일이 없고, 기존 `ADMIN$\__*`는 그대로 존재 |
 | Kerberos 환경 지정 | 이 문서는 기존 `<CCACHE_FILE>`을 command별 `KRB5CCNAME`으로만 전달 | 별도 shell 환경 복원 불필요. 입력 ccache는 삭제하지 않음 | 호출 command 종료 후 상위 shell의 `KRB5CCNAME` 값이 바뀌지 않음 |
 
 중단 후 임시 파일을 확인할 때는 기존에 검증한 credential로 `impacket-smbclient`를 열어 `ADMIN$`에서 `ls __*`를 실행하고, 실행 전 목록에 없으며 시간대가 일치하는 exact `<WMI_OUTPUT_NAME>`만 `rm <WMI_OUTPUT_NAME>`으로 제거한 뒤 `exit`한다. 이름·시간 대응을 확정할 수 없거나 원격 연결이 끊겼으면 광범위하게 `%SystemRoot%\__*`를 삭제하지 않고 `원격 복구 미확인`으로 기록한다.

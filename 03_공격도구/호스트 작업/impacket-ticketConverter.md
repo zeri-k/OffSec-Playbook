@@ -19,9 +19,12 @@ tags:
 - 실행 위치: Impacket이 설치된 Linux 호스트
 - 필요한 입력: 변환할 `.kirbi` 또는 `.ccache` ticket 파일과 출력 경로
 - 후속 환경: Linux에서는 `KRB5CCNAME`, Windows 도구에서는 `.kirbi`를 사용하는 흐름에 맞춰 출력 형식을 정한다.
+- `<INPUT_TICKET>`과 `<OUTPUT_TICKET>`은 Linux 실행 host의 서로 다른 경로이며 확장자는 변환 방향을 나타낸다. 변환 성공은 KDC 또는 service가 ticket를 수락했음을 뜻하지 않는다.
 
 
 ## 표준 사용법
+
+`<INPUT_TICKET>`은 existing `.kirbi`/`.ccache` Linux path, `<OUTPUT_TICKET>`은 변환할 새 path이며 방향에 맞는 extension을 쓴다. conversion result·cache inspection·KDC/service ticket acceptance는 별도 상태고 cleanup은 output path만 대상으로 한다.
 
 ```bash
 test ! -e '<OUTPUT_TICKET>'

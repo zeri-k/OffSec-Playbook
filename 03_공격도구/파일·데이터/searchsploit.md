@@ -18,6 +18,7 @@ tags:
 - 실행 환경: Exploit-DB 로컬 데이터베이스가 설치된 Linux 호스트
 - 입력: 제품명, 버전, CVE 또는 EDB-ID
 - 선택 입력: Nmap XML 결과 파일
+- `<EDB_ID>`는 search 결과의 Exploit-DB 식별자이고 복사한 PoC는 Linux 작업 디렉터리의 새 파일이다. 검색 결과·복사는 대상 취약성 또는 PoC 실행 가능성을 뜻하지 않으며, source 파일의 정확한 경로만 정리한다.
 
 ## 표준 사용법
 
@@ -99,7 +100,6 @@ find "$SEARCHSPLOIT_WORKDIR" -maxdepth 1 -type f -printf '%f %s bytes\n'
 rm -- "$SEARCHSPLOIT_WORKDIR/<COPIED_POC_FILE>"
 cd -- "$SEARCHSPLOIT_ORIGINAL_DIR"
 rmdir -- "$SEARCHSPLOIT_WORKDIR"
-test ! -e "$SEARCHSPLOIT_WORKDIR"
 ```
 
 디렉터리가 비지 않거나 예상하지 않은 파일이 있으면 재귀 삭제하지 않고 내용을 확인한다. `searchsploit -u`는 로컬 Exploit-DB mirror를 갱신하므로 현재 search에 필수인 단계가 아니며, 기존 mirror 상태를 보존해야 하는 환경에서는 실행하지 않는다.

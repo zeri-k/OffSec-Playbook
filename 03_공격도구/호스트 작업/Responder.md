@@ -23,8 +23,11 @@ Responder는 Linux에서 LLMNR·NBT-NS·mDNS·WPAD 요청을 관찰하거나 응
 - 네트워크 조건: LLMNR/NBT-NS/mDNS/WPAD 요청을 관찰할 수 있는 위치
 - relay 연계 조건: Responder의 SMB/HTTP server와 ntlmrelayx listener가 같은 포트를 점유하지 않도록 설정
 - 산출물 기준: 설치 위치의 `logs/`와 `Responder.db`는 이전 실행 자료가 누적될 수 있으므로 작업 전 경로·byte 크기·수정 시각을 기록
+- `<INTERFACE>`는 prior network discovery에서 선택한 Linux interface(예: `eth0`)다. text log append와 SQLite 행의 추가 또는 기존 행 timestamp 갱신은 별도 형식·저장 계약이므로, DB row의 정확한 식별자를 확인하지 못하면 DB 정리 완료로 기록하지 않는다.
 
 ## 표준 사용법
+
+`<INTERFACE>`는 prior network discovery에서 얻은 Linux capture interface, `<LOG_DIR>`·`<RESPONDER_DB>`는 설치 directory 아래의 기존 누적 저장소 경로다. 시작 전 byte·time baseline은 text log append와 DB row add/update를 구분하기 위한 값이며, listener start는 captured credential이나 relay result를 뜻하지 않는다.
 
 ```bash
 sudo responder -I <interface>
@@ -88,7 +91,7 @@ pgrep -af 'responder.*-I <INTERFACE>'
 sudo ss -luntp
 ```
 
-이번 PID가 없고 listener가 작업 전 상태로 돌아와야 능동 응답과 rogue service가 중지된 것이다. `logs/`의 protocol별 text 파일과 `Responder.db`는 기존 capture가 누적되는 저장소일 수 있다. 작업 전 없던 파일임이 확인되지 않으면 전체 파일이나 DB를 삭제하지 않고, 필요한 이번 byte 범위만 별도 작업 파일로 분리한다. 독립 시나리오의 입력·potfile 처분과 계정 잠금 확인은 [[무인증 내부망에서 Responder로 AD 자격 증명 확보]]에서 수행한다.
+이번 PID가 없고 listener가 작업 전 상태로 돌아와야 능동 응답과 rogue service가 중지된 것이다. `logs/`의 protocol별 text 파일은 append되므로 작업 전후 byte 범위를 별도 작업 파일로 분리할 수 있다. `Responder.db`는 SQLite 행 저장소이며 text byte 범위를 적용하지 않는다. 설치된 version의 table·row 식별과 기존 행 update 계약을 확인하지 못하면 DB 행 정리는 `미확인`으로 남기며 DB 전체를 삭제하지 않는다. 독립 시나리오의 입력·potfile 처분과 계정 잠금 확인은 [[무인증 내부망에서 Responder로 AD 자격 증명 확보]]에서 수행한다.
 
 ## 관련 공격기법
 

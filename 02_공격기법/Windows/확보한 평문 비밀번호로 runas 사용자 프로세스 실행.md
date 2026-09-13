@@ -11,14 +11,7 @@ tags:
 
 ## 한 줄 판단
 
-Windows 셸에서 다른 로컬·도메인 계정의 사용자명과 평문 비밀번호를 확보했으면 `runas /user`로 그 계정의 새 프로세스를 만들고 새 창의 `whoami /all`로 실제 사용자와 token 권한을 확인한다.
-
-## 사용할 때
-
-- 현재 가진 정보: 현재 계정과 다른 Windows 로컬·도메인 계정의 정확한 사용자명과 평문 비밀번호를 보유한다.
-- 명령 실행 위치와 도달성: 대상 계정으로 프로세스를 만들 Windows 호스트에서 `runas.exe`와 대화형 비밀번호 prompt를 사용할 수 있다.
-- 현재 계정과 권한: 현재 세션에서 프로세스를 실행할 수 있고, 대상 계정에는 해당 호스트의 로컬 로그온 권한이 있어야 한다.
-- 성공 결과: 대상 계정의 로컬 token으로 실행되는 새 프로세스를 얻는다. Administrators 그룹 멤버십과 상승된 token은 별도로 확인한다.
+Windows 셸에서 다른 로컬·도메인 계정의 사용자명과 평문 비밀번호를 확보했으면 `runas /user`로 그 계정의 새 프로세스를 만들고 새 창의 `whoami /all`로 실제 사용자와 현재 프로세스 액세스 토큰의 그룹·privilege·무결성 수준을 확인한다.
 
 ## 전제 조건
 
@@ -44,6 +37,8 @@ whoami
 ```cmd
 runas /user:<DOMAIN_OR_HOST>\<USER> "cmd.exe /k whoami /all"
 ```
+
+`<DOMAIN_OR_HOST>\<USER>`는 실행할 대상 계정의 로컬 또는 도메인 형식이고 `<PASSWORD>`는 prompt에만 입력한다. `/user` 새 창의 `whoami /all`은 로컬 token을 확인하는 출력이며, 원격 서비스 인증만 필요하면 이 문서 대신 `/netonly` 흐름을 사용한다.
 
 표시되는 password prompt에 확보한 `<PASSWORD>`를 입력한다. 명령줄 인수에 비밀번호를 직접 넣지 않는다.
 

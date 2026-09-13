@@ -17,6 +17,8 @@ tags:
 
 성공하면 유효 사용자 이름 후보, 암호화·인증 방식 또는 식별 가능한 테스트 메일의 전달 결과를 얻는다. `VRFY`가 막히면 `RCPT TO` 응답 차이를 확인하고, `RCPT TO` 수락 후 외부 메일이 도착하지 않으면 queue·후단 정책·발신자 제한을 확인한다. 배너·인증서의 도메인과 호스트명은 대상명 단서일 뿐이며 포트 오픈이나 envelope 수락만으로 오픈 relay를 단정하지 않는다.
 
+> 전체 테스트 메일은 외부 수신자, 메일 queue와 로그에 흔적을 남긴다. 기본 확인은 본문을 제출하지 않는 `RCPT` 단계에서 끝내고, 전달 여부는 별도 상태로 기록한다.
+
 ## 서비스 고유 확인
 
 | 우선순위 | 현재 가진 정보로 확인할 것 | 도구 | 확인 출력과 다음 판단 |
@@ -39,17 +41,19 @@ tags:
 
 ### Open Relay 검증
 
-자동 스크립트 결과, SMTP envelope 수락, 서버의 queue 수락과 실제 외부 전달을 서로 다른 단계로 확인한다. 먼저 사전에 합의한 외부 테스트 수신함과 고유한 `<TEST_ID>`를 준비하고, 같은 식별자의 기존 메시지가 없는지 확인한다.
+자동 스크립트 결과, SMTP envelope 수락, 서버의 queue 수락과 실제 외부 전달을 서로 다른 단계로 확인한다. 먼저 수신 내용을 확인할 수 있는 외부 테스트 수신함과 고유한 `<TEST_ID>`를 준비하고, 같은 식별자의 기존 메시지가 없는지 확인한다.
+
+`<TARGET>`은 현재 실행 호스트에서 도달 가능한 SMTP 서버 IP 또는 FQDN(예: `192.0.2.10`)이다. `<TEST_ID>`는 현재 실행 호스트에서 만든 고유 식별자(예: `relay-test-20260914`)이며, 전체 전송 시 Subject·헤더·본문의 같은 값으로 재사용한다.
 
 ```bash
 nmap -p25 -Pn --script smtp-open-relay <TARGET>
 swaks --from relay-test@external.test --to receiver@external.test --server <TARGET> --quit-after RCPT
 ```
 
-`--quit-after RCPT`는 envelope 수신자 단계 뒤에 중단하므로 메시지 본문을 제출하지 않는다. 이 결과만으로 실제 relay를 확정하지 않는다. 외부 전달 검증이 명시적으로 허가되었고 양쪽 주소를 통제할 때만 고유 식별자를 넣어 전체 전송을 수행한다.
+`--quit-after RCPT`는 envelope 수신자 단계 뒤에 중단하므로 메시지 본문을 제출하지 않으며, 이 결과만으로 실제 relay를 확정하지 않는다.
 
 ```bash
-swaks --from relay-test@external.test --to receiver@external.test --header 'Subject: Relay Test <TEST_ID>' --header 'X-Assessment-ID: <TEST_ID>' --body 'Authorized relay delivery check <TEST_ID>' --server <TARGET>
+swaks --from relay-test@external.test --to receiver@external.test --header 'Subject: Relay Test <TEST_ID>' --header 'X-Assessment-ID: <TEST_ID>' --body 'Relay delivery check <TEST_ID>' --server <TARGET>
 ```
 
 수동으로 확인할 때는 인증하지 않은 세션에서 서버 도메인이 아닌 발신자와 수신자를 사용한다.
@@ -72,7 +76,7 @@ QUIT
 | 변경 항목 | 작업 전 기준선 | 이번 작업 식별값 | 정리와 완료 확인 |
 |---|---|---|---|
 | 테스트 수신함의 메시지 | `<TEST_ID>`와 같은 제목·`X-Assessment-ID`가 없는지 확인 | 제목, `X-Assessment-ID`, Message-ID, 발신·수신 시각 | 권한이 있는 수신함에서 정확히 일치하는 메시지만 삭제하고 검색 결과가 비는지 확인 |
-| SMTP queue·중계 및 수신 로그 | 외부에서 직접 복원할 수 없음을 사전에 확인 | `<TEST_ID>`, Message-ID, 서버 응답과 시각 | 운영자 권한과 합의된 절차가 있을 때만 해당 queue 항목을 확인·취소한다. 전달 로그·탐지 이벤트는 보존 정책 대상이므로 원상복구했다고 기록하지 않음 |
+| SMTP queue·중계 및 수신 로그 | 외부에서 직접 복원할 수 없음을 먼저 확인 | `<TEST_ID>`, Message-ID, 서버 응답과 시각 | 해당 queue를 관리할 권한과 exact Message-ID가 있을 때만 그 항목을 확인·취소한다. 전달 로그·탐지 이벤트는 로컬 정리로 사라지지 않으므로 원상복구했다고 기록하지 않음 |
 
 `RCPT` 단계에서 중단했다면 메시지 본문과 수신함 항목은 생성되지 않아야 한다. 전체 전송 뒤 수신 메시지를 삭제해도 SMTP queue 처리 기록, `Received` 경로와 서버 로그까지 사라지는 것은 아니므로 공격 목표 달성과 정리 완료, 잔여 영향을 각각 기록한다.
 

@@ -14,14 +14,7 @@ tags:
 
 피벗 호스트에서 `<INTERNAL_IP>:<PORT>`에 연결할 수 있고 `<ATTACKER_IP>:11601`로 agent를 연결할 수 있으면, 운영 호스트에 TUN interface와 `<INTERNAL_CIDR>` route를 만들어 일반 TCP 도구가 내부 주소에 직접 도달하게 한다.
 
-## 사용할 때
-
-- 현재 네트워크 위치: 운영 호스트에서는 `<INTERNAL_IP>:<PORT>`에 직접 연결할 수 없지만, 셸 또는 원격 명령 실행을 보유한 피벗 호스트에서는 해당 내부 TCP 포트에 연결할 수 있다.
-- 명령 실행 위치: Ligolo-ng `proxy`, interface·route 구성과 최종 클라이언트는 운영 호스트에서 실행하고, `agent`는 피벗 호스트의 현재 세션에서 실행한다. kernel route가 적용되는 client 범위와 agent의 실제 connect 범위는 [[피벗과 터널의 연결 경계]]에서 구분한다.
-- 보유 계정·피벗 세션: 피벗 호스트의 유지 중인 셸 또는 원격 명령 실행이 필요하다. agent 제어 채널에는 내부 서비스용 계정이나 Kerberos ticket을 전달하지 않는다.
-- 현재 권한: 피벗 호스트에서는 현재 계정으로 agent를 실행할 수 있으면 되고, 운영 호스트에서는 TUN interface와 route를 만들 관리자/root 권한이 필요하다.
-- 지금 가능한 행동: `<INTERNAL_CIDR>`의 여러 호스트·TCP 포트를 ProxyChains 없이 일반 클라이언트로 확인한다.
-- 성공 범위: 운영 호스트에서 `<INTERNAL_IP>:<PORT>`의 TCP 응답이나 로그인 단계까지 도달한다. agent 연결은 경로 구성일 뿐이며 서비스 인증, 원격 명령 실행과 관리자 권한은 별도로 확인한다.
+agent 제어 연결, 운영 호스트의 TUN·route와 agent가 만드는 최종 TCP 연결은 [[피벗과 터널의 연결 경계]]처럼 각각 확인한다.
 
 ## 전제 조건
 
@@ -43,6 +36,8 @@ tags:
 6. 서비스에 인증하거나 세션을 열었으면 최종 대상의 Identity와 실제 권한을 별도로 확인한다.
 
 ### proxy와 agent 연결
+
+`<ATTACKER_IP>`는 agent가 연결할 운영 호스트 주소(예: `198.51.100.8`), `<INTERNAL_CIDR>`은 피벗 뒤 대역(예: `192.0.2.0/24`), `<INTERNAL_IP>:<PORT>`는 그 대역에서 먼저 확인할 TCP 서비스다. `proxy`는 운영 호스트의 관리자 셸에서, `agent`는 피벗 호스트의 현재 셸에서 실행한다.
 
 ```bash
 sudo ./proxy -selfcert

@@ -30,6 +30,8 @@ braa <community>@<target>:<oid>
 
 ### community string을 알고 있을 때 OID 범위 훑기
 
+`<TARGET>`은 SNMP agent IP/FQDN(예: `snmp.example.test`)이며 `public`은 확인한 community string으로 바꾼다.
+
 ```bash
 braa public@<TARGET>:.1.3.6.*
 ```

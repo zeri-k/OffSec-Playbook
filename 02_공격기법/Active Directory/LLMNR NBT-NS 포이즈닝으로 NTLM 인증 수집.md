@@ -15,14 +15,6 @@ tags:
 
 내부 링크에서 DNS 실패 뒤 발생하는 LLMNR/NBT-NS 요청을 먼저 수동 관찰하고, 대상 인터페이스에서 공격자 주소로 응답하여 NetNTLM 인증을 수집한 뒤 오프라인 크래킹과 실시간 relay 조건을 분리해 판단한다.
 
-## 사용할 때
-
-- 내부 네트워크 세그먼트에서 이름 해석 실패 요청이 발생하는지 확인할 때.
-- 아직 유효한 도메인 credential이 없거나 더 가치 있는 인증 주체의 NetNTLM 응답을 수집하려 할 때.
-- 수집한 인증을 평문 비밀번호 복구와 NTLM relay 중 어느 경로로 사용할지 결정해야 할 때.
-- 현재 보유 정보: 공격 호스트의 인터페이스·주소와 관찰할 내부 세그먼트뿐이며, 대상 사용자 비밀번호나 NT hash는 수집 전에는 보유하지 않은 상태다.
-- 실행 위치와 대상: 피해 호스트의 LLMNR UDP/5355 또는 NBT-NS UDP/137 broadcast를 볼 수 있는 같은 링크에서 listener를 실행한다. 다른 VLAN에서 이름만 아는 상태로는 수신할 수 없다.
-
 ## 전제 조건
 
 | 구분 | 조건 | 확인 방법 |
@@ -33,6 +25,10 @@ tags:
 | 충돌 방지 | 공격 호스트의 SMB·HTTP 등 수신 포트가 비어 있음 | 기존 서비스와 Responder/Inveigh listener 상태 확인 |
 
 ## 실행
+
+> rogue name response는 정상 이름 해석과 서비스 연결에 영향을 줄 수 있고 수집한 NetNTLM·log는 listener 중지로 되돌릴 수 없다. 분석 모드의 관찰과 응답·capture·relay 조건을 각각 분리한다.
+
+`<INTERFACE>`는 공격 호스트에서 관찰한 같은 링크 interface 이름(예: `eth0`)이고, `<RUN_MINUTES>`는 명령 옵션이 아니라 수동 중지 기준(예: 5분)이다. `<INVEIGH_RUN_DIRECTORY>`는 Windows 실행 호스트의 새 절대 출력 디렉터리(예: `C:\\Temp\\inveigh-p04`), `<UNIQUE_ID>`는 그 실행의 파일 prefix(예: `p04`)이며 `<MINUTES>`는 Inveigh `-RunTime`에 넘기는 정수다.
 
 ### Linux 공격 호스트에서 실행
 

@@ -17,7 +17,7 @@ tags:
 ## 필요한 입력과 실행 환경
 
 - 실행 위치: DC LDAP와 DNS에 접근 가능한 Linux 호스트
-- 필요한 입력: `<DOMAIN>\<USER>`, password, `ldap://<DC>` 또는 `ldaps://<DC>` URL
+- 필요한 입력: `<DOMAIN>\<USER>` 형식의 bind 계정(예: `CORP\\alice`), password, `ldap://<DC>` 또는 `ldaps://<DC>` URL. `<DC>`는 DC의 IP 또는 FQDN(예: `directory.example.test`)이며 명령은 Linux 분석 호스트에서 실행한다.
 - 출력: 현재 작업 디렉터리에 생성되는 `records.csv`
 - `-r` 사용 조건: DC 또는 지정 DNS를 통해 알 수 없는 레코드를 resolve할 수 있어야 한다.
 

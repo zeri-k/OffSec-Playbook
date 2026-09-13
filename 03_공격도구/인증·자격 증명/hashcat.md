@@ -18,6 +18,8 @@ tags:
 - 필요한 입력: 원본을 보존한 hash 파일, 정확한 hash mode, 공격 mode
 - 후보 입력: wordlist, rule 또는 mask; 파일/볼륨 hash는 전용 변환 도구로 먼저 추출한다.
 
+`<hash_mode>`/`<HASH_MODE>`는 hash 종류에서 정한 숫자(예: NTLM `1000`), `<hash_file>`/`<HASH_FILE>`과 `<wordlist_or_mask>`/`<WORDLIST>`는 실행 호스트의 입력 경로, `<RULE_FILE>`은 rule 파일 경로다. 자격 증명 hash 자체는 파일 무결성 hash와 구분해 보존한다.
+
 
 ## 최우선 실행 원칙
 

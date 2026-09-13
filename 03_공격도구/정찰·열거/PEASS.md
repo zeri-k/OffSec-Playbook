@@ -59,19 +59,18 @@ chmod +x /tmp/linpeas.sh
 
 ### Windows에서 winPEAS 실행
 
-대상 Windows PowerShell에서 OS 아키텍처와 C# 실행 파일의 .NET Framework 조건을 먼저 확인한다. `<WINPEAS_PATH>`는 공격 호스트가 아니라 대상 Windows 호스트에 있는 파일의 절대 경로다.
+대상 Windows PowerShell에서 OS 아키텍처와 C# 실행 파일의 .NET Framework 조건을 먼저 확인한다. `<WINPEAS_PATH>`는 대상 Windows 호스트에 있는 공식 release asset의 절대 경로이며, 가상 예시는 `C:\\Temp\\winPEASx64.exe`다.
 
 ```powershell
 [Environment]::Is64BitOperatingSystem
 (Get-ItemProperty -LiteralPath 'HKLM:\SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full' -Name Release -ErrorAction SilentlyContinue).Release
-Get-Item -LiteralPath '<WINPEAS_PATH>' | Select-Object FullName, Length, LastWriteTime
-certutil -hashfile '<WINPEAS_PATH>' SHA256
+Get-Item -LiteralPath '<WINPEAS_PATH>' | Select-Object FullName
 & '<WINPEAS_PATH>' -h
 ```
 
-공식 C# build는 .NET Framework 4.5.2 이상이 필요하며 v4 Full의 `Release` 값은 4.5.2 기준인 `379893` 이상이어야 한다. 값이 없거나 더 작거나 실행 시 CLR 오류가 나면 C# 실행 파일을 계속 시도하지 말고, 대상 환경에서 허용되는 공식 PowerShell·BAT build 또는 수동 열거를 선택한다. x64 Windows에는 x64 build를 우선하고, 파일 이름만 믿지 말고 release asset의 hash·아키텍처와 실제 호스트를 대조한다.
+공식 C# build는 .NET Framework 4.5.2 이상이 필요하며 v4 Full의 `Release` 값은 4.5.2 기준인 `379893` 이상이어야 한다. 값이 없거나 더 작거나 실행 시 CLR 오류가 나면 C# 실행 파일을 계속 시도하지 말고, 대상 환경에서 허용되는 공식 PowerShell·BAT build 또는 수동 열거를 선택한다. x64 Windows에는 x64 build를 우선하고 release asset의 아키텍처와 실제 호스트를 대조한다.
 
-먼저 현재 시스템과 사용자·token 범위를 짧게 확인한다.
+먼저 현재 시스템과 사용자·Windows access token(권한 privilege, UAC filtered/elevated 상태) 범위를 짧게 확인한다.
 
 ```powershell
 & '<WINPEAS_PATH>' systeminfo userinfo
@@ -79,8 +78,8 @@ certutil -hashfile '<WINPEAS_PATH>' SHA256
 
 확인할 출력:
 
-- `System Information`에서 OS·build·UAC·보안 설정, `Users Information`에서 현재 사용자·그룹·token privilege가 출력되어야 한다.
-- 이 출력은 현재 실행 프로세스가 조회한 상태다. Administrators 그룹 이름이나 `SeImpersonatePrivilege`가 보이는 것만으로 elevated token 또는 권한 상승 성공을 의미하지 않는다.
+- `System Information`에서 OS·build·UAC·보안 설정, `Users Information`에서 현재 사용자·그룹·현재 process access token의 privilege가 출력되어야 한다.
+- 이 출력은 현재 실행 프로세스가 조회한 상태다. Administrators 그룹 이름이나 `SeImpersonatePrivilege`가 보이는 것만으로 UAC filtered token이 아닌 elevated access token 또는 권한 상승 성공을 의미하지 않는다.
 - `Bad image`, CLR 초기화 오류 또는 즉시 종료가 나오면 아키텍처·.NET 조건·파일 무결성을 먼저 확인한다. 일부 검사만 `Access is denied`이면 전체 실행 실패로 일반화하지 않는다.
 
 기본 실행은 느린 추가 검사 일부를 제외한 전체 카테고리를 순회하므로, 허용된 평가 범위와 실행 시간을 확인한 뒤 사용한다. `notcolor`는 리다이렉션하거나 색상 없는 셸에서 항목을 읽을 때 선택한다.

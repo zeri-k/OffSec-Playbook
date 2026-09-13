@@ -13,12 +13,6 @@ tags:
 
 현재 사용하는 AD 계정이 도메인 컨트롤러의 LDAP에 연결할 수 있고 대상 그룹의 `member` 속성을 수정할 권한이 있다면, 제어 중인 계정이나 그룹을 구성원으로 추가한 뒤 새 멤버십이 실제로 부여하는 권한을 확인한다.
 
-## 사용할 때
-
-- 그룹 객체에 대한 `GenericWrite`, `GenericAll`, `AddSelf` 또는 구성원 쓰기 권한이 확인되었을 때.
-- 해당 그룹이 다른 고가치 그룹이나 AD 객체에 권한을 부여하는 경로의 중간 단계일 때.
-- 추가할 계정 또는 그룹과 원복할 단일 변경을 정확히 기록할 수 있을 때.
-
 ## 전제 조건
 
 | 구분 | 조건 | 확인 방법 |
@@ -29,7 +23,11 @@ tags:
 
 ## 실행
 
+> 그룹 구성원 추가는 대상 계정의 권한을 바꾸며 기존 Windows 로그온 access token에는 즉시 반영되지 않을 수 있다. 추가 전 구성원과 이번에 추가한 객체를 구분해 exact membership만 복구한다.
+
 ### 1. 변경 전 구성원 기록
+
+`<TARGET_GROUP>`은 변경할 도메인 그룹 이름·DN·SID, `<CONTROLLED_ACCOUNT_OR_GROUP>`은 추가할 사용자 또는 그룹이다. `<DOMAIN>\\<CONTROLLED_USER>`와 `<OPERATOR_PASSWORD>`는 명시적 LDAP 변경 요청자의 인증 자료이며 추가 대상과 혼동하지 않는다.
 
 ```powershell
 Import-Module .\PowerView.ps1
@@ -65,7 +63,7 @@ Get-DomainGroupMember -Identity '<TARGET_GROUP>' |
 
 - 추가한 AD 객체의 `MemberName`과 `MemberSID`.
 - 그룹이 부여하는 실제 ACL, 로컬 그룹 또는 서비스 접근 권한은 별도로 재조회한다.
-- 기존 로그온 token에는 새 그룹 SID가 즉시 반영되지 않을 수 있다. 디렉터리 멤버십과 access token의 생성 시점은 [[Windows 액세스 토큰과 특권 활성화]]처럼 분리하고, 새 로그온이나 새 Kerberos 인증 컨텍스트에서 `whoami /groups`와 실제 대상 권한을 다시 확인한다.
+- 기존 Windows 로그온 access token에는 새 그룹 SID가 즉시 반영되지 않을 수 있다. 디렉터리 멤버십, 새 로그온의 로컬 access token, 새 Kerberos ticket/PAC, 원격 DC·서비스가 그 인증 컨텍스트를 인가한 결과를 [[Windows 액세스 토큰과 특권 활성화]]처럼 분리한다. 새 Windows 로그온이면 `whoami /groups`, 원격 접근이면 새 ticket/PAC와 대상 서비스의 실제 인가 결과를 각각 확인한다.
 
 ## 관찰과 상태 전환
 
@@ -96,7 +94,7 @@ Get-DomainGroupMember -Identity '<TARGET_GROUP>' |
 
 빈 결과를 확인하고, 기존 멤버였던 AD 객체는 제거하지 않는다.
 
-이 결과는 AD 그룹의 `member` 속성 복구다. 이번 추가 뒤 만든 로그온 token·Kerberos 인증 컨텍스트와 원격 session은 제거 전 그룹 SID·권한을 계속 보유할 수 있으므로 작업 생성 session을 종료하고, 새 인증 컨텍스트에서 그룹 SID와 실제 대상 접근이 원래 상태인지 확인한다. 기존 session을 종료하거나 확인할 수 없으면 권한 영향 복구를 완료로 표시하지 않는다.
+이 결과는 AD 그룹의 `member` 속성 복구다. 이번 추가 뒤 만든 Windows 로그온 access token, Kerberos ticket/PAC와 원격 server-side 인증 컨텍스트는 제거 전 그룹 SID·권한을 계속 보유할 수 있다. 작업 생성 session을 종료한 뒤 새 Windows 로그온이면 그룹 SID를, 원격 서비스면 새 인증 컨텍스트의 대상 인가 결과를 각각 원래 상태와 대조한다. 기존 session을 종료하거나 확인할 수 없으면 권한 영향 복구를 완료로 표시하지 않는다.
 
 ## 관련 공격기법
 

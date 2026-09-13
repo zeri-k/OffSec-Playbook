@@ -20,7 +20,11 @@ tags:
 - 라이브 입력: 캡처할 네트워크 인터페이스
 - 권한 조건: 라이브 분석은 root 또는 해당 인터페이스의 패킷 캡처 권한 필요
 
+`<PCAP_FILE>`과 `<PCAP_DIRECTORY>`는 Linux 분석 호스트의 읽기 입력이고, `<INTERFACE>`는 그 호스트의 캡처 인터페이스(예: `eth0`)다. `<PCREDZ_OUTPUT_DIR>`은 `mktemp`으로 만든 새 로컬 출력 디렉터리다.
+
 ## 표준 사용법
+
+`<PCREDZ_OUTPUT_DIR>`은 명령을 실행하는 Linux 분석 호스트의 새 디렉터리다. live mode의 `<INTERFACE>`는 그 호스트에서 `ip link`로 확인한 이름이고 `$PCREDZ_PID`는 background 실행 직후 `$!`에서 얻어 종료 단계에 재사용한다.
 
 ```bash
 ./Pcredz -f '<PCAP_FILE>' -o '<PCREDZ_OUTPUT_DIR>' [options]
@@ -79,7 +83,7 @@ elevated shell 안에서 실행해 `$!`가 sudo wrapper가 아닌 PCredz 작업 
 
 ## 변경 영향과 정리
 
-오프라인 분석은 입력 pcap을 수정하지 않지만 `<PCREDZ_OUTPUT_DIR>`에 credential·hash·session log를 생성한다. 라이브 분석은 각 캡처 대상에 대한 게시 승인과 정확한 PID 기록이 필요하다. 라이브 작업이면 먼저 기록한 프로세스만 종료한다.
+오프라인 분석은 입력 pcap을 수정하지 않지만 `<PCREDZ_OUTPUT_DIR>`에 credential·hash·session log를 생성한다. 라이브 분석은 정확한 PID 기록이 필요하다. 라이브 작업이면 먼저 기록한 프로세스만 종료한다.
 
 ```bash
 kill "$PCREDZ_PID"
@@ -87,7 +91,7 @@ wait "$PCREDZ_PID"
 ps -p "$PCREDZ_PID"
 ```
 
-검토·인계 후에는 생성 직후 기록한 파일 목록과 대조한 뒤 이번 실행의 고유 출력 경로만 정리한다.
+필요한 분석 뒤에는 생성 직후 기록한 파일 목록과 대조한 뒤 이번 실행의 고유 출력 경로만 정리한다.
 
 ```bash
 find "$PCREDZ_OUTPUT_DIR" -xdev -depth -type f -delete

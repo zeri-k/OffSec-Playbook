@@ -18,6 +18,7 @@ Meterpreter는 Metasploit payload로 열린 세션에서 시스템·권한 정�
 - 실행 위치: Metasploit에서 이미 열린 Meterpreter session
 - 필요한 입력: session ID와 수행할 Meterpreter command
 - 환경 조건: payload의 platform/architecture와 현재 session 권한에 따라 command 및 extension 지원 범위가 달라진다.
+- `<SESSION_ID>`는 `sessions -l` 출력의 현재 Meterpreter session이며 `<CIDR>`은 pivot host 관점의 내부 대역, SOCKS port와 job ID는 Metasploit console 출력에서 얻는다. route·listener 생성은 final TCP response나 대상 인증을 뜻하지 않는다.
 
 
 ## 표준 사용법
@@ -121,8 +122,8 @@ msf6 > jobs
 | 명령 실행/파일 전송 성공 | 세션 조작 가능 | 필요한 파일 회수, 권한 상승, 피벗 가능성 확인 |
 | 세션이 자주 죽음 | payload 안정성 또는 AV/EDR 영향 | 일반 shell 전환, 다른 payload, 실행 위치 확인 |
 | 권한 부족 | 현재 사용자 권한 제한 | `getprivs`, local exploit, credential 수집 방향 검토 |
-| `Stolen token with username` | 지정한 프로세스 token이 세션에 적용됨 | `getuid`와 실제 자원 접근으로 권한 확인 |
-| `rev2self` 뒤 원래 `getuid` 복귀 | 현재 session의 impersonation token이 해제됨 | 실행 전 사용자와 실제 자원 접근을 다시 대조 |
+| `Stolen token with username` | 지정한 Windows 프로세스의 impersonation 또는 primary access token이 Meterpreter session에 적용됨 | `getuid`와 실제 자원 접근으로 token type·권한 확인 |
+| `rev2self` 뒤 원래 `getuid` 복귀 | 현재 session에 적용된 impersonation access token이 해제됨 | 실행 전 사용자와 실제 자원 접근을 다시 대조 |
 | `Migration completed successfully` | Meterpreter payload가 대상 PID의 프로세스로 이동함 | 이동 뒤 `getpid`, `getuid`, `getprivs`와 세션 생존 확인 |
 | `Operation failed: Incorrect function` | `hashdump`가 현재 세션 권한·architecture·프로세스 조건에서 실패 | SYSTEM 여부를 확인하고 `ps | grep lsass`에서 호환되는 `lsass.exe` PID를 찾은 뒤 이동·재시도 |
 | kiwi 확장 필요 오류 | `lsa_dump_sam`·`lsa_dump_secrets` 실행 전 kiwi가 로드되지 않음 | `load kiwi` 뒤 architecture 경고와 실행 결과 확인 |

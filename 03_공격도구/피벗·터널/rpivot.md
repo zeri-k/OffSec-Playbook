@@ -20,6 +20,7 @@ rpivot은 피벗 호스트의 클라이언트가 공격 호스트 서버로 역�
 - client 입력: 공격 호스트의 rpivot server 주소와 포트
 - 네트워크 조건: 피벗 호스트에서 server 포트로 outbound TCP 연결 가능
 - 선택 입력: egress HTTP/NTLM proxy 주소와 인증 정보
+- `<ATTACKER_IP>`는 client가 outbound로 연결할 server host, SOCKS port는 attacker에 bind되며 `<PROXY_HOST>`는 optional egress proxy다. Python 2 runtime과 SOCKS4 제한을 TCP 목적지 접근과 별도로 확인한다.
 
 ## 표준 사용법
 

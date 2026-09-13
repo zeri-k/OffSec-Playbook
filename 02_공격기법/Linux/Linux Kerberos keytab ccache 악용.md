@@ -16,16 +16,13 @@ tags:
 
 AD와 통합된 Linux 호스트에서 읽을 수 있는 keytab 또는 ccache를 발견했으면, 파일에서 principal·ticket 종류·만료 범위를 먼저 확인하고 자격 파일 수집은 [[Linux 파일 자격증명 검색]], ticket을 적용한 서비스 접근은 [[Pass the Ticket]]으로 나누어 진행한다.
 
-## 사용할 때
-
-- 현재 보유 접근: Linux 셸에서 Kerberos 설정과 읽을 수 있는 `*.keytab` 또는 `krb5cc_*` 파일을 확인했다.
-- 명령 실행 위치: 파일 소유자·권한과 Kerberos 자료를 확인할 Linux 호스트다.
-- 현재 계정·권한: 현재 Linux 계정이 파일을 읽을 수 있어야 한다. 로컬 파일 소유자와 ticket principal은 같은 계정이라고 가정하지 않는다.
-- 성공 범위: 이 문서는 파일 발견, keytab으로 ticket을 발급할 경로, 기존 ccache를 사용할 경로를 선택한다. 실제 파일 수집과 원격 서비스 인증은 연결된 세부 기법에서 판정한다.
+파일 소유자·권한과 Kerberos 자료를 확인할 Linux 호스트에서 실행한다. 현재 계정이 `*.keytab` 또는 `krb5cc_*`를 읽을 수 있어야 하며, 로컬 파일 소유자와 ticket principal은 같은 계정이라고 가정하지 않는다. 파일 발견과 원격 서비스 인증은 별도 결과다.
 
 ## 실행
 
 ### AD 통합 상태와 Kerberos 파일 확인
+
+이 블록은 대상 Linux 호스트에서 실행한다. `<CCACHE_FILE>`은 현재 계정이 읽는 기존 cache의 절대 경로(가상 예: `/tmp/krb5cc_1000`)이며, 검색 결과의 파일 소유자와 ticket principal은 같다고 가정하지 않는다.
 
 ```bash
 cat /etc/krb5.conf
@@ -34,12 +31,16 @@ find /tmp /var/tmp /home -name 'krb5cc_*' -o -name '*.keytab' 2>/dev/null
 klist -c <CCACHE_FILE>
 ```
 
+`<CCACHE_FILE>`은 대상 Linux 호스트의 읽기 가능한 기존 cache 절대 경로(가상 예: `/tmp/krb5cc_1000`)다.
+
 확인할 출력:
 
 - Kerberos realm, ccache의 계정, ticket 종류·SPN과 만료 시각.
 - 파일을 찾았더라도 현재 Linux 계정으로 읽을 수 있는지 소유자·모드·ACL을 별도로 확인한다.
 
 ### keytab으로 새 TGT 발급
+
+이 블록도 keytab을 읽을 수 있는 Linux 호스트에서 실행한다. `<KEYTAB_FILE>`은 기존 keytab 절대 경로(가상 예: `/etc/krb5.keytab`), `<KEYTAB_WORK_CCACHE>`는 작업 전 존재하지 않는 `FILE:` cache 경로(가상 예: `/tmp/krb5cc-work`), `<PRINCIPAL>`은 바로 위 `klist -k -e` 출력의 principal(가상 예: `svc-web@EXAMPLE.TEST`)이다.
 
 ```bash
 klist -k -e <KEYTAB_FILE>
@@ -54,6 +55,8 @@ KRB5CCNAME='FILE:<KEYTAB_WORK_CCACHE>' klist
 - `kinit` 오류 없이 `klist`에 해당 계정의 유효한 TGT가 표시되는지 확인한다.
 
 ### ccache 적용과 서비스 접근 확인
+
+`<CCACHE_FILE>`은 앞 단계에서 확인한 기존 cache를 재사용하고, `<KERBEROS_WORK_CCACHE>`는 그 사본의 새 절대 경로(가상 예: `/tmp/krb5cc-copy`)다. `<HOST_FQDN>`·`<SHARE>`·`<DOMAIN>`·`<USER>`은 최종 서비스의 DNS 이름·공유명·Kerberos realm·계정명이며, service client의 인증 성공은 서비스 권한과 별도로 판단한다.
 
 ```bash
 test ! -e '<KERBEROS_WORK_CCACHE>'

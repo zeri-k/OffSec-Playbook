@@ -15,14 +15,6 @@ tags:
 
 피해자의 NTLM 인증을 수신할 수 있고 공격 호스트에서 취약한 AD CS Web Enrollment에 접근할 수 있으면, 들어오는 인증을 실시간 relay해 피해자 계정의 인증 certificate를 발급받고 Kerberos Ticket-Granting Ticket(TGT)으로 전환한다.
 
-## 사용할 때
-
-- 현재 보유 정보: AD CS Web Enrollment 주소, Certification Authority(CA) 이름과 피해자 사용자 또는 머신 계정 후보.
-- 명령 실행 위치: 피해자의 NTLM 인증을 SMB listener로 받을 수 있고 `/certsrv`에도 HTTP/HTTPS로 접근할 수 있는 공격 호스트.
-- 현재 인증 수단: 공격자 소유 AD 비밀번호·hash·ticket은 필수가 아니며, 피해자의 NTLM 인증이 실행 중인 listener에 실시간으로 도달해야 한다.
-- 공격 대상과 결과: relay되는 피해자 계정이 template 등록 권한을 가지면 그 계정의 certificate와 private key를 얻는다. 비밀번호나 NT hash를 얻는 절차는 아니다.
-- 권한 경계: certificate 발급은 relay된 계정의 기존 인증 범위를 재현할 뿐이며, 인증서 획득 자체가 로컬 관리자, Domain Admin 또는 DCSync 권한을 뜻하지 않는다.
-
 ## 전제 조건
 
 | 확인할 것 | 필요한 상태 | 확인 방법 | 미충족 시 다음 확인 |
@@ -45,6 +37,10 @@ tags:
 원래 client, relay listener, AD CS target과 이후 PFX·TGT의 결과 경계는 [[NTLM 인증 자료, 실시간 Relay와 서비스 권한 경계]]를 따른다. Relay 인증 성공, certificate 발급과 PKINIT 성공을 하나의 결과로 합치지 않는다.
 
 ## 실행
+
+> certificate 발급과 private key 생성은 민감한 인증 자료를 남긴다. relay 성공, certificate 발급, PKINIT TGT 발급을 각각 분리하고, 발급 certificate의 serial과 CA 설정을 복구에 사용한다.
+
+`<CA>`는 Web Enrollment를 제공하는 CA 호스트, `<DC>`·`<DC_IP>`는 PKINIT에 쓸 DC, `<PFX_PATH>`와 `<ESC8_CCACHE_PATH>`는 Linux 공격 호스트의 새 출력 경로다. relay PID와 certificate serial은 명령 입력이 아니라 해당 단계의 출력에서 기록한다.
 
 1. AD CS Web Enrollment와 relay 보호 조건을 확인한다.
 2. `ntlmrelayx --adcs`로 relay listener를 준비한다.
@@ -150,7 +146,7 @@ ss -ltnp | grep -E '[:.]445[[:space:]]'
 
 두 번째 `ps`가 비고 445번 listener가 작업 전 상태로 돌아와야 relay listener 정리가 끝난 것이다. child가 남으면 PPID와 명령행이 이번 ntlmrelayx에서 생성된 것과 일치할 때만 해당 PID를 별도로 종료한다.
 
-발급 certificate는 승인된 CA 관리자만 CA에서 정확한 serial로 revoke하고 CRL을 게시한다. `<CA_HOST>\<CA_NAME>`과 `<CERT_SERIAL>`을 발급 결과와 대조한 뒤 실행한다.
+발급 certificate는 CA에서 정확한 serial로 revoke하고 CRL을 게시한다. `<CA_HOST>\<CA_NAME>`과 `<CERT_SERIAL>`을 발급 결과와 대조한 뒤 실행한다.
 
 ```cmd
 certutil -config "<CA_HOST>\<CA_NAME>" -revoke <CERT_SERIAL> 1
@@ -160,7 +156,7 @@ certutil -config "<CA_HOST>\<CA_NAME>" -isvalid <CERT_SERIAL>
 
 revocation은 발급 행을 삭제하거나 이미 발급된 Kerberos ticket·열린 세션을 즉시 없애는 작업이 아니다. CRL 게시·전파와 기존 ticket 만료 또는 세션 종료를 별도로 확인하며, CA 관리자 확인을 받지 못하면 원상복구 완료가 아니라 `발급 certificate 미폐기` 상태로 남긴다.
 
-증적 보존이 끝난 뒤 작업 전 없었던 전용 디렉터리 안에서 이번 실행이 만든 정확한 PFX와 ccache만 제거하고, 빈 디렉터리만 삭제한다.
+사용 후 작업 전 없었던 전용 디렉터리 안에서 이번 실행이 만든 정확한 PFX와 ccache만 제거하고, 빈 디렉터리만 삭제한다.
 
 ```bash
 rm -- '<PFX_PATH>' '<ESC8_CCACHE_PATH>'

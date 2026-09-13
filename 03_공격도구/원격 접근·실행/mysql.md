@@ -18,9 +18,12 @@ tags:
 - 실행 위치: 대상 MySQL/MariaDB에 접근 가능한 Linux 또는 Windows 호스트
 - 필요한 입력: host, port, 사용자명, 비밀번호와 필요하면 database
 - 환경별 입력: TLS mode, socket/프로토콜, 기본 schema와 출력 형식
+- `<HOST>`와 `<PORT>`는 MySQL listener(예: `database.example.invalid:3306`)이며, CA 파일은 client 실행 호스트의 PEM 경로다. `USER()`와 `CURRENT_USER()`는 접속 주체와 유효 권한 주체를 각각 보여 주므로 같은 값으로 가정하지 않는다.
 
 
 ## 표준 사용법
+
+`<HOST>`·`<PORT>`는 client host에서 도달하는 MySQL/MariaDB listener(예: `database.example.invalid:3306`)이고 `<USER>`·`<PASSWORD>`는 DB authentication 입력이다. `<CA_FILE>`은 client host의 PEM path이며 database/schema 값은 접속 뒤 기본 namespace를 정할 뿐 현재 effective privilege를 보장하지 않는다.
 
 ```bash
 mysql -h <host> -P <port> -u <user> -p
@@ -49,7 +52,7 @@ mysql --version
 mysql -h <TARGET_FQDN> -u <USER> -p --ssl-mode=VERIFY_IDENTITY --ssl-ca=<CA_FILE>
 ```
 
-`VERIFY_IDENTITY`는 CA와 서버 호스트명을 검증한다. 실패하면 client 버전·CA 파일·접속 FQDN을 먼저 확인하고, `--ssl-mode=DISABLED`는 서버가 평문 접속을 허용하며 암호화 제외이 승인된 진단에서만 사용한다.
+`VERIFY_IDENTITY`는 CA와 서버 호스트명을 검증한다. 실패하면 client 버전·CA 파일·접속 FQDN을 먼저 확인한다. `--ssl-mode=DISABLED`는 평문 접속 허용 여부와 TLS 실패 원인을 구분하는 진단에서만 사용한다.
 
 ## 주요 옵션
 

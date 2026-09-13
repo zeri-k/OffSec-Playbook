@@ -19,9 +19,12 @@ tags:
 - 실행 환경: Oracle SQL*Plus client가 설치된 Linux, Windows 또는 Unix 호스트
 - 원격 입력: Oracle 서버, 포트, Service Name 또는 SID와 계정
 - 로컬 입력: Oracle 세션과 OSDBA 권한
+- 원격 connect identifier는 `host:port/service`(예: `ora01.corp.example:1521/ORCLPDB1`)이며 Service Name과 SID는 교환하지 않는다. 로컬 `/ as sysdba`는 Oracle host의 OSDBA membership을 전제로 하며 원격 SQL 계정 인증과 다르다.
 
 
 ## 표준 사용법
+
+remote block의 `<USER>/<PASSWORD>@<HOST>:<PORT>/<SERVICE_NAME>`에서 Service Name은 SID와 교환하지 않으며 host·port는 SQL*Plus client 관점 endpoint다. local `/ as sysdba`는 Oracle host의 OSDBA session을 사용하므로 remote credential·network connection 결과와 구분한다.
 
 ```bash
 sqlplus -L <user>@<host>:<port>/<service>
