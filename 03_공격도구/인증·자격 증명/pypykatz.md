@@ -37,8 +37,12 @@ pypykatz lsa minidump <OPERATOR_HOME>/Documents/lsass.dmp
 ### 결과를 파일로 저장하며 분석
 
 ```bash
-pypykatz lsa minidump lsass.dmp | tee pypykatz.out
+test ! -e '<PYPYKATZ_OUTPUT>'
+pypykatz lsa minidump '<LSASS_DUMP_PATH>' | tee '<PYPYKATZ_OUTPUT>'
+test -s '<PYPYKATZ_OUTPUT>'
 ```
+
+기존 출력 파일이 있으면 덮어쓰지 말고 다른 exact 경로를 정한다. `tee`의 종료 상태만으로 parser 성공을 확정하지 않고 화면과 파일에서 `FILE`, `LogonSession`, parser 오류를 함께 확인한다.
 
 
 ## 주요 옵션
@@ -58,6 +62,21 @@ pypykatz lsa minidump lsass.dmp | tee pypykatz.out
 | parsing 오류 | dump 형식/architecture 불일치 또는 손상 | 원본 dump 재수집, minidump 형식, 도구 버전 확인 |
 | DPAPI/Vault 단서 | 추가 복호화 대상 존재 | masterkey와 사용자 context 확보 여부 확인 |
 
+## 변경 영향과 복구
+
+기본 분석은 입력 dump를 읽고 표준 출력에 표시할 뿐이다. `tee` 예시는 `<PYPYKATZ_OUTPUT>`을 추가로 만들며, 이 파일에도 hash·key·masterkey·평문 후보가 남을 수 있다. 필요한 후속 처리가 끝나면 이번 실행 전 없었던 exact 출력만 승인된 보존·폐기 정책에 따라 처리한다.
+
+```bash
+rm -- '<PYPYKATZ_OUTPUT>'
+test ! -e '<PYPYKATZ_OUTPUT>'
+```
+
+입력 `<LSASS_DUMP_PATH>`는 이 도구가 만든 자원이 아니므로 여기서 삭제하지 않는다. terminal scrollback·shell logging과 이미 복사한 인증 자료는 출력 파일 삭제로 되돌릴 수 없다.
+
 ## 관련 공격기법
 
 - [[LSASS 메모리 덤프]]
+
+## 참고 링크
+
+- [skelsec pypykatz: LSASS processing and minidump source](https://github.com/skelsec/pypykatz#lsass-processing)

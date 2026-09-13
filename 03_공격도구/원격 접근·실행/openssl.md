@@ -83,6 +83,9 @@ sha256sum '<INPUT_FILE>' '<ROUNDTRIP_OUTPUT>'
 | `-starttls <PROTO>` | 평문 연결 후 STARTTLS 협상 | SMTP, IMAP, POP3 등 |
 | `s_server -accept <PORT>` | 임시 TLS listener 생성 | 인증서·키 기반 파일 전송 |
 | `enc -aes-256-cbc` | AES-256-CBC 파일 암복호화 | 로컬 파일 보호 |
+| `-pass <SOURCE>` | prompt·stdin·파일 등 passphrase 입력 위치 지정 | command line에 passphrase literal을 남기지 않는 복호화 |
+| `-md <DIGEST>` | passphrase 기반 key 생성에 사용할 digest 지정 | producer와 같은 legacy·PBKDF2 조건 재현 |
+| `-pbkdf2`, `-iter <COUNT>` | PBKDF2 사용과 iteration 지정 | PBKDF2로 생성된 `enc` 파일 복호화 |
 
 ## 도구 고유 출력
 
@@ -115,6 +118,7 @@ ss -ltnp | grep -E '[:.]<TLS_PORT>[[:space:]]'
 - [[SMTP 사용자 열거]]
 - [[IMAP POP3 메일함 수집]]
 - [[FTP 익명 접근과 파일 수집]]
+- [[보호된 파일 및 아카이브 크래킹]]
 
 ## 참고 링크
 

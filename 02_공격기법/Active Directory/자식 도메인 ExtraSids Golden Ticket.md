@@ -24,7 +24,7 @@ tags:
 
 | 확인할 것 | 필요한 상태 | 확인 방법 | 미충족 시 다음 확인 |
 |---|---|---|---|
-| 신뢰 관계 | 자식과 부모가 같은 포리스트에 있고 부모 방향 인증 가능 | 도메인·포리스트 정보와 trust direction 확인 | 외부·포리스트 간 trust, SID filtering과 선택적 인증 조건 확인 |
+| 신뢰 관계 | 자식과 부모가 같은 포리스트의 `WITHIN_FOREST` 경로에 있고 부모 방향 인증 가능 | 도메인·포리스트 정보, trust direction과 quarantine·SID filtering 속성 확인 | external·forest trust에는 일반화하지 않고 실제 SID filtering 경계 확인 |
 | 자식 서명 key | 자식 도메인 `krbtgt`의 현재 NT hash 또는 AES key | 자식 도메인 DCSync 결과와 key 종류 확인 | 도메인, key 종류와 `krbtgt` 세대 확인 |
 | ticket에 표시할 사용자 | 실제 자식 사용자와 일치하는 RID | `impacket-lookupsid`로 사용자·RID 대응 확인 | 임의 이름이나 다른 사용자의 RID를 조합하지 않음 |
 | 추가 권한 SID | `<ROOT_DOMAIN_SID>-519` | 부모 도메인 SID와 Enterprise Admins RID 519 결합 | 부모 도메인 SID, 그룹 RID와 SID filtering 확인 |
@@ -206,6 +206,7 @@ Linux에서는 작업 전 `KRB5CCNAME` 설정 여부와 값을 Vault 밖에 기�
 
 - ticket 생성, 현재 세션 주입, 부모 KDC 수락과 부모 서비스 접근은 서로 다른 성공 단계다.
 - PAC에 부모 SID가 들어간 사실만으로 모든 부모 서비스 권한을 단정하지 않는다.
+- 같은 포리스트라는 이름만으로 SID가 항상 전달된다고 단정하지 않는다. `WITHIN_FOREST` 경계, quarantine·SID filtering 설정과 selective authentication을 실제 trust 속성에서 확인한다. 신뢰 경계의 referral과 PAC 처리 관계는 [[Kerberos 인증 자료와 서비스 접근]]을 참조한다.
 - 부모 계정의 hash·key를 얻으려면 [[DCSync]], 얻은 NT hash를 사용하려면 [[Pass the Hash]]로 이동한다.
 
 ## 관련 공격기법
@@ -218,6 +219,7 @@ Linux에서는 작업 전 `KRB5CCNAME` 설정 여부와 값을 Vault 밖에 기�
 
 - [[impacket-lookupsid]]
 - [[impacket-ticketer]]
+- [[impacket-raiseChild]]
 - [[PowerView]]
 - [[mimikatz]]
 - [[rubeus]]
@@ -230,5 +232,7 @@ Linux에서는 작업 전 `KRB5CCNAME` 설정 여부와 값을 Vault 밖에 기�
 ## 참고 링크
 
 - [Impacket ticketer](https://github.com/fortra/impacket/blob/master/examples/ticketer.py)
+- [MS-PAC: SID Filtering and Claims Transformation](https://learn.microsoft.com/openspecs/windows_protocols/ms-pac/55fc19f2-55ba-4251-8a6a-103dd7c66280)
+- [MS-PAC: KERB_VALIDATION_INFO](https://learn.microsoft.com/openspecs/windows_protocols/ms-pac/69e86ccc-85e3-41b9-b514-7d969cd0ed73)
 - [Rubeus](https://github.com/GhostPack/Rubeus)
 - [MIT Kerberos kdestroy](https://web.mit.edu/kerberos/krb5-latest/doc/user/user_commands/kdestroy.html)

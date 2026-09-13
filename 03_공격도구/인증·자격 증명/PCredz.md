@@ -23,28 +23,38 @@ tags:
 ## 표준 사용법
 
 ```bash
-./Pcredz -f <capture_file> [options]
+./Pcredz -f '<PCAP_FILE>' -o '<PCREDZ_OUTPUT_DIR>' [options]
 ```
+
+현재 upstream의 `-o`는 credential 유형별 `logs/` 파일과 `CredentialDump-Session.log`를 지정 경로에 저장한다. 구버전은 출력 option·파일 배치가 다를 수 있으므로 `./Pcredz -h`로 확인한다.
 
 ## 대표 예시
 
 ### 단일 packet capture에서 credential 추출
 
 ```bash
-./Pcredz -f demo.pcapng -t -v
+PCREDZ_OUTPUT_DIR="$(mktemp -d "${PWD}/pcredz.XXXXXX")"
+./Pcredz -f '<PCAP_FILE>' -o "$PCREDZ_OUTPUT_DIR" -t -v
+find "$PCREDZ_OUTPUT_DIR" -xdev -type f -printf '%p %s bytes\n'
 ```
 
 ### 여러 pcap 파일이 있는 디렉터리 분석
 
 ```bash
-./Pcredz -d ./pcaps -t
+./Pcredz -d '<PCAP_DIRECTORY>' -o "$PCREDZ_OUTPUT_DIR" -t
 ```
 
 ### live interface에서 credential 관찰
 
 ```bash
-./Pcredz -i eth0 -v
+sudo -s
+PCREDZ_OUTPUT_DIR='<PCREDZ_OUTPUT_DIR>'
+./Pcredz -i '<INTERFACE>' -o "$PCREDZ_OUTPUT_DIR" -v &
+PCREDZ_PID=$!
+ps -p "$PCREDZ_PID" -o pid=,user=,args=
 ```
+
+elevated shell 안에서 실행해 `$!`가 sudo wrapper가 아닌 PCredz 작업 PID를 가리킨다. 출력 경로는 승격 전에 만든 이번 작업의 고유 디렉터리 절대 경로를 쓴다.
 
 ## 주요 옵션
 
@@ -53,6 +63,7 @@ tags:
 | `-f` | 단일 pcap/pcapng 파일 분석 |
 | `-d` | pcap 파일이 있는 디렉터리 분석 |
 | `-i` | live interface 캡처 분석 |
+| `-o` | 형식별 민감 로그를 저장할 출력 디렉터리. 설치 버전의 help에서 지원 확인 |
 | `-t` | TCP stream 기반 분석 활성화 |
 | `-v` | 상세 출력 |
 
@@ -66,6 +77,30 @@ tags:
 | 결과 없음 | 암호화 트래픽 또는 캡처 범위 부족 | pcap 필터, 프로토콜, 캡처 위치 확인 |
 | 파싱 오류 | 파일 손상 또는 형식 문제 | pcap/pcapng 무결성과 도구 버전 확인 |
 
+## 변경 영향과 정리
+
+오프라인 분석은 입력 pcap을 수정하지 않지만 `<PCREDZ_OUTPUT_DIR>`에 credential·hash·session log를 생성한다. 라이브 분석은 각 캡처 대상에 대한 게시 승인과 정확한 PID 기록이 필요하다. 라이브 작업이면 먼저 기록한 프로세스만 종료한다.
+
+```bash
+kill "$PCREDZ_PID"
+wait "$PCREDZ_PID"
+ps -p "$PCREDZ_PID"
+```
+
+검토·인계 후에는 생성 직후 기록한 파일 목록과 대조한 뒤 이번 실행의 고유 출력 경로만 정리한다.
+
+```bash
+find "$PCREDZ_OUTPUT_DIR" -xdev -depth -type f -delete
+find "$PCREDZ_OUTPUT_DIR" -xdev -depth -type d -empty -delete
+test ! -e "$PCREDZ_OUTPUT_DIR"
+```
+
+경로가 남으면 예상하지 않은 파일·소유자·열린 프로세스를 확인하고 정리 완료로 판정하지 않는다. 라이브 분기에서 연 elevated shell은 정리 확인 후 `exit`로 닫는다. 입력 pcap·터미널 scrollback·원격 탐지 로그는 출력 디렉터리 삭제로 되돌려지지 않는다.
+
 ## 관련 공격기법
 
 - [[네트워크 트래픽 자격증명 수집]]
+
+## 참고 링크
+
+- [PCredz 공식 저장소](https://github.com/lgandx/PCredz)

@@ -82,3 +82,7 @@ netdom query /domain:<DOMAIN_FQDN> workstation
 ## 관련 공격기법
 
 - [[AD 도메인 트러스트 열거와 공격 경로 식별]]
+
+## 참고 링크
+
+- [Microsoft: netdom query](https://learn.microsoft.com/windows-server/administration/windows-commands/netdom-query)

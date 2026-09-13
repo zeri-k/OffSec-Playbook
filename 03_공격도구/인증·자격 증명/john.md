@@ -74,6 +74,12 @@ john hashes.txt --show
 | `No password hashes loaded` | 변환 결과 또는 format을 인식하지 못함 | `*2john` 출력과 `--format`을 재확인 |
 | `<N> password hashes cracked, <N> left` | `--show` 기준 복구/미복구 수 | 미복구 hash에만 다음 후보군 적용 |
 
+## local cache와 session 정리
+
+John은 복구 결과를 `john.pot`에, 중단 상태를 이름 있는 `.rec` session에 저장할 수 있다. 위치와 `--pot` 지원은 core/Jumbo build와 packaging에 따라 다르므로 실행 전에 `john --list=build-info`와 `john --list=hidden-options`를 확인한다. Jumbo build가 `--pot=<TASK_POTFILE>`을 지원하면 파생 hash와 같은 고유 작업 디렉터리로 분리하고 `--show`에도 동일한 option을 사용한다.
+
+`--session=<TASK_SESSION>`으로 중단 상태를 만든 경우 실제 `.rec` 경로를 build 정보와 파일 생성 결과에서 확인해 기록한다. 완료 후에는 이번 작업의 pot·rec·hash만 제거하며 기본 `john.pot`이나 다른 session을 이름으로 일괄 삭제하지 않는다. shared pot을 사용했다면 hash 파일 삭제와 복구 평문 cache 제거를 같은 완료 상태로 표시하지 않는다.
+
 ## 관련 공격기법
 
 - [[오프라인 해시 크래킹]]
@@ -84,3 +90,4 @@ john hashes.txt --show
 ## 참고 링크
 
 - [John the Ripper 문서](https://www.openwall.com/john/doc/)
+- [John command-line options](https://www.openwall.com/john/doc/OPTIONS.shtml)

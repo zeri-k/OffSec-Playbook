@@ -42,6 +42,8 @@ tags:
 | 피해자 인증 주체 | 공격 호스트로 NTLM 인증을 보내는 사용자 또는 머신 계정 | 이 계정의 기존 권한이 certificate와 TGT에 반영됨 |
 | AD CS 대상 | 피해자 계정에 인증용 template 등록을 허용하는 Web Enrollment | certificate 발급만 수행하며 새 관리자·복제 권한을 부여하지 않음 |
 
+원래 client, relay listener, AD CS target과 이후 PFX·TGT의 결과 경계는 [[NTLM 인증 자료, 실시간 Relay와 서비스 권한 경계]]를 따른다. Relay 인증 성공, certificate 발급과 PKINIT 성공을 하나의 결과로 합치지 않는다.
+
 ## 실행
 
 1. AD CS Web Enrollment와 relay 보호 조건을 확인한다.

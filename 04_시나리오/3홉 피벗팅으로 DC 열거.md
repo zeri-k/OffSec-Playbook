@@ -184,7 +184,7 @@ Windows2에서 Windows1 listener로 agent를 연결한다.
 Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -eq '<WINDOWS2_AGENT_PATH>' -and $_.CommandLine -like '*<WINDOWS1_IP>:4445*' } | Select-Object ProcessId, ExecutablePath, CommandLine
 ```
 
-Proxy 콘솔의 `tunnel_list`에 Linux 피벗, Windows1, Windows2 세션이 각각 보여야 한다. 각 agent 이름·연결 주소와 ID를 대조해 `<LINUX_AGENT_ID>`, `<WINDOWS1_AGENT_ID>`, `<WINDOWS2_AGENT_ID>`를 기록한다. 세션이 나타나지 않으면 이전 홉에서 listener가 열린 상태와 다음 홉에서 해당 주소·포트로 연결되는지를 먼저 확인한다.
+Proxy 콘솔의 `tunnel_list`에 Linux 피벗, Windows1, Windows2 세션이 각각 보여야 한다. 각 agent 이름·연결 주소와 ID를 대조해 `<LINUX_AGENT_ID>`, `<WINDOWS1_AGENT_ID>`, `<WINDOWS2_AGENT_ID>`를 기록한다. 세션이 나타나지 않으면 이전 홉에서 listener가 열린 상태와 다음 홉에서 해당 주소·포트로 연결되는지를 먼저 확인한다. 하위 agent가 상위 agent listener와 전송 연결에 의존하고 복구 때 반대 순서가 필요한 이유는 [[피벗과 터널의 연결 경계]]를 따른다.
 
 ## 4. Windows2의 최종 내부망 route 연결
 
@@ -431,11 +431,25 @@ Windows portproxy 대안을 실행했다면 [[Windows Netsh Portproxy 포트 포
 
 ## 완료 기준
 
+### 공격 목표 판정
+
 - Linux 공격 호스트의 `ip route get <DC_IP>`가 의도한 `<THIS_TUN>` 인터페이스를 가리킴.
 - 공격 호스트에서 DC의 88·389·445 중 필요한 포트에 TCP 연결됨.
 - SMB 또는 LDAP 출력으로 DC 호스트명·도메인명·도메인 DN을 확인함.
 - 유효 AD 계정이 있으면 LDAP 사용자·SPN 열거가 실행됨.
 - 피벗 경로 자체를 다시 선택해야 하면 [[내부망 경로 확보 후 피벗 구성]], DC 서비스가 보이면 관련 서비스·공격기법으로 이동함.
+
+위 결과는 공격 목표 달성 판정이다. 터널·route·파일 정리가 끝났다는 뜻은 아니다.
+
+### 최종 복구 상태 판정
+
+| 판정 | 필요한 확인 | 최종 기록 |
+|---|---|---|
+| 복구 완료 | 가장 깊은 원격 host부터 task-created agent·listener·process·파일이 사라지고, 이어 각 hop과 공격 host의 exact route·TUN·proxy process·작업 디렉터리가 기준선으로 돌아왔음을 해당 host에서 확인 | `공격 목표: 달성/미달성`, `복구: 완료`를 별도로 기록 |
+| 제한적 복구 | 접근 가능한 host와 공격 host의 exact 자원은 정리했지만 연결 단절 등으로 일부 원격 host의 agent·listener·파일 부재를 확인할 수 없음 | 확인한 host·자원과 `원격 정리 미확인` 대상을 식별값별로 기록하고 `복구 완료`로 표시하지 않음 |
+| 복구 미완료 | 기록한 PID·listener ID·route·TUN·파일 중 하나라도 남아 있거나 원래 설정과 다른 값이 확인됨 | 남은 exact 자원, 마지막 확인 출력과 다시 접근해야 할 host를 기록 |
+
+대안으로 SSH master, Meterpreter job·route 또는 Windows portproxy를 만들었다면 해당 하위 기법의 복구 확인까지 위 판정에 포함한다. 공격 목표가 실패했더라도 생성한 자원은 정리하며, 공격 목표가 성공했더라도 복구 상태가 제한적·미완료이면 두 결과를 합쳐 “완료”라고 쓰지 않는다.
 
 ## 관련 노트
 

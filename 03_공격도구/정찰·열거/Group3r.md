@@ -12,7 +12,7 @@ tags:
 
 ## 도구 개요
 
-Group3r는 AD에 연결된 Group Policy Object(GPO)를 읽고 정책 설정별 보안 문제 후보와 판단 근거를 계층화하여 출력하는 도구다. 여러 GPO의 설정과 적용 위험을 한 번에 검토하고 후속 수동 확인이 필요한 정책을 찾을 때 적합하다.
+Group3r는 AD에 연결된 Group Policy Object(GPO), SYSVOL과 정책이 참조하는 파일을 읽고 공격에 유용할 수 있는 설정·권한 문제 후보를 계층화하여 출력하는 도구다. 공식 설명상 컴플라이언스 기준을 판정하는 감사 도구가 아니며, 후속 수동 검증이 필요한 공격 경로를 선별할 때 사용한다.
 
 ## 필요한 입력과 실행 환경
 
@@ -32,8 +32,11 @@ group3r.exe -f <OUTPUT_LOG>
 
 ### 결과를 파일로 저장
 
+기존 파일을 덮어쓰지 않는 `<GROUP3R_LOG_PATH>`를 정하고 실행 전 부재를 확인한다.
+
 ```cmd
-group3r.exe -f group3r-findings.log
+if exist "<GROUP3R_LOG_PATH>" exit /b 1
+group3r.exe -f "<GROUP3R_LOG_PATH>"
 ```
 
 확인할 출력:
@@ -69,7 +72,22 @@ group3r.exe -s
 | 더 깊게 들여쓴 finding | 설정에서 발견한 문제 후보와 이유 | 실제 레지스트리·정책 값과 영향 호스트 확인 |
 | 결과 없음 또는 실행 실패 | 컨텍스트·도달성·읽기 범위 또는 옵션 문제 | 도메인 사용자 컨텍스트, DC 접근과 `-s`·`-f` 지정 확인 |
 
+## 변경 영향과 복구
+
+`-s`는 파일을 만들지 않지만 terminal·session log에는 결과가 남을 수 있다. `-f`가 만든 log에는 GPO 설정, 경로와 credential 후보가 포함될 수 있으므로 분석 뒤 exact 경로만 제거한다.
+
+```cmd
+del "<GROUP3R_LOG_PATH>"
+if exist "<GROUP3R_LOG_PATH>" echo REMAINS
+```
+
+마지막 명령이 아무것도 출력하지 않아야 로컬 log 정리가 끝난 것이다. LDAP·SYSVOL·참조 파일 조회 기록과 이미 반출한 사본은 되돌리지 않는다.
+
 ## 관련 공격기법
 
 - [[AD 보안 구성과 GPO 감사]]
 - [[AD GPO 쓰기 권한과 영향 범위 열거]]
+
+## 참고 링크
+
+- [Group3r 공식 저장소](https://github.com/Group3r/Group3r)

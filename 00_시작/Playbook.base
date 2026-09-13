@@ -7,7 +7,7 @@ filters:
         - file.inFolder("03_공격도구")
         - file.inFolder("00_시작/상태별 라우터")
         - file.inFolder("04_시나리오")
-        - file.inFolder("07_공통 원리")
+        - file.inFolder("05_공통 원리")
 properties:
   file.name:
     displayName: 문서
@@ -133,7 +133,7 @@ views:
     name: 공통 원리
     filters:
       and:
-        - file.inFolder("07_공통 원리")
+        - file.inFolder("05_공통 원리")
     order:
       - file.name
       - file.tags

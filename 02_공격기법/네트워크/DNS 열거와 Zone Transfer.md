@@ -45,6 +45,7 @@ tags:
 | 특정 DNS 서버에 직접 질의하며 여러 레코드·호스트 후보를 자동 수집 | `dnsenum --dnsserver` | 지정 DNS가 반환한 레코드와 발견 호스트 후보 | wildcard 응답, DNS 서버 주소와 wordlist 범위를 확인 |
 | 현재 resolver 또는 별도로 지정한 nameserver로 host discovery 수행 | `fierce` | 권한 NS·AXFR 결과와 해석되는 서브도메인 후보 | 실제 사용된 nameserver, wildcard와 wordlist 범위를 확인 |
 | 공개 도메인의 외부 정보원에서 서브도메인 후보 수집 | `subfinder` | 수동 검증이 필요한 서브도메인 후보 | 내부 전용 zone에는 결과가 없을 수 있으므로 직접 DNS 열거 사용 |
+| 현재 해석되는 public IP를 제3자 관측 자료와 대조 | `shodan host` | 과거 관측 시점의 port·service banner 후보 | API plan·quota와 관측 시각을 확인하고 현재 서비스는 직접 재검증 |
 | wordlist와 resolver 목록을 보유 | `subbrute.py` | 직접 DNS로 해석된 이름 후보 | resolver 응답, wildcard와 wordlist 적합성 확인 |
 | IP 주소를 알고 PTR 이름을 확인 | `dig -x` | 역방향 DNS가 반환한 호스트명 후보 | PTR 미등록을 호스트 부재로 해석하지 않음 |
 
@@ -136,6 +137,32 @@ wc -l <WORKDIR>/subdomains.txt
 - 공개 source에서 수집한 서브도메인 후보와 새 결과 파일.
 - 외부 정보원 후보는 현재 DNS 해석이나 서비스 도달성을 증명하지 않으므로 대상 DNS에서 다시 확인한다.
 
+후보별 현재 A·AAAA 응답을 확인한다. 빈 줄과 wildcard는 제외하고, CNAME·공유 CDN 주소는 해당 조직 소유 IP로 확대하지 않는다.
+
+```bash
+while IFS= read -r hostname; do
+  test -n "$hostname" || continue
+  printf '\n[%s]\n' "$hostname"
+  dig +short "$hostname" A
+  dig +short "$hostname" AAAA
+done < '<WORKDIR>/subdomains.txt'
+```
+
+#### 공개 관측 데이터에서 IP 서비스 후보 대조
+
+현재 DNS에서 확인한 public `<PUBLIC_IP>`가 승인 범위와 연결되고, Shodan CLI가 이미 별도 API profile로 구성되어 있으며 현재 plan이 host lookup을 허용할 때만 조회한다. API key 자체를 명령·Vault에 기록하지 않는다.
+
+```bash
+shodan info
+shodan host <PUBLIC_IP>
+```
+
+확인할 출력:
+
+- 계정 plan·사용 가능 기능 확인 결과와 `<PUBLIC_IP>`에 대해 Shodan이 마지막으로 관측한 시각, port·product·banner 후보.
+- Shodan 결과는 제3자의 과거 관측 자료다. 현재 열려 있는 서비스나 대상 조직 소유를 확정하지 않으므로 DNS 관계·범위를 다시 확인하고 승인된 위치에서 해당 포트의 현재 서비스 응답을 검증한다.
+- 인증·membership·quota 오류는 대상 서비스 부재가 아니다. 이 분기는 건너뛰고 현재 DNS·직접 서비스 식별 경로를 유지한다.
+
 #### wordlist와 resolver로 직접 이름 확인
 
 ```bash
@@ -164,14 +191,17 @@ dig @<DNS> -x <IP>
 |---|---|---|---|
 | AXFR로 zone 파일 전체 또는 다수의 내부 호스트명이 나온다. | zone transfer 허용 확인 | DNS 레코드 집합 | 레코드별 주소와 포트를 확인해 해당 서비스 문서로 분기 |
 | 서브도메인/역방향 조회로 새 웹 vhost나 내부 서비스가 확인된다. | 추가 호스트 식별 | 서비스 후보 | 웹 호스트는 [[웹 정찰과 경로 열거]], 나머지는 식별된 서비스 기법으로 전환 |
-| TXT/SRV/MX에서 메일, AD 또는 클라우드 단서가 나온다. | 서비스 역할 식별 | 도메인·서비스 단서 | 메일은 [[SMTP 사용자 열거]], SMB는 [[SMB 익명 열거와 공유 권한 확인]] 조건 검토 |
+| `_ldap._tcp`, `_kerberos._tcp`, `dc._msdcs` SRV 또는 DC 역할 hostname이 나온다. | AD 서비스 역할 후보이며 실제 DC·도메인 컨텍스트는 미확정 | AD 서비스 단서 | 88·389·445 도달성과 RootDSE를 확인하는 [[AD 도메인 컨텍스트 기본 확인]] |
+| MX 또는 mail 역할 hostname이 나온다. | 메일 서버 주소 후보이며 SMTP 도달성과 사용자 후보는 미확정 | 메일 서비스 단서 | 주소와 포트를 확인한 뒤 [[SMTP 서비스]]에서 전송 계층·기능을 확인 |
+| CNAME·TXT에서 승인 범위의 cloud storage URL이 나온다. | 외부 서비스·저장소 후보이며 소유·익명 접근은 미확정 | 클라우드 서비스 단서 | [[공개 클라우드 스토리지 익명 접근 검증]]의 소유 관계·접근 조건 검토 |
+| Shodan에 과거 port·banner가 표시된다. | 제3자 관측 기반 서비스 후보이며 현재 상태 미확정 | 공개 서비스 후보 | 관측 시각·DNS 소유 관계를 확인하고 현재 서비스 응답을 검증한 뒤 해당 서비스 문서로 분기 |
 | AXFR 거부 | 정상적인 전송 제한 | 시작 상태 유지 | wordlist, 인증서 SAN, 웹 링크에서 호스트 후보 수집 |
 | 응답 없음 | UDP/TCP 차단, 잘못된 DNS 서버 | 시작 상태 유지 | TCP 53, 다른 NS, `/etc/hosts` 후보 확인 |
 | 결과 빈약 | 도메인 후보 오류 | 시작 상태 유지 | 웹 리다이렉션, SMTP 배너, 인증서 CN/SAN 재확인 |
 
 ## 변경 영향과 복구
 
-기본 `dig`, `dnsenum`, `fierce`와 PTR 조회는 조회만 수행한다. `subfinder -o`와 shell redirection을 사용하면 로컬 결과 파일이 생성되므로 실행 전 경로를 확인하고 이번 작업에서 새로 만든 파일만 보존 정책에 따라 이동하거나 제거한다.
+기본 `dig`, `dnsenum`, `fierce`, `shodan host`와 PTR 조회는 조회만 수행한다. Shodan API 제공자에는 계정·질의 기록이 남고 plan별 사용 제한이 적용될 수 있으며, 이를 로컬 정리로 되돌릴 수 있다고 표현하지 않는다. `subfinder -o`와 shell redirection을 사용하면 로컬 결과 파일이 생성되므로 실행 전 경로를 확인하고 이번 작업에서 새로 만든 파일만 보존 정책에 따라 이동하거나 제거한다.
 
 ```bash
 rm -- <WORKDIR>/subdomains.txt
@@ -190,8 +220,12 @@ test ! -e <WORKDIR>/subdomains.txt
 ## 후속 공격 연결
 
 - 새 웹 호스트: [[웹 정찰과 경로 열거]]
-- 메일 서버: [[SMTP 사용자 열거]], [[SMTP 서비스#Open Relay 검증|SMTP Open Relay 검증]], [[IMAP POP3 메일함 수집]]
-- AD 도메인 단서: [[원격 비밀번호 공격]], [[SMB 익명 열거와 공유 권한 확인]]
+- AD SRV·DC 역할 hostname: [[AD 도메인 컨텍스트 기본 확인]]
+- MX·mail 역할 hostname: [[SMTP 서비스]]
+- SMTP endpoint와 사용자명·메일 주소 후보를 모두 확인함: [[SMTP 사용자 열거]]
+- relay 허용 단서 또는 유효한 메일함 credential까지 확인함: [[SMTP 서비스#Open Relay 검증|SMTP Open Relay 검증]], [[IMAP POP3 메일함 수집]]
+- AD 컨텍스트 확인 뒤 계정이 없고 SMB 무인증 응답이 있음: [[SMB 익명 열거와 공유 권한 확인]]
+- 공개 cloud storage URL 후보: [[공개 클라우드 스토리지 익명 접근 검증]]
 
 ## 관련 서비스
 
@@ -203,6 +237,7 @@ test ! -e <WORKDIR>/subdomains.txt
 - [[dnsenum]]
 - [[fierce]]
 - [[subfinder]]
+- [[shodan]]
 - [[subbrute]]
 - [[nmap]]
 

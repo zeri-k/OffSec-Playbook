@@ -2,8 +2,8 @@
 tags:
   - 환경/windows
 문서역할: 수동절차
-시작조건: ["대상 Windows 호스트에서 명령 실행", "현재 token에 SeTakeOwnershipPrivilege가 할당됨"]
-필요권한: ["SeTakeOwnershipPrivilege", "대상 파일의 ACL 변경에 필요한 권한"]
+시작조건: ["대상 Windows 호스트에서 명령 실행", "현재 token에 SeTakeOwnershipPrivilege가 존재"]
+필요권한: ["현재 token에 할당된 SeTakeOwnershipPrivilege", "대상 파일의 ACL 변경에 필요한 권한"]
 필요조건: ["대상 파일 경로와 원래 owner·ACL 기록"]
 결과: ["대상 파일의 소유권과 읽기 권한", "파일에서 확인한 정보·자격 증명 후보"]
 ---
@@ -12,11 +12,11 @@ tags:
 
 ## 한 줄 판단
 
-현재 token에 `SeTakeOwnershipPrivilege`가 있고 변경할 대상 파일이 있으면, 소유권을 현재 사용자로 바꾼 뒤 필요한 최소 ACL을 부여하여 파일을 읽고 원래 보안 설명자로 복구한다.
+현재 token에 `SeTakeOwnershipPrivilege`가 있고 변경할 대상 파일이 있으면, 필요한 경우 그 privilege 하나만 현재 PowerShell process에서 활성화하고 소유권·최소 ACL을 변경해 파일을 읽은 뒤 원래 보안 설명자와 privilege 상태로 복구한다.
 
 ## 사용할 때
 
-- `whoami /priv`에서 `SeTakeOwnershipPrivilege`가 확인되고, 파일은 나열할 수 있지만 내용 읽기가 거부될 때.
+- `whoami /priv`에서 `SeTakeOwnershipPrivilege`가 `Enabled` 또는 `Disabled`로 존재하고, 파일은 나열할 수 있지만 내용 읽기가 거부될 때.
 - 파일·폴더·레지스트리 같은 securable object의 owner·ACL 변경이 실제 대상의 동작에 영향을 줄 수 있을 때.
 - 이미 읽기 가능한 다른 정보 수집 경로가 없고, 파일 경로·원래 owner·ACL을 기록할 수 있을 때.
 
@@ -26,14 +26,14 @@ tags:
 
 | 확인할 것 | 필요한 상태 | 확인 방법 | 미충족 시 다음 확인 |
 |---|---|---|---|
-| 현재 token 권한 | `SeTakeOwnershipPrivilege`가 존재하고 활성화 가능 | `whoami /priv` | 권한이 없으면 일반 ACL 또는 다른 수집 기법 선택 |
+| 현재 token 권한 | `SeTakeOwnershipPrivilege`가 현재 token에 존재 | `whoami /priv` | `Disabled`면 아래 선택적 활성화 후 재확인하고, 목록에 없으면 현재 token에서 활성화할 수 없으므로 다른 기법 선택 |
 | 대상 | 파일 경로·현재 owner·ACL과 업무 영향 파악 | `Get-Acl`, `icacls` | 민감 파일·실행 중 설정 파일이면 변경 영향을 먼저 확인 |
 | 복구 정보 | 변경 전 owner와 DACL, 덮어쓰지 않을 ACL backup 경로가 기록됨 | `Get-Acl`, `icacls /save`, `Test-Path` | 기록 없이 소유권·ACL 변경을 시작하지 않음 |
 | 실행 위치 | 파일이 존재하는 대상 Windows 호스트 | `hostname`, `Test-Path` | 대상 세션·경로를 재확인 |
 
 ## 실행
 
-먼저 privilege와 원래 보안 설명자를 기록한다. privilege가 disabled라면 현재 환경에서 허용된 token privilege 활성화 방법을 사용한 뒤 다시 확인한다.
+먼저 privilege와 원래 보안 설명자를 기록한다. 이 문서는 교육 원천의 모든 token privilege를 한꺼번에 활성화하는 script를 사용하지 않는다. `AdjustTokenPrivileges`는 현재 token에 이미 있는 privilege만 조정하며, API 자체가 성공을 반환해도 `GetLastError()==ERROR_NOT_ALL_ASSIGNED(1300)`이면 요청한 privilege가 token에 없었던 상태다.
 
 ```powershell
 whoami /priv
@@ -45,12 +45,109 @@ icacls '<TARGET_FILE>' /save '<ACL_BACKUP_FILE>'
 
 `Test-Path`가 `False`인 고유한 `<ACL_BACKUP_FILE>`을 사용한다. `icacls /save`는 DACL 복구 입력이고 owner는 포함하지 않으므로 `Get-Acl`의 정확한 `<ORIGINAL_OWNER>`를 별도로 기록한다.
 
-파일 소유권을 가져오고 현재 사용자에게 필요한 범위만 부여한 뒤 내용을 확인한다.
+### Disabled privilege 하나만 현재 process에서 활성화
 
-```cmd
-takeown /f "<TARGET_FILE>"
-icacls "<TARGET_FILE>" /grant "<CURRENT_USER>:R"
-type "<TARGET_FILE>"
+`whoami /priv`에서 `Disabled`로 확인한 경우에만 같은 PowerShell process에서 아래 P/Invoke를 정의한다. Windows PowerShell 5.1과 PowerShell 7 모두 Win32 `advapi32.dll`을 호출하며, 별도 script 파일이나 system-wide 설정을 만들지 않는다.
+
+```powershell
+$PRIVILEGE_WAS_DISABLED = $true
+$PRIVILEGE_PROCESS_PID = $PID
+Get-Process -Id $PRIVILEGE_PROCESS_PID | Select-Object Id,StartTime,Path
+
+Add-Type -TypeDefinition @'
+using System;
+using System.ComponentModel;
+using System.Runtime.InteropServices;
+
+public static class TokenPrivilege
+{
+    private const UInt32 TOKEN_QUERY = 0x0008;
+    private const UInt32 TOKEN_ADJUST_PRIVILEGES = 0x0020;
+    private const UInt32 SE_PRIVILEGE_ENABLED = 0x00000002;
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct LUID
+    {
+        public UInt32 LowPart;
+        public Int32 HighPart;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct TOKEN_PRIVILEGES
+    {
+        public UInt32 PrivilegeCount;
+        public LUID Luid;
+        public UInt32 Attributes;
+    }
+
+    [DllImport("kernel32.dll")]
+    private static extern IntPtr GetCurrentProcess();
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool CloseHandle(IntPtr handle);
+
+    [DllImport("advapi32.dll", SetLastError = true)]
+    private static extern bool OpenProcessToken(IntPtr processHandle, UInt32 desiredAccess, out IntPtr tokenHandle);
+
+    [DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern bool LookupPrivilegeValue(string systemName, string name, out LUID luid);
+
+    [DllImport("advapi32.dll", SetLastError = true)]
+    private static extern bool AdjustTokenPrivileges(
+        IntPtr tokenHandle,
+        bool disableAllPrivileges,
+        ref TOKEN_PRIVILEGES newState,
+        UInt32 bufferLength,
+        IntPtr previousState,
+        IntPtr returnLength);
+
+    public static void Set(string privilegeName, bool enabled)
+    {
+        IntPtr tokenHandle;
+        if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY | TOKEN_ADJUST_PRIVILEGES, out tokenHandle))
+            throw new Win32Exception(Marshal.GetLastWin32Error());
+
+        try
+        {
+            LUID luid;
+            if (!LookupPrivilegeValue(null, privilegeName, out luid))
+                throw new Win32Exception(Marshal.GetLastWin32Error());
+
+            TOKEN_PRIVILEGES state = new TOKEN_PRIVILEGES();
+            state.PrivilegeCount = 1;
+            state.Luid = luid;
+            state.Attributes = enabled ? SE_PRIVILEGE_ENABLED : 0;
+
+            bool adjusted = AdjustTokenPrivileges(tokenHandle, false, ref state, 0, IntPtr.Zero, IntPtr.Zero);
+            int error = Marshal.GetLastWin32Error();
+            if (!adjusted || error != 0)
+                throw new Win32Exception(error);
+        }
+        finally
+        {
+            CloseHandle(tokenHandle);
+        }
+    }
+}
+'@
+
+[TokenPrivilege]::Set('SeTakeOwnershipPrivilege', $true)
+whoami /priv | Select-String 'SeTakeOwnershipPrivilege'
+```
+
+확인할 출력:
+
+- `SeTakeOwnershipPrivilege ... Enabled`가 보여야 이 PowerShell process와 이후 생성하는 child command에서 owner 변경을 시도한다.
+- Win32 error 1300이면 현재 token에 privilege가 없다. 사용자 권한 할당을 바꾼 직후라면 새 로그온 token을 만들고 다시 확인하며, 그렇지 않으면 다른 기법을 선택하고 owner 변경을 실행하지 않는다.
+- access denied나 다른 Win32 error면 현재 process token handle 접근, 실행 계정과 token 제한을 먼저 확인한다.
+- 처음부터 `Enabled`였다면 `$PRIVILEGE_WAS_DISABLED = $false`로 기록하고 위 활성화 코드는 실행하지 않는다.
+
+파일 소유권을 가져오고 현재 사용자에게 필요한 범위만 부여한 뒤 내용을 확인한다. owner 변경과 실제 read ACE가 별도 단계인 이유는 [[Windows 파일 소유권과 ACL]]의 access check 경계를 따른다.
+
+```powershell
+takeown.exe /f '<TARGET_FILE>'
+icacls.exe '<TARGET_FILE>' /grant '<CURRENT_USER>:R'
+Get-Content -LiteralPath '<TARGET_FILE>'
 ```
 
 확인할 출력:
@@ -94,13 +191,32 @@ Test-Path -LiteralPath '<ACL_BACKUP_FILE>'
 
 마지막 출력이 `False`여야 backup 정리까지 끝난 것이다. 이름이 비슷한 ACL 파일이나 대상 디렉터리 전체를 삭제하지 않는다.
 
+처음 `Disabled`였던 privilege를 이 PowerShell process에서 활성화했다면 owner·DACL 복구가 끝난 뒤 같은 process에서 다시 비활성화한다. 처음부터 `Enabled`였던 상태는 변경하지 않는다.
+
+```powershell
+if ($PRIVILEGE_WAS_DISABLED) {
+    [TokenPrivilege]::Set('SeTakeOwnershipPrivilege', $false)
+    whoami /priv | Select-String 'SeTakeOwnershipPrivilege'
+}
+```
+
+마지막 출력이 `Disabled`여야 process token 상태 복구까지 끝난 것이다. ACL 복구 전에 privilege를 끄지 않는다. 비활성화가 실패하면 별도 PowerShell에서 시작 시각·path가 기록과 같은 process만 종료하고 PID 부재를 확인한다.
+
+```powershell
+Get-Process -Id <PRIVILEGE_PROCESS_PID> | Select-Object Id,StartTime,Path
+Stop-Process -Id <PRIVILEGE_PROCESS_PID>
+Get-Process -Id <PRIVILEGE_PROCESS_PID> -ErrorAction SilentlyContinue
+```
+
+process 종료는 token 변경을 없애지만 owner·DACL 변경을 복원하지 않으므로 파일 복구와 별도로 판정한다.
+
 ## 관련 공통 원리
 
 - [[Windows 파일 소유권과 ACL]]
 
 
 ## 참고 링크
-- [Microsoft: SeTakeOwnershipPrivilege](https://learn.microsoft.com/windows/security/threat-protection/security-policy-settings/take-ownership-of-files-or-other-objects), [Microsoft: takeown](https://learn.microsoft.com/windows-server/administration/windows-commands/takeown), [Microsoft: icacls](https://learn.microsoft.com/windows-server/administration/windows-commands/icacls)
+- [Microsoft: SeTakeOwnershipPrivilege](https://learn.microsoft.com/windows/security/threat-protection/security-policy-settings/take-ownership-of-files-or-other-objects), [Microsoft: AdjustTokenPrivileges](https://learn.microsoft.com/windows/win32/api/securitybaseapi/nf-securitybaseapi-adjusttokenprivileges), [Microsoft: OpenProcessToken](https://learn.microsoft.com/windows/win32/api/processthreadsapi/nf-processthreadsapi-openprocesstoken), [Microsoft: LookupPrivilegeValue](https://learn.microsoft.com/windows/win32/api/winbase/nf-winbase-lookupprivilegevaluew), [Microsoft: takeown](https://learn.microsoft.com/windows-server/administration/windows-commands/takeown), [Microsoft: icacls](https://learn.microsoft.com/windows-server/administration/windows-commands/icacls)
 ## 관련 상태 라우터
 
 - [[Windows 셸 또는 세션 확보 후 컨텍스트 열거]]

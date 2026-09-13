@@ -9,7 +9,7 @@
 
 ## 한 줄 판단
 
-현재 MySQL 또는 Microsoft SQL Server(MSSQL) 로그인에 서버 파일 읽기 기능을 사용할 권한이 있고 DB 서비스 계정이 대상 운영체제 파일을 읽을 수 있으면, DB query로 파일 내용을 반환받아 설정·계정·네트워크 단서를 수집한다.
+현재 MySQL 또는 Microsoft SQL Server(MSSQL) 로그인에 서버 파일 읽기 기능을 사용할 권한이 있고 DB 서비스 계정이 대상 운영체제 파일을 읽을 수 있으면, DB query로 파일 내용을 반환받아 설정·계정·네트워크 단서를 수집한다. client·DB login·engine service account와 서버 경로의 관계는 [[DB 서버 측 작업의 실행 주체와 결과 경계]]를 따른다.
 
 ## 사용할 때
 

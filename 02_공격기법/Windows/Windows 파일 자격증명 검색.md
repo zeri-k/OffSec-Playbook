@@ -61,12 +61,15 @@ Get-ChildItem -Recurse $env:USERPROFILE -Include *pass*,*cred*,*.kdbx,unattend.x
 ### LaZagne
 
 ```cmd
-LaZagne.exe all
+if not exist "<LAZAGNE_PATH>" echo MISSING
+"<LAZAGNE_PATH>" all
 ```
 
 확인할 출력:
 
 - 브라우저, WinSCP, mail, sysadmin tool credential.
+- `all`은 현재 권한으로 지원 모듈 전체를 검사한다. 대상 역할이 브라우저·sysadmin tool처럼 분명하면 [[lazagne]]의 해당 module부터 실행해 범위와 출력량을 줄인다.
+- 실행 파일을 이번 작업에서 반입했다면 실행 전 부재를 확인한 exact 경로만 기록하고, 수집·검증 뒤 [[lazagne#변경 영향과 복구]]에 따라 제거한다.
 
 ## 관찰과 상태 전환
 

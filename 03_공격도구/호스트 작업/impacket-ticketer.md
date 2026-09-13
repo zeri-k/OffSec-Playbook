@@ -20,7 +20,7 @@ tags:
 - 실행 위치: Impacket이 설치된 Linux 호스트. ticket 생성 자체는 DC 연결이 필요하지 않지만, 생성한 TGT로 새 TGS를 요청하려면 KDC TCP/UDP 88번에 접근해야 한다.
 - Golden Ticket 입력: `<DOMAIN_SID>`, `<DOMAIN>`, `krbtgt` NT hash 또는 AES key, ticket에 넣을 사용자 이름과 RID.
 - Silver Ticket 입력: 서비스 계정·컴퓨터 계정 key와 `<SERVICE>/<HOST_FQDN>` SPN.
-- cross-realm ExtraSids 입력: 부모 도메인 SID와 대상 그룹 RID를 결합한 SID.
+- 같은 포리스트 cross-domain ExtraSids 입력: 부모 도메인 SID와 대상 그룹 RID를 결합한 SID. forest·external trust에 일반화하지 않고 SID filtering 경계를 별도 확인한다.
 - 환경에 따라 KDC가 ticket의 클라이언트 계정 이름을 확인한다. 재현성과 오류 진단을 위해 실제로 존재하는 사용자 이름과 일치하는 RID를 사용한다.
 
 ## 표준 사용법
@@ -97,3 +97,7 @@ impacket-ticketer -nthash <SERVICE_ACCOUNT_NT_HASH> -domain <DOMAIN> -domain-sid
 
 - [[자식 도메인 ExtraSids Golden Ticket]]
 - [[Pass the Ticket]]
+
+## 참고 링크
+
+- [Impacket ticketer](https://github.com/fortra/impacket/blob/master/examples/ticketer.py)

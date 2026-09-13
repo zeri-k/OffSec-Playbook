@@ -16,7 +16,7 @@ tags:
 ## 사용할 때
 
 - 현재 네트워크 위치: 공격 호스트에서 `<PIVOT_IP>`로 직접 inbound 연결은 만들 수 없지만, 피벗 호스트에서 `<ATTACKER_IP>:9999` outbound TCP는 가능하다.
-- 명령 실행 위치: `server.py`와 ProxyChains 클라이언트는 공격 호스트에서, `client.py`는 셀을 보유한 피벗 호스트에서 실행한다.
+- 명령 실행 위치: `server.py`와 ProxyChains 클라이언트는 공격 호스트에서, `client.py`는 셀을 보유한 피벗 호스트에서 실행한다. 이 문서의 `reverse`는 피벗 client가 제어 연결을 시작하고 공격 호스트에 SOCKS listener가 생기며 피벗이 최종 연결을 만드는 배치다. 다른 reverse forward와의 차이는 [[피벗과 터널의 연결 경계]]를 따른다.
 - 현재 계정·권한: 피벗 호스트의 현재 셀 계정으로 Python2와 `client.py`를 실행하고 outbound socket을 열 수 있어야 한다. root 권한은 rpivot 실행의 필수 조건이 아니다.
 - 도달해야 하는 대상: 피벗 호스트에서 직접 응답하는 `<INTERNAL_IP>:<PORT>` 웹 또는 TCP 서비스다.
 - 성공 범위: 공격 호스트의 `127.0.0.1:9050` SOCKS4를 거쳐 `<INTERNAL_IP>:<PORT>`의 서비스 응답을 받는다. 서비스 인증, 원격 명령 실행과 관리자 권한은 아직 획득하지 않은 상태다.

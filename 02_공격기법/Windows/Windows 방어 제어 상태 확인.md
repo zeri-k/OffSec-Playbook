@@ -107,3 +107,10 @@ $ExecutionContext.SessionState.LanguageMode
 ## 관련 상태 라우터
 
 - [[Windows 셸 또는 세션 확보 후 컨텍스트 열거]]
+
+## 참고 링크
+
+- [Microsoft: Get-MpComputerStatus](https://learn.microsoft.com/powershell/module/defender/get-mpcomputerstatus)
+- [Microsoft: Get-AppLockerPolicy](https://learn.microsoft.com/powershell/module/applocker/get-applockerpolicy)
+- [Microsoft: about_Language_Modes](https://learn.microsoft.com/powershell/module/microsoft.powershell.core/about/about_language_modes)
+- [Microsoft: netsh advfirewall](https://learn.microsoft.com/windows-server/administration/windows-commands/netsh-advfirewall)

@@ -41,7 +41,7 @@ tags:
 ## 상태 재평가
 
 - WinRM 인증 성공과 두 번째 Kerberos 서비스 인증 성공을 구분한다.
-- `HTTP/<JUMP_HOST>` service ticket과 사용자 TGT는 같은 인증 자료가 아니다.
+- `HTTP/<JUMP_HOST>` service ticket과 사용자 TGT는 같은 인증 자료가 아니다. AS·TGS 발급, cache 표시와 두 번째 서비스 사용의 차이는 [[Kerberos 인증 자료와 서비스 접근]]을 따른다.
 - 명시적 credential 조회 성공 뒤에도 원래 계정의 AD 객체 권한과 두 번째 대상의 서비스 권한을 별도로 확인한다.
 - 새로운 AD 계정·ticket·원격 세션 또는 고권한을 얻으면 해당 상태 라우터로 전환한다.
 

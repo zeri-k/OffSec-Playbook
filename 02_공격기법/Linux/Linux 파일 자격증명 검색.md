@@ -29,17 +29,53 @@ Linux 파일시스템에서 설정·스크립트·로그를 읽을 수 있으면
 
 ## 실행
 
+### 검색 범위와 결과 형식 선택
+
+| 읽을 수 있는 범위 | 우선 확인 | 결과 해석과 다음 분기 |
+|---|---|---|
+| 서비스·웹 설정과 스크립트 | `.conf`·`.cnf`·`.env`·`.ini`·`.yml`, deploy·backup·cron이 호출하는 스크립트 | 계정·host·port·서비스와 같이 있는 값만 credential 후보로 옮긴다. |
+| 로컬 DB·note·backup | `.db`·`.sqlite`·`.sql`·`.txt`·backup 파일과 최근 수정 시각 | binary DB를 `rg`로 평문으로 단정하지 않고 형식·schema·필요한 parser를 먼저 확인한다. |
+| shell·application history | `.bash_history`·`.zsh_history`·DB client history | [[Linux Shell History 자격증명 검색]]에서 명령·대상·과거 실행 상태를 같이 판단한다. |
+| SSH·TLS private key | key header·소유자·SSH config·암호화 여부 | [[Linux 개인키 검색]]으로 분리한다. |
+| Firefox 등 사용자 프로필 | 같은 profile의 `logins.json`·`key4.db`, profile 소유자 | encrypted entry 존재는 평문 획득이 아니다. 현재 사용자·master password·keyring 조건을 확인한 뒤 [[lazagne]] 등 호환 도구를 쓴다. |
+| `/etc/passwd`·`/etc/shadow` | 같은 호스트·시점의 계정·hash 쌍 | [[Linux passwd shadow 해시 입력 준비]]에서 `unshadow`와 password 필드 상태를 분리한다. |
+
 ### 설정과 스크립트 검색
 
 ```bash
-for ext in conf config cnf env ini yml yaml php py sh; do find / -name "*.$ext" 2>/dev/null; done
-rg -i "password|passwd|pwd|secret|token|user|key" /var/www /home /opt 2>/dev/null
+for ext in conf config cnf env ini yml yaml php py sh; do find /home /var/www /opt /etc -xdev -type f -name "*.$ext" -readable 2>/dev/null; done
+rg -i "password|passwd|pwd|secret|token|user|key" /home /var/www /opt /etc 2>/dev/null
 ```
 
 확인할 출력:
 
 - DB 계정, API token, 내부 URL과 자격 증명 값이 기록된 파일 경로.
 - 예시값·폐기된 환경 변수를 구분할 계정명, 대상 서비스와 파일 수정 시각.
+
+### 로컬 DB·note·cron 참조 좁히기
+
+```bash
+find /home /var/www /opt -xdev -type f \( -name '*.db' -o -name '*.sqlite*' -o -name '*.sql' -o -name '*.txt' -o -name '*.bak' \) -readable -print 2>/dev/null
+rg -n -i 'password|passwd|pwd|secret|token|credential|connection' /etc/crontab /etc/cron.d /var/spool/cron 2>/dev/null
+```
+
+확인할 출력:
+
+- DB·note·backup의 실제 경로·소유자·수정 시각과 해당 파일을 생성·사용하는 서비스.
+- cron 항목의 변수·인자에 평문 후보가 있는지, 또는 호출되는 스크립트·설정 경로만 있는지.
+- binary DB·encrypted store·서비스 참조를 평문 비밀번호로 기록하지 않고, 형식 식별 후 전용 parser·정상 client를 선택한다.
+
+### Firefox 저장 항목 후보 확인
+
+```bash
+find /home -xdev -type f \( -path '*/.mozilla/firefox/*/logins.json' -o -path '*/.mozilla/firefox/*/key4.db' \) -readable -print 2>/dev/null
+```
+
+확인할 출력:
+
+- 같은 Firefox profile 디렉터리의 `logins.json`과 `key4.db`, 파일 소유자와 읽기 권한.
+- `logins.json`의 encrypted username·password field는 저장 항목 후보이며 평문 credential이 아니다. 같은 profile의 key DB와 master password·keyring 조건을 빼먹지 않는다.
+- [[lazagne]] `browsers`를 사용하면 현재 계정·추가 권한·지원 브라우저 버전을 확인하고, 평문 출력은 정상 서비스 인증 전까지 후보로 취급한다.
 
 ### 로그의 자격 증명 단서 검색
 
@@ -58,6 +94,8 @@ rg -i "password|accepted|sudo|COMMAND=|ssh" /var/log 2>/dev/null
 |---|---|---|---|
 | 설정·스크립트에 비밀번호, DB credential 또는 API token이 있음 | 파일 기반 자격 증명 노출 | 서비스 credential 후보 확보 | 계정 형식과 대상 서비스를 확인해 정상 클라이언트로 검증 |
 | 내부 URL·호스트명과 계정명이 함께 있음 | 값의 적용 대상 식별 가능 | 검증 대상 서비스 후보 | 현재 네트워크 경로와 서비스 인증 방식 확인 |
+| DB·browser store의 encrypted record와 필요한 같은 profile key 파일이 보임 | 저장 자격 증명 후보지만 평문은 미확보 | 형식·복호화 조건 확인 | 현재 계정·master password·keyring·전용 parser 조건 확인 |
+| cron·systemd·deploy 설정에 호출 경로만 있음 | credential이 아니라 후속 파일 단서 | 검색 경로 좁힘 | 현재 계정이 읽을 수 있는 정확한 스크립트·설정의 인자를 확인 |
 | 검색 결과가 과다함 | 범위와 키워드가 넓음 | 유효 단서 미선별 | `/var/www`, `/opt`, `/home`과 최근 수정 파일 우선 |
 | 읽기 거부 | 현재 사용자 권한 부족 | 접근 가능한 파일 범위만 확인 | 다른 읽기 가능한 경로 또는 권한 상승 후보 검토 |
 
@@ -82,3 +120,7 @@ rg -i "password|accepted|sudo|COMMAND=|ssh" /var/log 2>/dev/null
 - [[mimipenguin]]
 - [[lazagne]]
 - [[linpeas]]
+
+## 참고 링크
+
+- [Mozilla Support — Firefox profile의 `key4.db`와 `logins.json`](https://support.mozilla.org/en-US/kb/profiles-where-firefox-stores-user-data)

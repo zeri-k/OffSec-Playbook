@@ -19,14 +19,14 @@ tags:
 
 - 현재 보유 정보: SMB signing이 required가 아닌 호스트나 HTTP·LDAP·AD CS relay 후보와 피해자 사용자 또는 머신 계정의 NTLM 인증을 수신할 경로가 식별된 상태다.
 - 명령 실행 위치와 도달성: Responder, coercion 또는 MSSQL hash capture를 실행하는 수신 호스트에서 피해자 인증을 받고 relay 대상의 SMB·LDAP·HTTP 서비스에 접근할 수 있다.
-- 현재 가능한 행동과 결과: [[LLMNR NBT-NS 포이즈닝으로 NTLM 인증 수집]] 등에서 받은 인증을 중계하고, relay된 계정의 기존 권한으로 서비스 접근·객체 변경·명령 실행·certificate 발급 중 가능한 영향을 확인한다.
+- 현재 가능한 행동과 결과: [[LLMNR NBT-NS 포이즈닝으로 NTLM 인증 수집]] 등에서 새로 들어오는 NTLM 메시지를 중계하고, relay된 계정의 기존 권한으로 서비스 접근·객체 변경·명령 실행·certificate 발급 중 가능한 영향을 확인한다. 저장한 response와 live relay의 차이는 [[NTLM 인증 자료, 실시간 Relay와 서비스 권한 경계]]를 따른다.
 
 ## 전제 조건
 
 | 확인할 것 | 필요한 상태 | 확인 방법 | 미충족 시 다음 확인 |
 |---|---|---|---|
 | 명령 실행 위치와 네트워크 경로 | 수신 호스트가 피해자 NTLM 인증을 받을 수 있고 relay 대상의 SMB·LDAP·HTTP 서비스에 접근 가능 | Responder/ntlmrelayx 수신 로그와 대상 포트 연결 확인 | 피해자와 수신 호스트 사이의 이름 해석·coercion 경로, 수신 호스트와 대상 사이의 방화벽·라우팅 확인 |
-| 현재 인증 수단 | 피해자 사용자 또는 머신 계정의 NTLM challenge-response가 수신 호스트에 도달 | ntlmrelayx에서 수신한 인증 주체 확인 | 인증 유도 경로와 피해자 프로토콜이 NTLM을 사용하는지 확인 |
+| 현재 인증 수단 | 피해자 사용자 또는 머신 계정의 새 NTLM 교환이 relay listener에 실시간 도달 | ntlmrelayx에서 수신한 인증 주체와 target challenge 전달 확인 | 저장된 response와 구분하고 인증 유도 경로·피해자 protocol의 NTLM 사용 확인 |
 | 현재 권한 | 수신 도구를 실행할 수 있고 relay된 계정이 대상 서비스에서 수행할 작업 권한을 보유 | 수신 호스트 권한과 대상 서비스의 share·LDAP ACL·enrollment 권한 확인 | relay 성공과 대상 작업 권한을 분리해 다른 계정 또는 대상 검토 |
 | 공격 대상의 조건 | SMB signing이 required가 아니거나 HTTP·LDAP·AD CS에서 EPA/CBT 등 relay 방어가 미흡 | `nmap`, `netexec`와 대상 서비스 설정 확인 | 방어가 적용된 서비스는 제외하고 다른 프로토콜·대상 확인 |
 | 필요한 파일·목록·주소 | 대상 URL 또는 호스트 목록과 실행할 relay 작업이 확정 | `targets.txt`, LDAP/HTTP URL과 ntlmrelayx action 검토 | 인증을 받기 전에 대상·프로토콜·기대 결과를 먼저 확정 |

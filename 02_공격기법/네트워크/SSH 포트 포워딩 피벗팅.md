@@ -104,6 +104,25 @@ proxychains -f '<SSH_PROXYCHAINS_CONFIG>' nmap -sT -Pn -n -p3389 <INTERNAL_IP>
 - ProxyChains를 통한 Nmap은 TCP connect scan인 `-sT`를 사용한다.
 - Nmap이 `filtered` 또는 `no-response`를 보여도 `proxychains nc -vz`에서 `OK`와 `open`이 보이면 해당 TCP 포트 접근은 성공으로 판단한다.
 
+### Windows RDP client에서 Plink로 SOCKS 동적 포워딩
+
+Windows 작업 호스트에 Plink가 이미 있거나 승인된 파일 전송 경로로 준비할 수 있을 때 OpenSSH `ssh -D` 대신 사용한다. 아래 대표 절차는 SSH password를 명령행에 남기지 않고 PuTTY private key를 사용한다. 첫 연결 전에 승인된 경로로 얻은 SSH host key fingerprint를 `<SSH_HOST_KEY_FINGERPRINT>`와 대조한다.
+
+Windows 작업 호스트의 PowerShell:
+
+```powershell
+Get-NetTCPConnection -LocalAddress 127.0.0.1 -LocalPort <SOCKS_PORT> -State Listen -ErrorAction SilentlyContinue
+Test-Path -LiteralPath '<PLINK_PATH>'
+Test-Path -LiteralPath '<PPK_PATH>'
+$Plink = Start-Process -FilePath '<PLINK_PATH>' -ArgumentList @('-ssh','-N','-D','127.0.0.1:<SOCKS_PORT>','-hostkey','<SSH_HOST_KEY_FINGERPRINT>','-i','<PPK_PATH>','<USER>@<PIVOT_IP>') -PassThru -NoNewWindow
+$Plink | Select-Object Id,Path,StartTime
+Get-NetTCPConnection -LocalAddress 127.0.0.1 -LocalPort <SOCKS_PORT> -State Listen | Select-Object LocalAddress,LocalPort,OwningProcess
+```
+
+`OwningProcess`가 기록한 `<PLINK_PID>`와 일치해야 이번 Plink가 만든 listener로 식별할 수 있다. Proxifier에서 같은 `127.0.0.1:<SOCKS_PORT>`를 SOCKS proxy로 지정하고, connection log와 `<INTERNAL_IP>:<PORT>`의 실제 서비스 응답을 함께 확인한다. `-N`은 원격 shell을 열지 않고 forwarding만 유지하며, `-hostkey`는 지정한 fingerprint와 다른 서버 연결을 거부한다.
+
+인증이 실패하면 새 host key를 자동 수락하거나 password를 `-pw`에 넣지 않는다. `plink.exe -v` 출력에서 host key, 사용자, key 인증과 서버의 forwarding 거부를 구분하고 승인된 fingerprint·PuTTY key 형식·SSH 서버 정책을 확인한다.
+
 ### ProxyChains Nmap 분리 확인
 
 ```bash
@@ -146,7 +165,7 @@ ssh -S '<SSH_CONTROL_SOCKET>' -O check <USER>@<PIVOT_IP>
 
 ## 변경 영향과 복구
 
-`-L`·`-D`는 공격 호스트에, `-R`은 피벗 호스트에 listener를 만든다. 세 방식 모두 기록한 `<SSH_CONTROL_SOCKET>`으로 식별되는 SSH master process가 유지한다. 작업용 `<SSH_KNOWN_HOSTS_FILE>`과 `-D`에서 선택한 `<SSH_PROXYCHAINS_CONFIG>`만 새 파일로 만든다.
+OpenSSH의 `-L`·`-D`는 공격 호스트에, `-R`은 피벗 호스트에 listener를 만든다. 세 방식 모두 기록한 `<SSH_CONTROL_SOCKET>`으로 식별되는 SSH master process가 유지한다. 작업용 `<SSH_KNOWN_HOSTS_FILE>`과 `-D`에서 선택한 `<SSH_PROXYCHAINS_CONFIG>`만 새 파일로 만든다.
 
 1. 터널을 사용하는 서비스 client와 하위 session을 먼저 정상 종료한다. `-R`의 reverse callback을 사용했다면 callback session과 공격 호스트의 exact payload listener를 먼저 정리한다.
 2. 공격 호스트에서 `ssh -S '<SSH_CONTROL_SOCKET>' -O check <USER>@<PIVOT_IP>`로 이번 master가 살아 있는지 확인한다. `-L`·`-D`는 공격 호스트의 `ss -ltnp`, `-R`은 연결이 살아 있을 때 피벗 호스트의 `ss -ltnp`로 기록한 포트가 이번 SSH session에 속하는지 대조한다.
@@ -154,6 +173,18 @@ ssh -S '<SSH_CONTROL_SOCKET>' -O check <USER>@<PIVOT_IP>
 4. master가 끝난 뒤 stale control socket이 남았을 때만 `rm -- '<SSH_CONTROL_SOCKET>'`을 실행한다. 이번 작업에서 새로 만든 host-key 파일과 `-D`용 설정은 `rm -- '<SSH_KNOWN_HOSTS_FILE>' '<SSH_PROXYCHAINS_CONFIG>'`로 제거하고 각 생성 경로에 `test ! -e`를 적용한다. `-L`·`-R`만 사용해 ProxyChains 파일을 만들지 않았다면 그 경로는 삭제 명령에서 제외한다.
 
 `ExitOnForwardFailure=yes`는 요청한 listener bind 실패를 SSH 시작 실패로 처리하지만 최종 `<INTERNAL_IP>:<PORT>` 연결 성공까지 보장하지 않는다. `-O exit`가 실패하면 control socket 경로와 `-O check` 결과를 다시 확인하고 다른 SSH process를 이름으로 종료하지 않는다. SSH 연결이 먼저 끊겨 `-R`의 원격 listener를 확인할 수 없거나 하위 session 상태를 확인하지 못했으면 전체 복구 완료로 기록하지 않는다.
+
+Plink 분기를 사용했다면 내부 서비스 client와 Proxifier의 이번 rule을 먼저 종료한 다음, Windows 작업 호스트에서 기록한 PID·경로·시작 시각과 listener 소유 PID를 다시 대조하고 exact process만 종료한다.
+
+```powershell
+Get-CimInstance Win32_Process -Filter "ProcessId = <PLINK_PID>" | Select-Object ProcessId,ExecutablePath,CreationDate,CommandLine
+Get-NetTCPConnection -LocalAddress 127.0.0.1 -LocalPort <SOCKS_PORT> -State Listen | Select-Object LocalAddress,LocalPort,OwningProcess
+Stop-Process -Id <PLINK_PID>
+Get-Process -Id <PLINK_PID> -ErrorAction SilentlyContinue
+Get-NetTCPConnection -LocalAddress 127.0.0.1 -LocalPort <SOCKS_PORT> -State Listen -ErrorAction SilentlyContinue
+```
+
+경로·시작 시각 또는 `OwningProcess`가 기록과 다르면 PID 재사용이나 다른 listener일 수 있으므로 종료하지 않는다. 작업 전에 없었고 이번에 전송한 것으로 확인된 `<PLINK_PATH>`만 `Remove-Item -LiteralPath '<PLINK_PATH>' -Force`로 제거하고 `Test-Path`가 `False`인지 확인한다. 기존 Plink, key, PuTTY registry host key와 saved session은 삭제하지 않는다.
 
 ## 확인할 출력과 권한
 
@@ -183,3 +214,4 @@ ssh -S '<SSH_CONTROL_SOCKET>' -O check <USER>@<PIVOT_IP>
 
 - [OpenSSH ssh(1)](https://man.openbsd.org/ssh.1)
 - [OpenSSH ssh_config(5)](https://man.openbsd.org/ssh_config.5)
+- [PuTTY 0.84 Plink manual](https://the.earth.li/~sgtatham/putty/0.84/htmldoc/Chapter7.html)

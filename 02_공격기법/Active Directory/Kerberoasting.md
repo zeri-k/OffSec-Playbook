@@ -129,7 +129,7 @@ Impacket의 `-outputfile`은 JtR/Hashcat 형식 cipher를 지정 파일에 쓰�
 
 ### 신뢰 대상 도메인의 SPN 계정 대상
 
-현재 계정이 속한 `<SOURCE_DOMAIN>`과 TGS를 요청할 `<TARGET_TRUST_DOMAIN>`을 구분하고, [[AD 도메인 트러스트 열거와 공격 경로 식별]]에서 대상 도메인 조회와 Kerberos 요청 방향을 먼저 확인한다.
+현재 계정이 속한 `<SOURCE_DOMAIN>`과 TGS를 요청할 `<TARGET_TRUST_DOMAIN>`을 구분하고, [[AD 도메인 트러스트 열거와 공격 경로 식별]]에서 대상 도메인 조회와 Kerberos 요청 방향을 먼저 확인한다. trust가 KDC referral을 허용하는 것과 대상 서비스 권한은 별개이며, 그 관계는 [[Kerberos 인증 자료와 서비스 접근]]을 참조한다.
 
 #### Linux 공격 호스트에서 실행
 

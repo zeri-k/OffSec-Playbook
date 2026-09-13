@@ -77,6 +77,8 @@ find '<OUTPUT_DIRECTORY>' -maxdepth 1 -type f -name '<OUTPUT_PREFIX>.*' -print
 | `-sam`, `-security`, `-system` | 오프라인 hive 파일 지정 |
 | `-ntds` | NTDS.dit 파일 지정 |
 | `LOCAL` | 로컬 파일 기반 분석 모드 |
+| `-use-vss` | 기본 DRSUAPI 대신 원격 `NTDSUTIL` VSS 방식을 사용. DC 관리자급 원격 작업 권한과 생성 자원 정리 확인이 필요 |
+| `-exec-method` | `-use-vss`에서 사용할 원격 실행 방식 선택. 현재 구현은 `smbexec`, `wmiexec`, `mmcexec`을 제공 |
 | `-just-dc`, `-just-dc-user` | DC 계정 데이터 또는 특정 사용자만 덤프 |
 | `-just-dc-ntlm` | DC dump에서 NTLM hash만 출력 |
 | `-outputfile` | NTLM·Kerberos·cleartext 결과를 접두부별 파일로 저장 |
@@ -103,6 +105,8 @@ find '<OUTPUT_DIRECTORY>' -maxdepth 1 -type f -name '<OUTPUT_PREFIX>.*' -print
 | Kerberos 오류 뒤 `Try again with -use-vss` | 인증·KDC 단계에서 이미 실패한 뒤 표시된 일반 fallback 안내 | 선행 Kerberos 오류부터 해결하고 인증 성공 전에는 VSS 전환을 근본 해결로 취급하지 않음 |
 | `.ntds.cleartext` 생성 | 가역 암호화 저장 계정의 복호화 가능한 값 존재 | 계정·범위를 확인하고 민감 산출물로 보호 |
 | 출력 일부 누락 | 보호 기능 또는 권한 제한 | hive 파일 방식, VSS, 오프라인 덤프 검토 |
+
+`-use-vss`는 단순 읽기 전용 switch가 아니다. 실행 전 Remote Registry와 관련 원격 실행 자원의 상태를 확인하고, 정상 종료의 `Cleaning up...` 뒤에도 이번 실행의 임시 service·file·snapshot이 남지 않았는지 [[NTDS.dit 덤프#변경 영향과 복구]]의 식별값 기준으로 대조한다. 도구 버전이나 원격 연결 중단 때문에 식별값을 확인할 수 없으면 복구 완료로 판정하지 않는다.
 
 ## 참고 링크
 

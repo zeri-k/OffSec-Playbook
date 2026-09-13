@@ -17,7 +17,7 @@ Windows 파일의 security descriptor에는 owner와 DACL이 별도 필드로 �
 1. 프로세스가 파일을 열 때 읽기·쓰기·삭제처럼 필요한 access mask를 요청합니다. Windows는 현재 token의 사용자·그룹 SID와 파일 DACL의 ACE를 순서대로 평가해 요청 권리를 허용하거나 거부합니다.
 2. 명시적 ACE는 상속 ACE보다 먼저 평가되는 canonical 순서를 사용하고, 같은 그룹에서는 deny가 allow보다 앞섭니다. 여러 그룹의 allow 권리는 합쳐질 수 있지만 먼저 적용되는 deny나 제한 token 때문에 최종 결과가 달라질 수 있습니다.
 3. 파일 owner는 DACL을 바꿀 수 있지만 owner가 되는 순간 데이터 읽기 권리가 자동 추가되지는 않습니다. `SeTakeOwnershipPrivilege`는 먼저 owner를 바꿀 수 있게 하고, 실제 읽기가 필요하면 새 owner가 DACL에 필요한 최소 ACE를 추가하는 별도 단계가 이어집니다.
-4. `SeBackupPrivilege`를 활성화하고 backup semantics를 요청하는 API·도구는 백업 목적의 파일 읽기에서 일반 DACL 검사를 우회할 수 있습니다. 이는 owner나 DACL을 바꾸는 동작이 아니며, 일반 `copy`가 같은 결과를 낸다는 뜻도 아닙니다.
+4. 현재 token에서 `SeBackupPrivilege`가 활성화되고 API·도구가 backup semantics로 읽기 권리를 요청하면 Windows는 파일 ACL과 무관하게 backup용 읽기 접근을 부여할 수 있습니다. 이 우회는 backup에 필요한 읽기 권리에 한정되며 함께 요청한 비읽기 권리는 여전히 DACL 평가를 받습니다. 또한 owner나 DACL을 바꾸는 동작이 아니고, 일반 `copy`가 같은 결과를 낸다는 뜻도 아닙니다. 사본을 만들 출력 경로는 별도 handle이므로 그 디렉터리와 새 파일의 일반 쓰기 권한도 따로 필요합니다.
 5. 파일이나 상위 디렉터리의 DACL을 수정하면 상속 설정에 따라 하위 객체와 서비스 계정의 접근도 달라질 수 있습니다. 따라서 기존 owner, 전체 DACL과 상속 상태가 복구 입력이며 새 allow ACE 한 줄만 기억해서는 원래 상태를 재구성할 수 없습니다.
 
 ## 실전에서의 해석
@@ -42,4 +42,6 @@ Windows 파일의 security descriptor에는 owner와 DACL이 별도 필드로 �
 - [Microsoft: Access Control](https://learn.microsoft.com/windows/win32/secauthz/access-control)
 - [Microsoft: DACLs and ACEs](https://learn.microsoft.com/windows/win32/secauthz/dacls-and-aces)
 - [Microsoft: Order of ACEs in a DACL](https://learn.microsoft.com/windows/win32/secauthz/order-of-aces-in-a-dacl)
+- [Microsoft: File Security and Access Rights](https://learn.microsoft.com/windows/win32/fileio/file-security-and-access-rights)
+- [Microsoft: Privilege Constants](https://learn.microsoft.com/windows/win32/secauthz/privilege-constants)
 - [Microsoft: SeTakeOwnershipPrivilege](https://learn.microsoft.com/windows/security/threat-protection/security-policy-settings/take-ownership-of-files-or-other-objects)

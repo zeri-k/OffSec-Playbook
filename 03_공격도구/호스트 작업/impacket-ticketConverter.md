@@ -24,7 +24,8 @@ tags:
 ## 표준 사용법
 
 ```bash
-impacket-ticketConverter <input_ticket> <output_ticket>
+test ! -e '<OUTPUT_TICKET>'
+impacket-ticketConverter '<INPUT_TICKET>' '<OUTPUT_TICKET>'
 ```
 
 ## 대표 예시
@@ -32,13 +33,15 @@ impacket-ticketConverter <input_ticket> <output_ticket>
 ### Linux ccache를 Windows kirbi로 변환
 
 ```bash
-impacket-ticketConverter <CCACHE_FILE> <TICKET_FILE>
+test ! -e '<TICKET_FILE>'
+impacket-ticketConverter '<CCACHE_FILE>' '<TICKET_FILE>'
 ```
 
 ### Windows kirbi를 Linux ccache로 변환
 
 ```bash
-impacket-ticketConverter <TICKET_FILE> <CCACHE_FILE>
+test ! -e '<CCACHE_FILE>'
+impacket-ticketConverter '<TICKET_FILE>' '<CCACHE_FILE>'
 ```
 
 ## 주요 옵션
@@ -59,7 +62,24 @@ impacket-ticketConverter <TICKET_FILE> <CCACHE_FILE>
 | parsing 오류 | ticket 파일 손상 또는 형식 불일치 | 원본 ticket 재수집, base64/바이너리 변환 여부 확인 |
 | 인증 실패 | ticket 자체 조건 문제 | SPN, realm, 만료 시간, 시간 동기화 확인 |
 
+형식 변환 성공은 ticket의 principal·SPN·유효 시간이 맞거나 KDC·서비스가 받아들였다는 뜻이 아니다. 입력과 출력의 ticket 정보를 각각 확인한 뒤 실제 서비스에서 사용 여부를 검증한다.
+
+## 변경 영향과 복구
+
+이 도구가 새로 만드는 상태는 실행 전 없음을 확인한 `<OUTPUT_TICKET>` 하나다. 후속 Windows·Linux process에서 ticket 사용을 먼저 종료한 뒤 이 exact 출력 파일만 제거한다. 원본 `<INPUT_TICKET>`은 이 명령이 만든 파일이 아니므로 삭제하지 않는다.
+
+```bash
+rm -- '<OUTPUT_TICKET>'
+test ! -e '<OUTPUT_TICKET>'
+```
+
+마지막 명령이 성공해야 변환 사본 정리가 끝난 것이다. 다른 위치로 복사한 ticket, 주입된 Windows 로그온 세션과 KDC·서비스 감사 기록은 이 파일 삭제로 제거되지 않는다.
+
 ## 관련 공격기법
 
 - [[Pass the Ticket]]
 - [[Linux Kerberos keytab ccache 악용]]
+
+## 참고 링크
+
+- [Fortra Impacket: ticketConverter implementation](https://github.com/fortra/impacket/blob/master/examples/ticketConverter.py)

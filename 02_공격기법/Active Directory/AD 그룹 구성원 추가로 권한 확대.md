@@ -65,7 +65,7 @@ Get-DomainGroupMember -Identity '<TARGET_GROUP>' |
 
 - 추가한 AD 객체의 `MemberName`과 `MemberSID`.
 - 그룹이 부여하는 실제 ACL, 로컬 그룹 또는 서비스 접근 권한은 별도로 재조회한다.
-- 기존 로그온 token에는 새 그룹 SID가 즉시 반영되지 않을 수 있다. 새 로그온이나 새 Kerberos 인증 컨텍스트에서 `whoami /groups`와 실제 대상 권한을 다시 확인한다.
+- 기존 로그온 token에는 새 그룹 SID가 즉시 반영되지 않을 수 있다. 디렉터리 멤버십과 access token의 생성 시점은 [[Windows 액세스 토큰과 특권 활성화]]처럼 분리하고, 새 로그온이나 새 Kerberos 인증 컨텍스트에서 `whoami /groups`와 실제 대상 권한을 다시 확인한다.
 
 ## 관찰과 상태 전환
 
@@ -95,6 +95,8 @@ Get-DomainGroupMember -Identity '<TARGET_GROUP>' |
 ```
 
 빈 결과를 확인하고, 기존 멤버였던 AD 객체는 제거하지 않는다.
+
+이 결과는 AD 그룹의 `member` 속성 복구다. 이번 추가 뒤 만든 로그온 token·Kerberos 인증 컨텍스트와 원격 session은 제거 전 그룹 SID·권한을 계속 보유할 수 있으므로 작업 생성 session을 종료하고, 새 인증 컨텍스트에서 그룹 SID와 실제 대상 접근이 원래 상태인지 확인한다. 기존 session을 종료하거나 확인할 수 없으면 권한 영향 복구를 완료로 표시하지 않는다.
 
 ## 관련 공격기법
 

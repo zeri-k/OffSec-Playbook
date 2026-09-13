@@ -44,6 +44,24 @@ python3 windapsearch.py --dc-ip <DC_IP> -u '<USER>@<DOMAIN>' -p '<PASSWORD>' -U
 
 ### Windows 공격 호스트에서 실행
 
+Microsoft ActiveDirectory 모듈이 있으면 조회할 DC와 필요한 속성을 명시한다.
+
+```powershell
+Get-Module -ListAvailable ActiveDirectory
+Import-Module ActiveDirectory
+Get-ADUser -Filter * -Server '<DC_FQDN>' -Properties Enabled,PasswordLastSet,LastLogonDate,AccountExpirationDate,ServicePrincipalName,userAccountControl |
+  Select-Object SamAccountName,DistinguishedName,Enabled,PasswordLastSet,LastLogonDate,AccountExpirationDate,ServicePrincipalName,userAccountControl
+```
+
+`-Filter *`는 현재 검색 base의 전체 사용자 객체를 요청하므로 승인된 도메인·DC 범위를 확인하고, 큰 환경에서는 `-SearchBase '<OU_DN>'` 또는 `-ResultSetSize <MAX_OBJECTS>`로 먼저 줄인다. 추가 속성은 `-Properties`를 지정해야 반환된다.
+
+확인할 출력:
+
+- `SamAccountName`, `DistinguishedName`, `Enabled`와 요청한 추가 속성.
+- cmdlet import 성공과 사용자 객체 반환을 구분한다. 빈 결과나 terminating error가 나오면 `<DC_FQDN>`·search base·현재 credential의 디렉터리 읽기 권한을 먼저 확인한다.
+
+PowerView를 사용할 때는 필요한 사용자나 범위를 별도로 지정한다.
+
 ```powershell
 Import-Module .\PowerView.ps1
 Get-DomainUser -Identity <USER> -Domain <DOMAIN> | Select-Object name,samaccountname,memberof,pwdlastset,lastlogontimestamp,accountexpires,admincount,userprincipalname,serviceprincipalname,useraccountcontrol
@@ -79,3 +97,7 @@ dsquery user
 ## 관련 상태 라우터
 
 - [[AD Identity 확인 후 도메인 컨텍스트 열거]]
+
+## 참고 링크
+
+- [Microsoft Get-ADUser](https://learn.microsoft.com/powershell/module/activedirectory/get-aduser)

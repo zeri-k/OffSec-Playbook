@@ -35,7 +35,7 @@ gobuster <mode> [옵션]
 ```shell
 gobuster dir -u http://target/ -w /usr/share/seclists/Discovery/Web-Content/common.txt
 gobuster vhost -u http://target/ -w subdomains.txt --append-domain
-gobuster dns -d example.com -w subdomains.txt
+gobuster dns --domain example.com -w subdomains.txt
 ```
 
 ## 대표 예시
@@ -43,7 +43,8 @@ gobuster dns -d example.com -w subdomains.txt
 ### 디렉터리/파일 열거
 
 ```shell
-gobuster dir -u http://<TARGET>/ -w /usr/share/seclists/Discovery/Web-Content/common.txt -t 50 -o gobuster-dir.txt
+GOBUSTER_OUT_DIR="$(mktemp -d "${PWD}/gobuster.XXXXXX")"
+gobuster dir -u http://<TARGET>/ -w /usr/share/seclists/Discovery/Web-Content/common.txt -t 50 -o "$GOBUSTER_OUT_DIR/dir.txt"
 ```
 
 웹 루트 아래 흔한 경로를 찾는다.
@@ -60,7 +61,7 @@ gobuster dir -u http://<TARGET>/ -w /usr/share/seclists/Discovery/Web-Content/co
 gobuster vhost -u http://<DOMAIN>/ -w /usr/share/seclists/Discovery/DNS/subdomains-top1million-110000.txt --append-domain -t 60
 ```
 
-Host 헤더를 바꿔가며 가상 호스트를 찾는다. 기준 도메인이 로컬에서 해석되지 않으면 `/etc/hosts`에 먼저 등록한다.
+Host 헤더를 바꿔가며 가상 호스트를 찾는다. 현재 Gobuster 3.8 계열에서 기준 domain이 로컬에서 해석되지 않는 HTTP 대상은 `-u http://<TARGET_IP>/ --domain <DOMAIN> --append-domain`으로 연결 IP와 Host suffix를 분리할 수 있다. HTTPS는 URL 이름이 SNI와 인증서 검증에도 사용되므로 `--domain`이나 `-k`만으로 올바른 virtual host routing이 보장되지 않는다. 이름 해석 변경이 필요하면 기존 값을 기록하고 이번에 추가한 정확한 행만 복구하는 별도 절차를 사용한다.
 
 확인할 출력:
 
@@ -71,8 +72,10 @@ Host 헤더를 바꿔가며 가상 호스트를 찾는다. 기준 도메인이 �
 ### DNS 서브도메인 열거
 
 ```shell
-gobuster dns -d <DOMAIN> -w /usr/share/seclists/Discovery/DNS/subdomains-top1million-5000.txt
+gobuster dns --domain <DOMAIN> -w /usr/share/seclists/Discovery/DNS/subdomains-top1million-5000.txt
 ```
+
+현재 Gobuster 3.8 계열의 DNS domain option은 `--domain`이며 short alias는 `-do`다. 설치된 버전이 다르면 `gobuster dns --help`로 option을 확인하고, 과거 원천의 `-d`를 그대로 가정하지 않는다.
 
 DNS 질의로 존재하는 서브도메인을 찾는다.
 
@@ -102,7 +105,7 @@ URL의 특정 위치를 단어 목록으로 치환해 확인한다.
 | `dns` | DNS 이름을 질의하는 서브도메인 brute force 모드 | HTTP와 독립적으로 현재 DNS 레코드를 찾을 때 |
 | `fuzz` | URL의 `FUZZ` 토큰 위치를 치환하는 모드 | 경로·파라미터의 특정 위치만 바꿔 비교할 때 |
 | `-u <url>` | 스킴·포트·기준 경로를 포함한 대상 URL | `dir`, `vhost`, `fuzz`의 HTTP 연결 대상을 정할 때 |
-| `-d <domain>` | DNS 모드의 기준 도메인 | `dns` 질의 suffix를 정할 때 |
+| `--domain <domain>` / `-do <domain>` | 현재 3.8 계열의 DNS 기준 domain. vhost에서는 IP URL과 Host suffix를 분리 | 설치된 버전의 `dns`·`vhost --help`에서 각각 확인 |
 | `-w <wordlist>` | 모드에 대입할 단어 목록 | 경로용·vhost용·DNS용 목록을 구분해 사용할 때 |
 | `-x <ext>` | 각 단어에 붙여 검사할 확장자 목록 | 백업·설정·스크립트 파일 후보를 추가할 때 |
 | `-t <threads>` | 동시 요청·질의 수 | rate limit과 응답 안정성에 맞춰 속도를 조절할 때 |
@@ -126,8 +129,26 @@ URL의 특정 위치를 단어 목록으로 치환해 확인한다.
 | 모든 후보가 같은 status·length 또는 wildcard 진단 `Error:` | custom 404, wildcard DNS/vhost 또는 공통 차단 응답 가능성 | 임의 값 baseline을 다시 잡고 `-b`, `-s`, `--exclude-length`를 조정한다. |
 | 시작 단계 `Error:`, timeout 또는 연결·TLS 실패 | URL, wordlist, DNS, WAF, rate limit, TLS, Host 설정 문제로 열거 미완료 | 결과 없음과 구분하고 스레드, User-Agent, `-k`, `/etc/hosts`, vhost와 입력 파일을 확인한다. |
 
+## 변경 영향과 복구
+
+Gobuster 요청은 대상 access log·WAF·rate limit 상태에 남을 수 있으며 로컬 파일 삭제로 되돌릴 수 없다. 위 대표 `dir` 절차가 만든 결과를 보존하지 않을 때는 정확한 출력과 전용 디렉터리만 제거한다.
+
+```shell
+rm -- "$GOBUSTER_OUT_DIR/dir.txt"
+rmdir -- "$GOBUSTER_OUT_DIR"
+test ! -e "$GOBUSTER_OUT_DIR"
+```
+
+실행 실패로 결과 파일이 없으면 존재하지 않는 파일 오류와 scan 실패를 구분한다. 디렉터리가 비지 않으면 재귀 삭제하지 말고 추가 산출물을 확인한다. 이 문서는 `/etc/hosts`를 직접 변경하지 않는다.
+
 ## 관련 공격기법
 
 - [[웹 정찰과 경로 열거]]
 - [[웹 숨은 경로와 민감 파일 열거]]
 - [[DNS 열거와 Zone Transfer]]
+
+## 참고 링크
+
+- [Gobuster upstream README](https://github.com/OJ/gobuster)
+- [Gobuster current DNS CLI flags](https://github.com/OJ/gobuster/blob/master/cli/dns/dns.go)
+- [Gobuster current vhost CLI flags](https://github.com/OJ/gobuster/blob/master/cli/vhost/vhost.go)

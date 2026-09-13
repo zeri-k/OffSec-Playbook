@@ -45,6 +45,8 @@ $foreignMembers | ForEach-Object { Convert-SidToName $_.MemberName }
 - `Convert-SidToName`으로 변환된 실제 사용자·그룹 이름.
 - 빈 결과, SID 변환 실패와 LDAP 조회 거부를 서로 다른 상태로 기록한다.
 
+PowerView를 실행할 수 없는 Linux 경로에서는 [[AD 관계 그래프 수집과 공격 경로 식별]]의 두 도메인 `DCOnly` 수집으로 foreign membership 후보를 찾고, 양쪽 LDAP에서 SID·그룹 객체를 다시 확인한다. 한 collector가 표기한 `MemberDomain`이나 이름만으로 소속 realm을 확정하지 않고 SID의 domain prefix와 해당 도메인의 실제 object를 대조한다.
+
 ## 관찰과 상태 전환
 
 | 관찰 | 판단 | 결과 상태 | 다음 행동 |
@@ -68,7 +70,13 @@ $foreignMembers | ForEach-Object { Convert-SidToName $_.MemberName }
 ## 관련 도구
 
 - [[PowerView]]
+- [[bloodhound-python]]
+- [[BloodHound]]
 
 ## 관련 상태 라우터
 
 - [[AD Identity 확인 후 도메인 컨텍스트 열거]]
+
+## 참고 링크
+
+- [PowerSploit: Get-DomainForeignGroupMember](https://powersploit.readthedocs.io/en/latest/Recon/Get-DomainForeignGroupMember/)

@@ -44,6 +44,24 @@ python3 windapsearch.py --dc-ip <DC_IP> -u '<USER>@<DOMAIN>' -p '<PASSWORD>' -C
 
 ### Windows 공격 호스트에서 실행
 
+Microsoft ActiveDirectory 모듈이 있으면 현재성을 판단할 속성을 명시해 가져온다.
+
+```powershell
+Get-Module -ListAvailable ActiveDirectory
+Import-Module ActiveDirectory
+Get-ADComputer -Filter * -Server '<DC_FQDN>' -Properties DNSHostName,OperatingSystem,OperatingSystemVersion,LastLogonDate |
+  Select-Object Name,DNSHostName,DistinguishedName,Enabled,OperatingSystem,OperatingSystemVersion,LastLogonDate
+```
+
+`-Filter *`는 디렉터리의 컴퓨터 객체를 넓게 반환한다. 큰 환경에서는 `-SearchBase '<OU_DN>'` 또는 `-ResultSetSize <MAX_OBJECTS>`로 먼저 줄이고, 결과의 `LastLogonDate`·운영체제 문자열만으로 host가 현재 활성이라고 단정하지 않는다.
+
+확인할 출력:
+
+- 컴퓨터 `Name`·`DNSHostName`·DN·활성 속성과 운영체제·마지막 로그온 단서.
+- import 성공과 객체 반환을 분리한다. 빈 결과나 오류가 나오면 DC·search base·읽기 권한을 확인한다.
+
+PowerView를 사용할 때는 다음 경로를 사용한다.
+
 ```powershell
 Import-Module .\PowerView.ps1
 Get-DomainComputer
@@ -78,3 +96,7 @@ dsquery computer
 ## 관련 상태 라우터
 
 - [[AD Identity 확인 후 도메인 컨텍스트 열거]]
+
+## 참고 링크
+
+- [Microsoft Get-ADComputer](https://learn.microsoft.com/powershell/module/activedirectory/get-adcomputer)

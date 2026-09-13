@@ -73,6 +73,14 @@ nxc smb <TARGET> -u <USER> -p '<PASSWORD>' --shares
 
 공유 이름과 도구가 표시한 권한은 후보이며, 파일 READ·WRITE는 [[SMB 인증 공유 파일 수집]] 또는 [[SMB 쓰기 가능한 공유 검증]]에서 확인한다.
 
+### SMB 공유의 파일명 pattern 검색
+
+```shell
+nxc smb <TARGET> -u <USER> -p '<PASSWORD>' --spider '<SHARE>' --pattern '<FILENAME_PATTERN>'
+```
+
+현재 공식 `--spider`·`--pattern` 예시는 선택한 공유에서 파일명 pattern을 찾는 절차다. 경로 출력은 본문에 credential이 있거나 파일을 다운로드했다는 증거가 아니다. content 검색과 로컬 loot가 필요하면 [[SMB 공유 자격증명 수집]]에서 별도 도구를 선택한다.
+
 ### WinRM 인증 확인
 
 ```shell
@@ -111,6 +119,7 @@ nxc smb <TARGET> -u <USER> -p '<PASSWORD>' -x whoami
 | `--continue-on-success` | 성공 후에도 다음 조합 계속 시도 |
 | `--jitter <SECONDS>` | 호스트별 인증 요청 사이의 지연. 고정 초 또는 범위 사용 |
 | `--shares` | SMB 공유 열거 |
+| `--spider`, `--pattern` | 특정 SMB 공유에서 파일명 pattern 후보 선별. content·download 성공과 분리 |
 | `--sessions` | SMB 세션 열거 |
 | `--users` | 사용자 열거. 프로토콜별 지원 여부 확인 필요 |
 | `--sam` | 로컬 SAM 덤프 |
@@ -167,6 +176,7 @@ nxcdb (default) > workspace create <WORKSPACE>
 - [[AD 계정의 디렉터리 복제 권한 확인]]
 - [[NTDS.dit 덤프]]
 - [[WinRM 원격 PowerShell 세션]]
+- [[SMB 공유 자격증명 수집]]
 
 ## 참고 링크
 
@@ -174,3 +184,4 @@ nxcdb (default) > workspace create <WORKSPACE>
 - [NetExec credential와 Password Spraying 옵션](https://www.netexec.wiki/getting-started/using-credentials)
 - [NetExec SMB Password Spraying](https://www.netexec.wiki/smb-protocol/password-spraying)
 - [NetExec workspace database](https://www.netexec.wiki/getting-started/database-general-usage)
+- [NetExec SMB Spidering Shares](https://www.netexec.wiki/smb-protocol/spidering-shares)

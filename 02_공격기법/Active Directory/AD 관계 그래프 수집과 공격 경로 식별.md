@@ -34,8 +34,13 @@ tags:
 
 #### Linux 공격 호스트에서 실행
 
+기존 수집물과 섞이지 않는 전용 디렉터리를 만들고, 도구가 출력한 ZIP의 exact 경로를 `<CURRENT_DOMAIN_ZIP_PATH>`로 기록한다. 비밀번호는 command line에 넣지 않고 prompt에 입력한다.
+
 ```bash
-bloodhound-python -u '<USER>' -p '<PASSWORD>' -ns <DC_IP> -d <DOMAIN> -c all
+test ! -e '<BLOODHOUND_RUN_DIRECTORY>'
+mkdir -m 700 '<BLOODHOUND_RUN_DIRECTORY>'
+cd '<BLOODHOUND_RUN_DIRECTORY>'
+bloodhound-python -u '<USER>@<DOMAIN>' -ns <DC_IP> -d <DOMAIN> -c All --zip -op <CURRENT_DOMAIN_OUTPUT_PREFIX>
 ```
 
 #### Windows 공격 호스트에서 실행
@@ -54,13 +59,33 @@ bloodhound-python -u '<USER>' -p '<PASSWORD>' -ns <DC_IP> -d <DOMAIN> -c all
 
 ### 신뢰 대상 도메인 대상
 
-양쪽 도메인을 각각 수집한 뒤 같은 BloodHound 데이터베이스에서 외부 그룹 멤버십과 trust 경로를 확인한다.
+양쪽 도메인을 각각 수집한 뒤 같은 BloodHound 데이터베이스에서 외부 그룹 멤버십과 trust 경로를 확인한다. 다음 명령은 Legacy BloodHound 4.2/4.3 계열 `bloodhound-python` 기준이다. BloodHound CE용 collector는 설치한 `bloodhound-ce-python`의 `--help`와 서버 호환성을 먼저 확인한다.
+
+호스트 접촉이 필요 없는 trust·group·ACL 후보를 먼저 얻기 위해 `DCOnly`로 시작한다. source-domain credential이 target trust domain의 LDAP 조회에 받아들여지는지는 두 번째 명령의 인증 결과로 별도 확인한다. 각 명령이 출력한 ZIP exact 경로를 `<SOURCE_ZIP_PATH>`와 `<TARGET_ZIP_PATH>`로 기록한다.
+
+현재 도메인 절차의 전용 디렉터리를 만들지 않았다면 신뢰 수집 전에도 같은 `test`·`mkdir`·`cd` 세 명령을 먼저 수행한다.
 
 ```bash
-bloodhound-python -d <SOURCE_DOMAIN> -dc <SOURCE_DC_FQDN> -c All -u <USER> -p '<PASSWORD>'
-bloodhound-python -d <TARGET_TRUST_DOMAIN> -dc <TARGET_DC_FQDN> -c All -u '<USER>@<SOURCE_DOMAIN>' -p '<PASSWORD>'
-zip -r trusted-forest-bloodhound.zip *.json
+bloodhound-python -d <SOURCE_DOMAIN> -dc <SOURCE_DC_FQDN> -ns <SOURCE_DNS_IP> -c DCOnly --zip -op <SOURCE_OUTPUT_PREFIX> -u '<USER>@<SOURCE_DOMAIN>'
+bloodhound-python -d <TARGET_TRUST_DOMAIN> -dc <TARGET_DC_FQDN> -ns <TARGET_DNS_IP> -c DCOnly --zip -op <TARGET_OUTPUT_PREFIX> -u '<USER>@<SOURCE_DOMAIN>'
 ```
+
+확인할 출력:
+
+- 두 실행의 domain·user·group·trust 수와 서로 다른 ZIP 경로.
+- 첫 수집 성공은 source LDAP 읽기만, 둘째 수집 성공은 target LDAP 읽기까지 확인한 상태다.
+- collector ZIP을 같은 BloodHound에 ingest한 뒤 표시되는 trust·membership edge는 실행 후보이며 현재 권한 행사를 증명하지 않는다.
+
+## 변경 영향과 복구
+
+수집이 만든 로컬 ZIP·JSON만 정리한다. BloodHound 서버에 업로드했다면 로컬 파일 삭제와 서버 데이터 제거는 별개이며, 공유 분석 서버의 기존 데이터를 일괄 삭제하지 않는다.
+
+| 생성 항목 | 작업 전 확인과 식별 | 정리 명령 | 완료 확인 |
+|---|---|---|---|
+| Linux 전용 수집 디렉터리 | `test ! -e '<BLOODHOUND_RUN_DIRECTORY>'`; 실행 뒤 도구가 출력한 exact ZIP 경로 기록 | ingest·분석이 끝난 뒤 `rm -- '<CURRENT_DOMAIN_ZIP_PATH>'` 또는 신뢰 수집이면 `rm -- '<SOURCE_ZIP_PATH>' '<TARGET_ZIP_PATH>'`; 생성된 JSON이 남았다면 출력에서 확인한 exact 경로만 `rm -- '<EXACT_JSON_PATH>'`; 이어서 `cd ..`와 `rmdir '<BLOODHOUND_RUN_DIRECTORY>'` | `test ! -e '<BLOODHOUND_RUN_DIRECTORY>'` |
+| Windows SharpHound ZIP | 실행 전 `<SHARPHOUND_ZIP_PATH>` 부재 확인, 명령이 생성한 exact 경로 기록 | BloodHound ingest 뒤 `Remove-Item -LiteralPath '<SHARPHOUND_ZIP_PATH>'` | `Test-Path -LiteralPath '<SHARPHOUND_ZIP_PATH>'`가 `False` |
+
+수집 시 발생한 LDAP·SMB·RPC 접근 기록과 이미 업로드한 분석 서버 데이터는 이 파일 정리로 되돌아가지 않는다. ZIP 경로가 불명확하면 이름 pattern으로 삭제하지 말고 collector 출력과 생성 시각을 먼저 대조한다.
 
 ## 관찰과 상태 전환
 
@@ -87,3 +112,8 @@ zip -r trusted-forest-bloodhound.zip *.json
 
 - [[AD Identity 확인 후 도메인 컨텍스트 열거]]
 - 객체 제어권 확인 후: [[AD 객체 제어권 확보 후 악용 경로 선택]]
+
+## 참고 링크
+
+- [BloodHound.py 공식 저장소와 Legacy·CE collector 구분](https://github.com/dirkjanm/BloodHound.py)
+- [BloodHound.py CLI 구현](https://github.com/dirkjanm/BloodHound.py/blob/master/bloodhound/__init__.py)

@@ -57,10 +57,14 @@ EDB-ID의 로컬 파일 경로와 Exploit-DB URL을 확인한다.
 ### exploit 파일 복사
 
 ```shell
-searchsploit -m 51937
+SEARCHSPLOIT_ORIGINAL_DIR="$PWD"
+SEARCHSPLOIT_WORKDIR="$(mktemp -d "${PWD}/searchsploit.XXXXXX")"
+cd -- "$SEARCHSPLOIT_WORKDIR"
+searchsploit -m <EDB_ID>
+find "$SEARCHSPLOIT_WORKDIR" -maxdepth 1 -type f -printf '%f %s bytes\n'
 ```
 
-현재 디렉터리로 exploit 파일을 복사한다. 복사한 뒤 코드를 읽고 필요한 URL, 포트, 파일명, 인증값을 수정한다.
+현재 디렉터리로 exploit 파일을 복사한다. 출력에 표시된 정확한 `<COPIED_POC_FILE>`을 읽고 대상 version, URL·port·입력 파일·인증 조건, 기본 payload와 생성 파일을 확인한다. 검토 완료는 exploit 성공을 뜻하지 않으며 이 도구 문서에서는 PoC를 실행하지 않는다.
 
 
 ## 주요 옵션
@@ -87,6 +91,23 @@ searchsploit -m 51937
 | 결과 없음 | Exploit-DB에 직접 매칭 없음 | 제품명 변형, CVE, GitHub/벤더 advisory로 재검색 |
 | exploit 복사 후 실행 전 | 코드 검토 필요 | 하드코딩 주소, payload, Python 버전, 의존성 확인 |
 
+## 변경 영향과 복구
+
+`-m`은 현재 디렉터리에 PoC 사본을 만든다. 보존하지 않을 때는 출력과 `find`에서 확인한 이번 사본만 제거한다.
+
+```shell
+rm -- "$SEARCHSPLOIT_WORKDIR/<COPIED_POC_FILE>"
+cd -- "$SEARCHSPLOIT_ORIGINAL_DIR"
+rmdir -- "$SEARCHSPLOIT_WORKDIR"
+test ! -e "$SEARCHSPLOIT_WORKDIR"
+```
+
+디렉터리가 비지 않거나 예상하지 않은 파일이 있으면 재귀 삭제하지 않고 내용을 확인한다. `searchsploit -u`는 로컬 Exploit-DB mirror를 갱신하므로 현재 search에 필수인 단계가 아니며, 기존 mirror 상태를 보존해야 하는 환경에서는 실행하지 않는다.
+
 ## 관련 공격기법
 
 - [[Public Exploit 검토와 검증]]
+
+## 참고 링크
+
+- [Exploit-DB SearchSploit](https://gitlab.com/exploit-database/exploitdb/-/tree/main)

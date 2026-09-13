@@ -31,7 +31,8 @@ tags:
 ### 한 사람의 이름으로 사용자명 생성
 
 ```bash
-./username-anarchy Betty Jayde > user.list
+test ! -e '<USER_LIST>'
+./username-anarchy '<FIRST_NAME>' '<LAST_NAME>' > '<USER_LIST>'
 ```
 
 확인할 출력:
@@ -41,7 +42,8 @@ tags:
 ### 이름 목록으로 사용자명 생성
 
 ```bash
-./username-anarchy -i <OPERATOR_HOME>/names.txt > users.txt
+test ! -e '<USER_LIST>'
+./username-anarchy -i '<NAMES_FILE>' > '<USER_LIST>'
 ```
 
 확인할 출력:
@@ -51,7 +53,7 @@ tags:
 ### Hydra와 연결
 
 ```bash
-hydra -L user.list -p '<PASSWORD>' ssh://<TARGET>
+hydra -L '<USER_LIST>' -p '<PASSWORD>' ssh://<TARGET>
 ```
 
 확인할 출력:
@@ -72,6 +74,17 @@ hydra -L user.list -p '<PASSWORD>' ssh://<TARGET>
 |---|---|---|
 | 여러 사용자명 후보 출력 | 조직 ID 규칙 후보 확보 | `hydra`, `netexec`, `kerbrute`로 검증 |
 | 결과가 맞지 않음 | 조직 규칙이 다름 | 이메일 주소, 문서 작성자, SMB/LDAP 단서로 규칙 보정 |
+
+## 변경 영향과 로컬 산출물 정리
+
+`<USER_LIST>`는 이번 실행이 만든 사용자명 후보 파일이며 실제 계정 존재를 확정하지 않는다. 조직 실명을 포함할 수 있으므로 Vault에 저장하지 않고 승인된 작업 경로에서만 다룬다. 후속 검증과 인계가 끝나면 생성 전에 부재를 확인한 정확한 파일만 삭제한다.
+
+```bash
+rm -- '<USER_LIST>'
+test ! -e '<USER_LIST>'
+```
+
+삭제 실패 시 먼저 경로·소유권과 후속 도구가 파일을 열고 있는지 확인한다. 이름 pattern으로 다른 목록을 일괄 삭제하지 않는다.
 
 ## 관련 공격기법
 

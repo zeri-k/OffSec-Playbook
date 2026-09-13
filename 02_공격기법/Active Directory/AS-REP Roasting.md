@@ -149,7 +149,7 @@ Test-Path -LiteralPath '<ASREP_HASH_FILE>'
 
 - Linux 확인은 두 `test` 모두 종료 코드 `0`, Windows 확인은 `False`여야 파일 정리가 완료된 것이다.
 - KDC 감사 기록은 복구 대상이 아니며 삭제하지 않는다.
-- `GenericWrite`·`GenericAll`로 pre-authentication 설정을 임시 변경하는 경로는 이 문서의 실행 범위가 아니므로, 이 절차를 실행했다고 해서 해당 설정이 복구됐다고 판정하지 않는다.
+- `GenericWrite`·`GenericAll`로 pre-authentication 설정을 임시 변경해야 한다면 이 문서에서 섞어 실행하지 않고 [[임시 DONT_REQ_PREAUTH 설정과 AS-REP 요청]]에서 기준선·짧은 변경 창·즉시 복구를 함께 수행한다.
 
 ## 확인할 출력과 권한
 
@@ -176,6 +176,7 @@ Test-Path -LiteralPath '<ASREP_HASH_FILE>'
 ## 비교 기법
 
 - 유효한 도메인 계정 또는 TGT로 SPN 계정의 서비스 티켓을 요청할 때: [[Kerberoasting]]
+- 대상 사용자 객체를 제어해 pre-authentication 설정을 잠시 바꿔야 할 때: [[임시 DONT_REQ_PREAUTH 설정과 AS-REP 요청]]
 
 ## 관련 상태 라우터
 

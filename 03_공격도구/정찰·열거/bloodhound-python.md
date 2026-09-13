@@ -14,6 +14,8 @@ tags:
 
 `bloodhound-python`은 Linux에서 AD 객체·ACL·세션 관계를 수집해 BloodHound가 읽는 JSON 또는 ZIP 파일을 만든다. 도메인에 가입되지 않은 Linux 호스트에서 수집 범위를 조절하며 그래프 분석 자료를 준비할 때 적합하다.
 
+공식 저장소의 `master`와 PyPI `bloodhound` 패키지는 Legacy BloodHound 4.2/4.3용 `bloodhound-python`이다. BloodHound CE에는 `bloodhound-ce` branch·패키지의 `bloodhound-ce-python`을 사용한다. collector와 분석 서버 세대를 맞추고, 아래 명령은 Legacy CLI 기준으로 읽는다.
+
 ## 필요한 입력과 실행 환경
 
 - 실행 환경: 대상 DC와 DNS에 접근 가능한 Linux 호스트
@@ -23,15 +25,17 @@ tags:
 ## 표준 사용법
 
 ```bash
-bloodhound-python -u <USER> -p '<PASSWORD>' -d <DOMAIN> -ns <DC_IP> -c <COLLECTION_METHOD>
+bloodhound-python -u '<USER>@<DOMAIN>' -d <DOMAIN> -ns <DC_IP> -c <COLLECTION_METHOD>
 ```
+
+`-p`를 생략하면 비밀번호 prompt를 사용하므로 command history와 process argument에 평문을 직접 넣지 않는다.
 
 ## 대표 예시
 
 ### 전체 수집
 
 ```bash
-bloodhound-python -u <USER> -p '<PASSWORD>' -d <DOMAIN> -ns <DC_IP> -c all --zip
+bloodhound-python -u '<USER>@<DOMAIN>' -d <DOMAIN> -ns <DC_IP> -c all --zip -op <OUTPUT_PREFIX>
 ```
 
 확인할 출력:
@@ -41,7 +45,7 @@ bloodhound-python -u <USER> -p '<PASSWORD>' -d <DOMAIN> -ns <DC_IP> -c all --zip
 ### DC 중심 수집으로 범위 축소
 
 ```bash
-bloodhound-python -u <USER> -p '<PASSWORD>' -d <DOMAIN> -ns <DC_IP> -c DCOnly --zip
+bloodhound-python -u '<USER>@<DOMAIN>' -d <DOMAIN> -ns <DC_IP> -c DCOnly --zip -op <OUTPUT_PREFIX>
 ```
 
 확인할 출력:
@@ -51,34 +55,35 @@ bloodhound-python -u <USER> -p '<PASSWORD>' -d <DOMAIN> -ns <DC_IP> -c DCOnly --
 ### NTLM hash로 인증
 
 ```bash
-bloodhound-python -u <USER> --hashes ':<NTLM_HASH>' -d <DOMAIN> -ns <DC_IP> -c DCOnly --zip
+bloodhound-python -u '<USER>@<DOMAIN>' --hashes ':<NTLM_HASH>' -d <DOMAIN> -ns <DC_IP> -c DCOnly --zip -op <OUTPUT_PREFIX>
 ```
 
 ### 신뢰 관계가 있는 두 도메인 수집
 
 ```bash
-bloodhound-python -d <SOURCE_DOMAIN> -dc <SOURCE_DC_FQDN> -c All -u <USER> -p '<PASSWORD>'
-bloodhound-python -d <TARGET_TRUST_DOMAIN> -dc <TARGET_DC_FQDN> -c All -u <USER>@<SOURCE_DOMAIN> -p '<PASSWORD>'
-zip -r trusted-forest-bloodhound.zip *.json
+bloodhound-python -d <SOURCE_DOMAIN> -dc <SOURCE_DC_FQDN> -ns <SOURCE_DNS_IP> -c DCOnly --zip -op <SOURCE_OUTPUT_PREFIX> -u '<USER>@<SOURCE_DOMAIN>'
+bloodhound-python -d <TARGET_TRUST_DOMAIN> -dc <TARGET_DC_FQDN> -ns <TARGET_DNS_IP> -c DCOnly --zip -op <TARGET_OUTPUT_PREFIX> -u '<USER>@<SOURCE_DOMAIN>'
 ```
 
 확인할 출력:
 
-- 각 대상의 domain·forest·computer·user·group·trust 수와 생성된 JSON 파일.
-- 대상 DC FQDN이 해석되지 않으면 실행 호스트가 사용하는 DNS 서버와 도메인 검색 suffix를 먼저 확인한다.
+- 각 대상의 domain·forest·computer·user·group·trust 수와 `--zip`이 생성한 서로 다른 ZIP 파일.
+- 대상 DC FQDN이 해석되지 않으면 `-ns`로 지정한 DNS가 해당 FQDN을 실제로 해석하는지 먼저 확인한다. 시스템의 `/etc/resolv.conf`를 바꾸는 것을 기본 절차로 두지 않는다.
 - 양쪽 데이터를 함께 분석해야 외부 도메인 그룹 멤버십을 한 그래프에서 확인할 수 있다.
+- source 수집 성공만으로 target 도메인의 LDAP 인증·읽기 권한을 확정하지 않는다.
 
 ## 주요 옵션
 
 | 옵션 | 의미 | 사용하는 상황 |
 |---|---|---|
-| `-u`, `-p` | 사용자와 비밀번호 | 평문 credential 사용 |
+| `-u`, `-p` | 사용자와 비밀번호 | `-u`만 주면 password prompt를 사용하고, 자동화에 꼭 필요할 때만 노출 경로를 검토한 뒤 `-p` 사용 |
 | `--hashes` | LM:NTLM hash | NTLM hash로 인증 |
 | `-d` | 대상 AD domain | 조회 기준 지정 |
 | `-ns` | DNS server | DC 이름 해석 고정 |
 | `-dc` | 수집에 사용할 DC의 FQDN | 특정 현재·신뢰 대상 도메인의 DC 지정 |
 | `-c` | 수집 방법 | `all`, `DCOnly`, `Session`, `ACL` 등 범위 조절 |
 | `--zip` | 결과 압축 | BloodHound 업로드 단순화 |
+| `-op` | 출력 파일 prefix | 같은 디렉터리의 여러 수집 결과 구분 |
 
 ## 도구 고유 출력
 
@@ -94,3 +99,8 @@ zip -r trusted-forest-bloodhound.zip *.json
 - [[AD 관계 그래프 수집과 공격 경로 식별]]
 - [[AD ACL 권한 열거와 공격 경로 식별]]
 - [[AD 도메인 트러스트 열거와 공격 경로 식별]]
+
+## 참고 링크
+
+- [BloodHound.py 공식 저장소](https://github.com/dirkjanm/BloodHound.py)
+- [BloodHound.py CLI 구현](https://github.com/dirkjanm/BloodHound.py/blob/master/bloodhound/__init__.py)

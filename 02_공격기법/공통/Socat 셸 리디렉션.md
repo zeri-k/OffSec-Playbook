@@ -131,3 +131,8 @@ ss -ltnp | grep -E '[:.]<LISTEN_PORT>[[:space:]]'
 
 - [[Reverse Shell 획득]]
 - [[Bind Shell 획득]]
+
+## 참고 링크
+
+- [Socat 공식 저장소](https://repo.or.cz/socat.git)
+- [Socat manual](https://man7.org/linux/man-pages/man1/socat.1.html)

@@ -36,6 +36,20 @@ msfvenom -p <payload> LHOST=<ip> LPORT=<port> -f <format> -o <output>
 
 underscore와 slash 차이는 이름 표기만이 아니라 전달 방식 차이다. 설치된 버전에서 `msfvenom -l payloads`로 정확한 payload 이름을 확인하고, `exploit/multi/handler`의 `PAYLOAD`, transport, `LHOST`·`LPORT`를 생성 명령과 일치시킨다. 파일 생성 성공은 stager 연결·stage 전달 또는 stageless session 개설을 뜻하지 않는다.
 
+### encoder와 bad character
+
+Encoder는 exploit·전달 경로가 허용하지 않는 null byte·줄바꿈 같은 byte를 피하도록 payload representation을 바꾼다. 대상 platform·architecture와 호환되는 encoder만 선택할 수 있으며 encoder가 x86 payload를 x64 payload로 바꾸거나 반대 architecture의 실행을 가능하게 하는 것은 아니다.
+
+`-b '<BAD_BYTES>'`를 사용하면 msfvenom이 호환 encoder를 선택할 수 있고, 특정 encoder는 `-e <ENCODER>`로 지정한다. 생성 후 출력의 `Found/Attempting`, 선택된 encoder, payload/final size와 오류를 확인한다. 반복 횟수 `-i`는 결과 크기를 늘릴 수 있으며 여러 번 encoding해도 AV·EDR 우회를 보장하지 않는다. bad character가 확인되지 않은 상황에서 encoding을 기본 성공 조건으로 추가하지 않는다.
+
+### 탐지·외부 분석 경계
+
+`reverse_https` 같은 암호화 transport는 내용 관찰 범위를 바꿀 수 있지만 payload 파일, 실행 process, endpoint 주소·시간·트래픽 양과 행위 기반 탐지를 없애지 않는다. archive·packer·확장자 제거도 검사 불가·이상 파일·실행 후 행위를 별도 단서로 만들 수 있으므로 “탐지되지 않음”으로 판정하지 않는다.
+
+`-x <TEMPLATE>`와 `-k`는 template에 payload를 삽입하고 별도 thread로 원래 동작을 보존하려는 option이지만 Rapid7의 현재 문서는 `-k` 신뢰성을 오래된 x86 Windows 환경으로 제한한다. 정상 기능 유지, architecture·서명·무결성, 실행 결과를 확인하지 않은 template payload를 범용 전달 절차로 사용하지 않는다.
+
+공개 VirusTotal 제출은 결과를 여러 분석 partner와 공유하고 file name·submission metadata·sample 분석을 남길 수 있다. 고객 binary, 내부 URL·주소·credential·고유 payload는 공개 API나 공개 web upload에 제출하지 않는다. 이미 공개된 hash의 기존 report 조회와 승인된 private scanning은 새 sample 제출과 구분한다. 탐지 수가 0이라는 결과도 향후 또는 대상 환경의 미탐지를 보장하지 않는다.
+
 ## 대표 예시
 
 ### Windows Meterpreter 실행 파일 생성
@@ -78,6 +92,8 @@ bind payload의 `LPORT`는 내부 대상이 수신할 포트다. 공격 호스�
 | `-l` | payload/format/encoder 목록 확인 |
 | `-a`, `--platform` | 아키텍처와 플랫폼 지정 |
 | `-e`, `-b` | encoder와 bad character 지정 |
+| `-i` | encoder 반복 횟수. 결과 크기와 전달 제한을 함께 확인 |
+| `-x`, `-k` | executable template과 원래 동작 보존 시도. 현재 문서·대상별 호환성을 별도 확인 |
 
 
 ## 도구 고유 출력
@@ -102,3 +118,7 @@ bind payload의 `LPORT`는 내부 대상이 수신할 포트다. 공격 호스�
 ## 참고 링크
 
 - [Rapid7: Payload Generator](https://docs.rapid7.com/metasploit/the-payload-generator/)
+- [Metasploit: How to use msfvenom](https://docs.metasploit.com/docs/using-metasploit/basics/how-to-use-msfvenom.html)
+- [Rapid7: Encoded payloads do not guarantee antivirus bypass](https://docs.rapid7.com/metasploit/encoded-payloads-bypassing-anti-virus/)
+- [VirusTotal: How it works](https://docs.virustotal.com/docs/how-it-works)
+- [VirusTotal: File report and submission metadata](https://docs.virustotal.com/docs/results-reports)

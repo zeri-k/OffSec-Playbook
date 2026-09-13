@@ -24,30 +24,46 @@ tags:
 ## 표준 사용법
 
 ```bash
-manspider <target> [options]
+manspider <TARGET> -u '<USER>' -p '<PASSWORD>' -l '<MANSPIDER_OUTPUT_DIR>' [options]
 ```
+
+현재 MANSPIDER 2.x는 match 파일을 기본적으로 loot 경로에 다운로드하고 log를 남긴다. 로컬 사본이 필요 없으면 `-n`으로 download를 끄고, 필요하면 이번 작업의 고유 `-l` 경로를 지정한다.
 
 ## 대표 예시
 
 ### SMB share에서 password 문자열 검색
 
 ```bash
-docker run --rm -v ./manspider:/root/.manspider blacklanternsecurity/manspider <TARGET> -c 'passw' -u '<USER>' -p '<PASSWORD>'
+MANSPIDER_OUTPUT_DIR="$(mktemp -d "${PWD}/manspider.XXXXXX")"
+printf 'MANSPIDER output: %s\n' "$MANSPIDER_OUTPUT_DIR"
+docker run --rm -v "$MANSPIDER_OUTPUT_DIR:/root/.manspider" blacklanternsecurity/manspider <TARGET> --sharenames '<SHARE>' -c 'passw' -u '<USER>' -p '<PASSWORD>'
 ```
 
 ### 검색 결과를 로컬 loot 디렉터리에 보존
 
 ```text
--v ./manspider:/root/.manspider 로 Docker volume을 연결하면 다운로드된 매칭 파일과 로그를 로컬에 남길 수 있다.
+-v <MANSPIDER_OUTPUT_DIR>:/root/.manspider 로 Docker volume을 연결하면 다운로드된 매칭 파일과 로그를 이번 작업의 고유 로컬 경로에 남길 수 있다.
 ```
+
+### 파일명·content match만 보고 download하지 않기
+
+```bash
+manspider <TARGET> --sharenames '<SHARE>' -f '<FILENAME_REGEX>' -c '<CONTENT_REGEX>' -n -l "$MANSPIDER_OUTPUT_DIR" -u '<USER>' -p '<PASSWORD>'
+```
+
+`-n`은 match 파일 download를 끄지만 log 생성과 원격 SMB 조회 흔적까지 없애지 않는다. 출력 경로·share·match를 확인한 뒤 필요한 파일만 별도 수집한다.
 
 ## 주요 옵션
 
 | 옵션 | 설명 |
 | --- | --- |
 | `-c` | 파일 내용에서 찾을 문자열 지정 |
+| `-f`, `-e` | 파일명 regex 또는 확장자로 범위 축소 |
 | `-u`, `-p` | SMB 인증 사용자와 비밀번호 |
 | `-d` | 도메인 지정 |
+| `-l` | loot·log용 로컬 출력 디렉터리 |
+| `-n` | match 파일을 다운로드하지 않음 |
+| `--sharenames` | 지정한 공유로 검색 범위 제한 |
 | target | 단일 IP, 호스트명, 대역 지정 |
 | Docker volume | loot와 결과를 호스트에 보존 |
 
@@ -61,6 +77,22 @@ docker run --rm -v ./manspider:/root/.manspider blacklanternsecurity/manspider <
 | 결과 없음 | 키워드/확장자/권한 범위 제한 가능 | 검색어, 확장자, share 목록, 계정 권한 보강 |
 | timeout/접근 거부 | 네트워크 지연 또는 share 권한 부족 | 특정 share로 범위 축소, credential 재확인 |
 
+## 변경 영향과 정리
+
+MANSPIDER는 원격 공유를 읽고 `<MANSPIDER_OUTPUT_DIR>`에 log와, `-n`이 없으면 match 파일 사본을 만든다. 원격 파일을 수정하지는 않지만 SMB·AD 감사 흔적은 남을 수 있다. 검토·인계 후 출력 파일의 경로·크기·소유자를 확인하고, 이번 실행이 만든 고유 디렉터리 안의 파일·빈 디렉터리만 정리한다.
+
+```bash
+find "$MANSPIDER_OUTPUT_DIR" -xdev -depth -type f -delete
+find "$MANSPIDER_OUTPUT_DIR" -xdev -depth -type d -empty -delete
+test ! -e "$MANSPIDER_OUTPUT_DIR"
+```
+
+경로가 남으면 예상하지 않은 파일 형식·소유자·열린 process를 확인하고 정리 완료로 표시하지 않는다. 다른 `~/.manspider`나 이름 pattern으로 출력을 일괄 삭제하지 않는다.
+
 ## 관련 공격기법
 
 - [[SMB 공유 자격증명 수집]]
+
+## 참고 링크
+
+- [MANSPIDER 공식 저장소 — usage·loot·filter](https://github.com/blacklanternsecurity/MANSPIDER)

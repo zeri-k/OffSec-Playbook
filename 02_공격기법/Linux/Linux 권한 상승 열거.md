@@ -56,13 +56,14 @@ root 등 더 높은 권한으로 실행될 파일과 현재 계정이 쓸 수 �
 ```bash
 find / -perm -4000 -type f 2>/dev/null
 find / -writable -type d 2>/dev/null | head
+test -w /etc/passwd && ls -l /etc/passwd
 cat /etc/crontab
 ls -la /etc/cron.d /etc/cron.hourly /etc/cron.daily 2>/dev/null
 ```
 
 확인할 출력:
 
-- SUID binary, writable script/path, cron 실행 사용자.
+- SUID binary, writable script/path, writable `/etc/passwd`, cron 실행 사용자.
 - `find`의 숨긴 permission denied 때문에 결과가 일부일 수 있다. 발견한 파일은 소유자·mode·실제 실행 경로를 다시 확인하고, writable 디렉터리만으로 높은 권한 실행을 단정하지 않는다.
 
 ### 자동 열거
@@ -84,6 +85,7 @@ ls -la /etc/cron.d /etc/cron.hourly /etc/cron.daily 2>/dev/null
 | 관찰 | 판단 | 결과 상태 | 다음 행동 |
 |---|---|---|---|
 | root로 실행 가능한 sudo, SUID 또는 cron 경로가 발견된다. | 실행 주체와 제어 지점 확인 | 권한 상승 단서 | 유형에 따라 [[sudo 권한 오남용]], [[SUID GTFOBins 권한 상승]], [[Cron 권한 상승]]으로 분기 |
+| 현재 사용자로 `/etc/passwd` 내용을 수정할 수 있다. | 계정 인증 상태를 바꿀 수 있는 고영향 파일 권한 오류 | 권한 상승 후보 | [[쓰기 가능한 passwd 빈 비밀번호 권한 상승]]에서 PAM 수락 조건·기준선·즉시 복구를 먼저 확인 |
 | 읽을 수 있는 비밀번호, SSH key 또는 DB credential이 나온다. | 재사용 가능한 자격 증명 단서 확인 | 자격 증명 단서 | 소유자와 대상 서비스를 확인하고 해당 인증 기법으로 전달 |
 | kernel/software 버전과 exploit 전제 조건이 모두 맞는다. | 로컬 exploit 후보 확인 | 권한 상승 후보 | [[Kernel Exploit 후보 검증]]에서 빌드, 아키텍처와 보호 설정 재확인 |
 | 자동 스크립트 차단 | AV/모니터링/권한 | 시작 상태 유지 | 수동 열거, 작은 명령 단위 |
@@ -100,6 +102,7 @@ ls -la /etc/cron.d /etc/cron.hourly /etc/cron.daily 2>/dev/null
 - [[sudo 권한 오남용]]
 - [[SUID GTFOBins 권한 상승]]
 - [[Cron 권한 상승]]
+- [[쓰기 가능한 passwd 빈 비밀번호 권한 상승]]
 - [[Linux 파일 자격증명 검색]]
 - [[Linux Shell History 자격증명 검색]]
 - [[Linux 개인키 검색]]

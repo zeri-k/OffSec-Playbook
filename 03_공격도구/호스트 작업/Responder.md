@@ -22,6 +22,7 @@ Responder는 Linux에서 LLMNR·NBT-NS·mDNS·WPAD 요청을 관찰하거나 응
 - 권한 조건: packet capture와 rogue service 포트 bind가 가능한 root 권한
 - 네트워크 조건: LLMNR/NBT-NS/mDNS/WPAD 요청을 관찰할 수 있는 위치
 - relay 연계 조건: Responder의 SMB/HTTP server와 ntlmrelayx listener가 같은 포트를 점유하지 않도록 설정
+- 산출물 기준: 설치 위치의 `logs/`와 `Responder.db`는 이전 실행 자료가 누적될 수 있으므로 작업 전 경로·byte 크기·수정 시각을 기록
 
 ## 표준 사용법
 
@@ -50,7 +51,7 @@ sudo responder -I <INTERFACE> -wrfv
 ### 응답하지 않고 이름 해석 트래픽만 관찰
 
 ```bash
-sudo responder -I eth0 -A
+sudo responder -I <INTERFACE> -A
 ```
 
 ## 주요 옵션
@@ -78,12 +79,28 @@ sudo responder -I eth0 -A
 | 요청은 보이나 인증 응답 없음 | poisoning 비활성, 캐시 또는 인증 유도 미발생 | analyze mode 여부, protocol 옵션, 요청 유형 확인 |
 | address already in use | Responder와 relay listener의 포트 충돌 | Responder SMB/HTTP server 설정과 listener 포트 확인 |
 
+## 종료와 산출물 정리
+
+Responder는 전경 terminal에서 `Ctrl+C`로 종료한다. 시작 전후 `sudo ss -luntp`와 exact command line을 비교하고, 종료 뒤 남은 process를 찾을 때도 이름만으로 일괄 종료하지 않는다.
+
+```bash
+pgrep -af 'responder.*-I <INTERFACE>'
+sudo ss -luntp
+```
+
+이번 PID가 없고 listener가 작업 전 상태로 돌아와야 능동 응답과 rogue service가 중지된 것이다. `logs/`의 protocol별 text 파일과 `Responder.db`는 기존 capture가 누적되는 저장소일 수 있다. 작업 전 없던 파일임이 확인되지 않으면 전체 파일이나 DB를 삭제하지 않고, 필요한 이번 byte 범위만 별도 작업 파일로 분리한다. 독립 시나리오의 입력·potfile 처분과 계정 잠금 확인은 [[무인증 내부망에서 Responder로 AD 자격 증명 확보]]에서 수행한다.
+
 ## 관련 공격기법
 
 - [[내부망 수동 호스트 식별]]
 - [[LLMNR NBT-NS 포이즈닝으로 NTLM 인증 수집]]
 - [[네트워크 트래픽 자격증명 수집]]
 - [[NTLM Relay 조건 검토]]
+- [[DnsAdmins WPAD DNS 레코드로 NTLM 인증 유도]]
+
+## 참고 링크
+
+- [Responder 공식 저장소](https://github.com/lgandx/Responder)
 
 ## 관련 시나리오
 

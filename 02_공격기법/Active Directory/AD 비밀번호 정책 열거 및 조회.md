@@ -164,6 +164,12 @@ Get-ADUserResultantPasswordPolicy -Identity '<USER>' |
 - `lockoutThreshold: 0`을 무제한 시도 조건으로 해석하지 않고 시도 횟수·간격과 탐지 위험을 별도로 판단한다.
 - 익명, 일반 도메인 사용자와 관리자 권한을 구분하며 정책 조회 성공을 다른 AD 객체의 쓰기 권한으로 확대 해석하지 않는다.
 
+### 정책 출력과 실제 비밀번호 상태 구분
+
+- 최소 길이·복잡성·만료 값은 서버가 반환한 적용 정책이다. 개별 사용자의 현재 비밀번호가 강하거나 특정 후보와 일치한다는 증거가 아니다.
+- 정책 해석에서 관찰한 AD 설정과 보수적인 인증 시도 상한을 먼저 분리한다. 조직명·계절어·노출 비밀번호와 같은 후보의 품질은 승인된 관찰·blocklist와 별도로 평가한다.
+- 현재 NIST 지침은 일반적인 정기 변경을 비밀번호 강도의 대리 지표로 사용하지 않고, 노출 근거·사용자 요청·인증 수단 침해 증거가 있을 때 변경하도록 안내한다. 또한 일반·예상·노출·context-specific 값을 blocklist로 검사하고 실패 시도를 rate limit하도록 요구한다. 이 문서는 현재 대상 정책을 읽어 시도 위험을 계산하는 절차이며 대상 정책 변경을 제공하지 않는다.
+
 ## 변경 영향과 로컬 출력 정리
 
 - RPC·LDAP·CrackMapExec·Windows 정책 조회와 AD PowerShell cmdlet은 대상 정책을 읽을 뿐 변경하지 않는다. 다만 인증 경로는 서버 감사 기록을 남길 수 있다.
@@ -201,3 +207,4 @@ test ! -e '<OUTPUT_BASENAME>.json' && test ! -e '<OUTPUT_BASENAME>.yaml'
 - [Microsoft Learn — Get-ADDefaultDomainPasswordPolicy](https://learn.microsoft.com/en-us/powershell/module/activedirectory/get-addefaultdomainpasswordpolicy)
 - [Microsoft Learn — Get-ADFineGrainedPasswordPolicy](https://learn.microsoft.com/en-us/powershell/module/activedirectory/get-adfinegrainedpasswordpolicy)
 - [Microsoft Learn — Get-ADUserResultantPasswordPolicy](https://learn.microsoft.com/en-us/powershell/module/activedirectory/get-aduserresultantpasswordpolicy)
+- [NIST SP 800-63B — Password Verifiers](https://pages.nist.gov/800-63-4/sp800-63b.html#passwordver)

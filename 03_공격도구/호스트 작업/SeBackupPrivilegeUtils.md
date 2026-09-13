@@ -17,9 +17,12 @@ tags:
 ## 필요한 입력과 실행 환경
 
 - 실행 위치: 파일이 있는 대상 Windows 호스트의 PowerShell 세션.
-- 필요한 권한: `whoami /priv`에 `SeBackupPrivilege`가 있어야 하며, 명시적 deny ACE는 별도로 실패할 수 있다.
+- 필요한 권한: `whoami /priv`에 `SeBackupPrivilege`가 있어야 하며 `Set-SeBackupPrivilege` 뒤 같은 PowerShell process에서 활성 상태를 확인한다.
 - 필요한 파일: 대상 환경에 맞는 `SeBackupPrivilegeUtils.dll`, `SeBackupPrivilegeCmdLets.dll`.
+- 호환 조건: upstream에 포함된 prebuilt DLL은 x64·.NET Framework 2.0용이다. `Import-Module` 실패 시 현재 PowerShell process architecture와 CLR 호환성을 확인하고, 맞지 않으면 검증된 source에서 대상 환경용으로 빌드한 DLL을 사용한다.
 - 대상 조건: 원본 파일 경로와 현재 계정이 쓸 수 있는 사본 저장 경로.
+
+현재 upstream 구현은 원본을 `GENERIC_READ`, share mode 0, `OPEN_EXISTING`, `FILE_FLAG_BACKUP_SEMANTICS`로 열고 `ReadFile`로 기본 stream을 복사한다. 따라서 활성화된 backup privilege의 읽기에는 원본 DACL의 명시적 deny를 일반 실패 원인으로 두지 않는다. 반면 출력은 backup flag 없이 `GENERIC_WRITE`로 새로 열므로 출력 parent ACL과 파일 충돌이 별도 조건이며, source의 기존 handle과 share mode가 충돌하면 sharing violation이 날 수 있다. EFS·alternate stream·reparse point 등 파일 형태는 이 단순 복사가 모든 backup data를 보존한다고 가정하지 말고 생성된 사본을 따로 검증한다.
 
 ## 표준 사용법
 
@@ -56,7 +59,8 @@ Get-FileHash '<WRITABLE_PATH>\copied-file'
 
 - `Copied <SIZE> bytes`와 생성된 사본의 크기·hash.
 - 이 출력만으로 원본의 최신성, 사본 내용의 유용성이나 고권한 세션을 확정할 수는 없다.
-- access denied이면 privilege 활성 상태, 원본의 명시적 deny ACE, 출력 경로 ACL을 순서대로 확인한다.
+- `Opening input file`이면 같은 process의 privilege 활성 상태, DLL 호환성, 원본 경로·EFS와 sharing violation을 확인한다.
+- `Error creating output file`이면 출력 파일의 사전 존재·overwrite 선택, parent directory ACL과 사용 중인 handle을 확인한다.
 
 ## 주요 명령
 
@@ -72,8 +76,16 @@ Get-FileHash '<WRITABLE_PATH>\copied-file'
 |---|---|---|
 | `SeBackupPrivilege is enabled` | 현재 세션에서 privilege 활성화 | 보호 파일 복사 시도 |
 | `Copied <SIZE> bytes` | 사본 생성 성공 | 크기·hash와 내용 확인 |
-| access denied | token·ACE·원본 또는 출력 경로 조건 실패 | `whoami /priv`, 원본 DACL, 대상 경로 ACL 확인 |
+| `Opening input file`·access denied·sharing violation | privilege·모듈 호환성 또는 source open 조건 실패 | 같은 process의 privilege 상태, source 경로·암호화·share mode 확인 |
+| `Error creating output file` | destination create 조건 실패 | 사전 존재·overwrite 선택과 parent ACL 확인 |
 
 ## 관련 공격기법
 
 - [[SeBackupPrivilege로 보호된 파일과 hive 복사]]
+
+## 참고 링크
+
+- [SeBackupPrivilege upstream](https://github.com/giuliano108/SeBackupPrivilege)
+- [SeBackupPrivilegeUtils implementation](https://github.com/giuliano108/SeBackupPrivilege/blob/master/SeBackupPrivilegeUtils/Utils.cs)
+- [Microsoft: File Security and Access Rights](https://learn.microsoft.com/windows/win32/fileio/file-security-and-access-rights)
+- [Microsoft: CreateFile](https://learn.microsoft.com/windows/win32/api/fileapi/nf-fileapi-createfilew)

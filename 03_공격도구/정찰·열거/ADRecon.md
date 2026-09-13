@@ -18,8 +18,8 @@ ADRecon은 도메인·포리스트·trust·사용자·그룹·컴퓨터·GPO·DN
 
 - 실행 위치: 대상 AD와 DNS에 접근 가능한 Windows PowerShell
 - 계정 조건: 도메인 사용자 컨텍스트로 시작하며 LAPS·BitLocker Recovery Key 같은 항목은 별도 읽기 권한 필요
-- 선택 구성: Excel 보고서 생성에는 Excel, GPO 출력에는 GroupPolicy PowerShell 모듈 필요
-- 출력 위치: 실행 디렉터리 아래 생성되는 `ADRecon-Report-<TIMESTAMP>` 폴더
+- 선택 구성: 현재 upstream에서 Excel application은 선택 사항이며, GPO 출력에는 GroupPolicy PowerShell 모듈·RSAT가 필요
+- 출력 위치: `-OutputDir`로 지정하고 실행 전에 존재하지 않음을 확인한 전용 폴더
 
 ## 표준 사용법
 
@@ -31,8 +31,11 @@ ADRecon은 도메인·포리스트·trust·사용자·그룹·컴퓨터·GPO·DN
 
 ### 전체 기본 수집
 
+기존 결과와 섞이지 않는 전용 경로를 지정한다. 현재 upstream의 기본 수집은 모든 optional module을 의미하지 않으므로 `-Collect`·`-OutputType`을 생략한 결과 범위를 실행 출력에서 확인한다.
+
 ```powershell
-.\ADRecon.ps1
+if (Test-Path -LiteralPath '<ADRECON_RUN_DIRECTORY>') { throw 'run directory already exists' }
+.\ADRecon.ps1 -OutputDir '<ADRECON_RUN_DIRECTORY>'
 ```
 
 확인할 출력:
@@ -49,7 +52,7 @@ ADRecon은 도메인·포리스트·trust·사용자·그룹·컴퓨터·GPO·DN
 확인할 출력:
 
 - 지정한 보고서 디렉터리의 CSV를 바탕으로 생성된 Excel 결과.
-- Excel이 없으면 CSV만 생성될 수 있으므로 스크립트 완료와 Excel 파일 생성을 구분한다.
+- 지정한 output folder의 CSV를 읽어 Excel 파일이 생성됐는지 확인한다. 현재 upstream은 Excel application을 필수로 요구하지 않지만, 역사적 교육자료나 구버전 script의 요구 사항과 혼용하지 않는다.
 
 ## 주요 수집 범위와 조건
 
@@ -70,8 +73,23 @@ ADRecon은 도메인·포리스트·trust·사용자·그룹·컴퓨터·GPO·DN
 | `Output Directory` | 결과 폴더 생성 위치 | CSV·GPO XML·HTML 파일 존재 확인 |
 | `GPO-Report.html`, `GPO-Report.xml` | GPO 보고서 생성 | Group3r·직접 GPO 조회와 교차 확인 |
 | LAPS·BitLocker 항목 빈 결과 | 객체 부재 또는 현재 계정 읽기 제한 | 배포 여부와 비밀 속성 읽기 권한을 분리해 확인 |
-| Excel 보고서 없음 | Excel 미설치 또는 보고서 생성 단계 실패 | CSV 생성 여부와 `-GenExcel` 실행 조건 확인 |
+| Excel 보고서 없음 | 현재 output type·version에서 생성을 생략했거나 보고서 생성 단계 실패 | CSV 생성 여부, `-GenExcel` 입력 경로와 현재 release 요구 조건 확인 |
+
+## 변경 영향과 복구
+
+보고서 directory에는 사용자·SPN·group·trust·DNS·GPO와 권한이 허용된 경우 LAPS·BitLocker 같은 민감 속성이 포함될 수 있다. 후속 분석과 필요한 사본 처리가 끝난 뒤, 실행 전 존재하지 않았던 exact `<ADRECON_RUN_DIRECTORY>`만 제거한다.
+
+```powershell
+Remove-Item -LiteralPath '<ADRECON_RUN_DIRECTORY>' -Recurse
+Test-Path -LiteralPath '<ADRECON_RUN_DIRECTORY>'
+```
+
+마지막 출력이 `False`여야 로컬 수집물 정리가 끝난 것이다. 디렉터리 존재 기준선을 확인하지 못했거나 다른 작업 파일이 섞였다면 재귀 삭제하지 않고 생성 manifest와 exact 파일을 먼저 대조한다. LDAP·ADWS·SYSVOL 조회 기록과 이미 복사한 보고서는 이 정리로 제거되지 않는다.
 
 ## 관련 공격기법
 
 - [[AD 보안 구성과 GPO 감사]]
+
+## 참고 링크
+
+- [ADRecon 공식 저장소와 현재 사용법](https://github.com/adrecon/ADRecon)

@@ -72,3 +72,10 @@ socat TCP4-LISTEN:8080,fork TCP4:<INTERNAL_IP>:8443
 ## 관련 공격기법
 
 - [[Socat 셸 리디렉션]]
+
+listener PID, `fork` child와 하위 shell의 식별·종료 순서는 기법 문서의 `변경 영향과 복구`를 따른다.
+
+## 참고 링크
+
+- [Socat 공식 저장소](https://repo.or.cz/socat.git)
+- [Socat manual](https://man7.org/linux/man-pages/man1/socat.1.html)

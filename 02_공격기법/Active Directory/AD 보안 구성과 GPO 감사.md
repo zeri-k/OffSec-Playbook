@@ -37,7 +37,8 @@ Get-ADGroup -Identity "Protected Users" -Properties Name,Description,Members
 확인할 출력:
 
 - `Members`에 포함된 계정과 실제 고권한 계정 목록을 비교한다.
-- Protected Users 멤버십은 NTLM·delegation·ticket 수명 같은 인증 동작을 제한할 수 있으므로, 멤버십 유무와 실제 인증 실패 원인을 분리한다.
+- Protected Users 멤버십은 NTLM, Kerberos DES·RC4, constrained·unconstrained delegation과 4시간을 넘는 TGT 갱신을 제한한다. 구성원이 실제 AES Kerberos를 사용할 수 있는지와 기존 애플리케이션 의존성을 함께 확인한다.
+- 서비스 계정과 컴퓨터 계정에는 이 그룹을 일반적인 강화 수단으로 적용하지 않는다. 멤버십 확인은 보호가 실제로 작동했거나 계정 사용이 안전하다는 단독 증거가 아니다.
 
 ### 2. 목적별 감사 도구 선택
 
@@ -50,6 +51,19 @@ Get-ADGroup -Identity "Protected Users" -Properties Name,Description,Members
 | 객체 관계와 공격 경로 후보 | [[BloodHound]] | edge·path와 수집 시점 |
 
 도구마다 수집 범위와 결과 형식이 다르다. 여러 보고서에서 같은 항목이 반복되어도 각각 독립된 증거로 기록하고 실제 객체 조회나 서비스 접근으로 재검증한다.
+
+### 3. 강화 권고와 현재 상태를 분리해 확인
+
+| 원천의 권고 | 현재 상태에서 확인할 것 | 연결 문서 |
+|---|---|---|
+| 고권한 계정 보호·관리 계층 분리 | Protected Users 실제 membership, 사용 host와 인증 방식 | 이 문서의 1단계, [[AD 고권한 그룹과 중첩 구성원 열거]] |
+| host별 local administrator password 관리 | legacy Microsoft LAPS와 Windows LAPS 구현, 대상별 password 읽기 권한 | [[LAPS 비밀번호 읽기 권한과 자격 증명 수집]] |
+| service account의 장기 password 위험 축소 | SPN 소유 계정, gMSA 여부, enctype와 실제 TGS 형식 | [[SPN 계정 열거]], [[Kerberoasting]] |
+| SMB·LDAP signing과 NTLM 제한 | 실제 signing·channel binding·NTLM 경계와 relay 대상 조건 | [[NTLM Relay 조건 검토]] |
+| Print Spooler 노출 축소 | 대상별 spooler service와 원격 RPC interface 응답 | [[Print Spooler 원격 인터페이스 노출 확인]] |
+| trust·GPO·ACL 정기 검토 | 현재 trust direction, GPO link·ACL과 실제 적용 범위 | [[AD 도메인 트러스트 열거와 공격 경로 식별]], [[AD GPO 쓰기 권한과 영향 범위 열거]] |
+
+권고가 문서에 있다는 사실은 대상에 적용됐다는 증거가 아니다. 예를 들어 gMSA는 긴 자동 관리 password로 오프라인 복구 가능성을 크게 낮추지만 SPN과 service ticket 요청 자체를 없애지 않으므로 “Kerberoasting 불가능”으로 판정하지 않는다. 이 문서는 조회와 결과 선별만 수행하며 보안 그룹·GPO·service·registry를 변경하지 않는다.
 
 ## 관찰과 상태 전환
 
@@ -87,3 +101,5 @@ Get-ADGroup -Identity "Protected Users" -Properties Name,Description,Members
 
 ## 참고 링크
 - [Microsoft Active Directory PowerShell module](https://learn.microsoft.com/powershell/module/activedirectory/)
+- [Microsoft: Protected Users security group](https://learn.microsoft.com/windows-server/security/credentials-protection-and-management/protected-users-security-group)
+- [Microsoft: Windows LAPS overview](https://learn.microsoft.com/windows-server/identity/laps/laps-overview)

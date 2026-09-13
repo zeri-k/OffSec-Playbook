@@ -4,9 +4,9 @@ tags:
   - 환경/windows
   - 서비스/kerberos
 시작조건: ["특정 도메인 계정의 NTLM/RC4 또는 AES key 확보", "Kerberos 명령을 실행할 Windows 호스트 세션 확보"]
-필요권한: ["Rubeus를 실행하고 현재 로그온 세션에 ticket을 적용할 권한", "Mimikatz `sekurlsa::pth`는 대상 Windows 호스트 관리자 권한"]
+필요권한: ["Rubeus 실행과 전용 Type 9 process 생성 권한", "Mimikatz `sekurlsa::pth`는 대상 Windows 호스트 관리자 권한"]
 필요조건: ["실행 Windows 호스트에서 <DC_FQDN>:88 Kerberos와 DNS 접근 가능", "도메인·realm·DC FQDN과 시간 정합", "생성한 ticket으로 접근할 <HOST_FQDN>:<SERVICE_PORT> 도달 가능"]
-결과: ["key 주체 도메인 계정의 Kerberos TGT", "현재 Windows 로그온 세션의 ticket 사용 상태", "ticket 주체 권한 범위의 대상 서비스 접근"]
+결과: ["key 주체 도메인 계정의 Kerberos TGT", "전용 Windows 로그온 세션의 ticket 사용 상태", "ticket 주체 권한 범위의 대상 서비스 접근"]
 ---
 
 # OverPass the Hash
@@ -20,7 +20,7 @@ tags:
 - 현재 보유 정보: LSASS·NTDS 등에서 수집한 `<DOMAIN>\<USER>`의 NTLM/RC4 또는 AES128/AES256 key와 `<DOMAIN>`, `<DC_FQDN>`을 알고 있다. 로컬 계정 NT hash는 도메인 KDC의 TGT 발급에 사용할 수 없다.
 - 명령 실행 위치: Rubeus 또는 Mimikatz를 실행할 Windows 호스트에서 DNS로 DC와 대상 서비스 FQDN을 해석하고 Kerberos 포트에 연결할 수 있어야 한다.
 - 현재 계정·권한: 명령을 실행하는 현재 Windows 계정과 key가 가리키는 `<DOMAIN>\<USER>`는 서로 다를 수 있다. Mimikatz `sekurlsa::pth`는 현재 호스트의 관리자·debug 권한을 필요로 한다.
-- 지금 가능한 행동: 가능하면 AES key로 TGT를 요청하고, 현재 로그온 세션에 주입한 뒤 [[Pass the Ticket]]으로 대상 SPN와 서비스를 검증한다. 장기 key→TGT→service ticket→서비스 인가의 경계는 [[Kerberos 인증 자료와 서비스 접근]]에 따라 구분한다.
+- 지금 가능한 행동: 가능하면 AES key로 TGT를 요청해 전용 Type 9 로그온 세션에 적용한 뒤 [[Pass the Ticket]]으로 대상 SPN와 서비스를 검증한다. 장기 key→TGT→service ticket→서비스 인가의 경계는 [[Kerberos 인증 자료와 서비스 접근]]에 따라 구분한다.
 - 성공 범위: TGT 발급은 key가 도메인 계정에 유효함, ticket 주입은 현재 세션에서 사용 가능함, SMB·WinRM·WMI 성공은 해당 서비스의 인증·행동 권한을 각각 의미한다. 관리자·Domain Admin 권한은 자동으로 얻지 않는다.
 
 ## 전제 조건
@@ -39,28 +39,32 @@ tags:
 
 | 방식 | 선택 조건 | 실행 위치·필요 권한 | 성공 결과 |
 |---|---|---|---|
-| Rubeus `asktgt`와 `/ptt` | `<USER>`의 AES key 또는 NTLM/RC4 key로 TGT를 직접 요청할 때 | DC와 통신할 Windows 세션, 현재 세션에 ticket을 적용할 권한 | KDC가 발급한 TGT와 현재 세션의 ticket 사용 상태 |
+| Rubeus `asktgt`와 `/createnetonly` | `<USER>`의 AES key 또는 NTLM/RC4 key로 TGT를 직접 요청할 때 | DC와 통신할 Windows 세션 | KDC가 발급한 TGT와 별도 Type 9 로그온 세션의 ticket 사용 상태 |
 | Mimikatz `sekurlsa::pth` | NT hash로 별도 로그온 세션을 만들고 그 세션에서 Kerberos ticket을 요청해야 할 때 | 대상 Windows 호스트의 상승된 로컬 관리자·debug 권한 | NT hash가 적용된 새 프로세스·로그온 세션이며 TGT는 이후 `klist`로 별도 확인 |
 
 AES key를 보유했다면 Rubeus의 AES 방식을 우선 검토한다. Mimikatz 새 cmd 창이 열렸다는 사실만으로 TGT 발급이나 원격 서비스 접근이 성공한 것은 아니다.
 
 1. key가 로컬 계정이 아니라 `<DOMAIN>\<USER>` 도메인 계정의 것인지, 현재 Windows 호스트에서 DC·DNS·시간 조건이 맞는지 확인한다.
 2. Windows 실행 호스트에서 가능하면 AES key를 우선 사용해 `<USER>`의 TGT를 요청한다.
-3. `/ptt` 또는 출력 ticket을 저장해 현재 로그온 세션에 주입하고 `klist`로 principal·ticket 종류·만료 시각을 확인한다.
+3. 가능하면 `/createnetonly`로 전용 Type 9 로그온 세션을 만들고, 출력된 PID·LUID를 기록한 뒤 새 process 안의 `klist`로 principal·ticket 종류·만료 시각을 확인한다.
 4. [[Pass the Ticket]] 절차로 `<HOST_FQDN>:<SERVICE_PORT>`에 연결하여 ticket 사용, 서비스 인증, 원격 실행·관리자 권한을 별도로 검증한다.
 
 ### 명령과 확인할 출력
 
-#### Rubeus로 TGT 요청
+#### Rubeus로 전용 세션에 TGT 요청
+
+현재 Rubeus upstream의 `asktgt`가 `/createnetonly`를 지원하는지 `Rubeus.exe asktgt /?`에서 확인한다. `<OPTH_PROCESS_PID>`와 `<OPTH_LOGON_LUID>`는 출력된 값을 그대로 기록한다.
 
 ```cmd
-Rubeus.exe asktgt /domain:<DOMAIN> /user:<USER> /aes256:<AES256_KEY> /ptt
-Rubeus.exe asktgt /domain:<DOMAIN> /user:<USER> /rc4:<NTLM_HASH> /ptt
+Rubeus.exe asktgt /domain:<DOMAIN> /user:<USER> /aes256:<AES256_KEY> /createnetonly:"C:\Windows\System32\cmd.exe" /show
+Rubeus.exe asktgt /domain:<DOMAIN> /user:<USER> /rc4:<NTLM_HASH> /createnetonly:"C:\Windows\System32\cmd.exe" /show
+REM 새로 열린 cmd.exe에서 실행
+klist
 ```
 
 확인할 출력:
 
-- `TGT request successful`은 `<USER>` key로 KDC에서 TGT를 발급받은 상태, `Ticket successfully imported`와 `klist`의 `<USER>` TGT는 현재 Windows 로그온 세션에서 ticket을 사용할 수 있는 상태다. 둘 다 특정 원격 서비스 권한은 입증하지 않는다.
+- `TGT request successful`은 `<USER>` key로 KDC에서 TGT를 발급받은 상태다. `ProcessID`·`LUID`, `Ticket successfully imported`와 새 process의 `klist`에 표시된 `<USER>` TGT는 전용 로그온 세션에서 ticket을 사용할 수 있는 상태다. 둘 다 특정 원격 서비스 권한은 입증하지 않는다.
 
 #### Mimikatz 방식
 
@@ -72,7 +76,19 @@ sekurlsa::pth /domain:<DOMAIN> /user:<USER> /ntlm:<NTLM_HASH>
 
 확인할 출력:
 
-- 새 cmd 세션은 key가 가리키는 `<DOMAIN>\<USER>`의 네트워크 인증 자료를 사용할 수 있는 별도 로그온 세션이다. 이 세션에서 Kerberos 요청이 가능한지 `klist`와 대상 서비스 접속으로 확인한다.
+- 출력된 PID와 LUID를 각각 `<OPTH_PROCESS_PID>`·`<OPTH_LOGON_LUID>`로 기록한다. 새 cmd 세션은 key가 가리키는 `<DOMAIN>\<USER>`의 네트워크 인증 자료를 사용할 수 있는 별도 로그온 세션이다. 이 세션에서 Kerberos 요청이 가능한지 `klist`와 대상 서비스 접속으로 확인한다.
+
+## 변경 영향과 복구
+
+먼저 전용 cmd에서 시작한 SMB·WinRM·WMI client를 정상 종료한다. 상승된 셸에서 exact LUID를 대상으로 ticket을 지울 수 있으면 다음 순서로 정리한다.
+
+```cmd
+Rubeus.exe purge /luid:<OPTH_LOGON_LUID>
+taskkill /PID <OPTH_PROCESS_PID> /T
+tasklist /FI "PID eq <OPTH_PROCESS_PID>"
+```
+
+`/luid` purge는 상승된 권한이 필요하다. Rubeus를 일반 사용자로 실행했거나 purge가 거부되면 다른 로그온 세션을 건드리지 말고 기록한 process tree만 종료한다. 마지막 `tasklist`에 해당 PID가 없어야 전용 로그온 세션 정리가 끝난 것이다. 현재 공유 로그온 세션에 `/ptt`로 직접 주입하면 기존 TGT를 보존하면서 이번 ticket만 분리 복구하기 어렵기 때문에 격리된 일회성 세션이 아닌 곳에서는 fallback으로 사용하지 않는다. KDC·서비스 감사 기록과 이미 수행한 원격 접근은 되돌릴 수 없다.
 
 ## 관찰과 상태 전환
 
@@ -107,3 +123,9 @@ sekurlsa::pth /domain:<DOMAIN> /user:<USER> /ntlm:<NTLM_HASH>
 - [[rubeus]]
 - [[mimikatz]]
 - [[klist]]
+
+## 참고 링크
+
+- [GhostPack Rubeus: asktgt와 createnetonly](https://github.com/GhostPack/Rubeus)
+- [gentilkiwi Mimikatz: sekurlsa module](https://github.com/gentilkiwi/mimikatz/wiki/module-~-sekurlsa)
+- [Microsoft klist](https://learn.microsoft.com/windows-server/administration/windows-commands/klist)

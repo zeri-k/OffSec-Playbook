@@ -85,6 +85,7 @@ curl -X POST -d 'username=admin&password=admin' http://<TARGET>/login
 - [[Linux HTTP 파일 회수]]
 - [[웹 지문 확인과 공격면 분류]]
 - [[웹 단서 기반 기능 열거]]
+- [[공개 클라우드 스토리지 익명 접근 검증]]
 - [[상황별 파일 전송]]
 - [[제한 환경 파일 반입]]
 - [[WebDAV PUT 업로드와 실행]]

@@ -43,14 +43,17 @@ python3 ReconSpider.py <url>
 ### 웹사이트 크롤링
 
 ```bash
-python3 ReconSpider.py http://<DOMAIN>
+test ! -e '<RECONSPIDER_WORKDIR>'
+mkdir -m 700 -- '<RECONSPIDER_WORKDIR>'
+cd -- '<RECONSPIDER_WORKDIR>'
+python3 '<RECONSPIDER_PATH>' http://<DOMAIN>
 ```
 
 대상 웹사이트를 크롤링하고 결과를 `results.json`에 저장한다.
 
 확인할 출력:
 
-- 실행 뒤 새 수정 시각의 `results.json`이 생성되고 `emails`, `links`, `external_files`, `js_files`, `form_fields`, `images`, `videos`, `audio`, `comments` 키가 기록되는지 확인한다.
+- 실행 전 없던 전용 작업 디렉터리 안에 `results.json`이 생성되고 `emails`, `links`, `external_files`, `js_files`, `form_fields`, `images`, `videos`, `audio`, `comments` 키가 기록되는지 확인한다.
 - 키에 담긴 값은 크롤러가 응답에서 관찰한 후보다. 현재 URL의 status, 인증 필요 여부와 실제 기능은 개별 요청으로 확인한다.
 
 ### JSON 결과 확인
@@ -95,6 +98,17 @@ grep -i '"links"' -A 20 results.json
 | `external_files` 또는 `comments`에 값이 있음 | 외부 파일 URL이나 HTML 주석 문자열 관찰 | 파일 status·본문과 주석의 현재 관련성을 확인한다. 발견만으로 민감 정보 노출을 확정하지 않는다. |
 | 예상 키가 비었거나 결과가 적음 | 익명 응답, redirect, 인증, 크롤링 범위 또는 동적 콘텐츠 때문에 수집이 제한됐을 수 있음 | 기능 부재로 단정하지 말고 로그인 필요 여부, vhost, `robots.txt`, sitemap과 수동 탐색으로 보완한다. |
 | Python 예외·timeout 또는 새 결과 파일 미생성 | 스크립트·의존성·TLS·redirect·rate limit 문제로 실행 실패 | 기존 `results.json`을 이번 결과로 사용하지 말고 `curl`과 브라우저로 기준 응답 및 로컬 쓰기 권한을 확인한다. |
+
+필요한 후보를 승인된 작업 기록으로 옮긴 뒤에는 이번 실행 전에 없었던 전용 디렉터리와 그 안의 `results.json`만 확인해 정리한다. 다른 위치의 같은 이름 파일은 제거하지 않는다.
+
+```bash
+find '<RECONSPIDER_WORKDIR>' -maxdepth 1 -printf '%P\n'
+rm -- '<RECONSPIDER_WORKDIR>/results.json'
+rmdir -- '<RECONSPIDER_WORKDIR>'
+test ! -e '<RECONSPIDER_WORKDIR>'
+```
+
+스크립트가 예상하지 않은 파일을 더 만들었거나 보존할 결과가 남아 있으면 `rmdir` 실패를 우회하지 말고 내용을 확인한다. 원본 `ReconSpider.py`와 기존 결과 파일은 이 정리 대상이 아니다.
 
 ## 관련 공격기법
 

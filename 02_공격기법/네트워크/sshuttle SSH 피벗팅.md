@@ -17,7 +17,7 @@ tags:
 ## 사용할 때
 
 - 현재 네트워크 위치: 공격 호스트에서는 `<INTERNAL_IP>:<PORT>`에 직접 연결할 수 없지만 `<PIVOT_IP>:22`에는 연결할 수 있고, 피벗 호스트에서는 `<INTERNAL_CIDR>`의 목표 TCP 서비스에 연결할 수 있다.
-- 명령 실행 위치: `sshuttle`, `nmap`, `curl`, `xfreerdp` 같은 최종 클라이언트는 공격 호스트에서 실행하며, SSH 서버는 `<PIVOT_IP>`에서 트래픽을 내부 대역으로 전달한다.
+- 명령 실행 위치: `sshuttle`, `nmap`, `curl`, `xfreerdp` 같은 최종 클라이언트는 공격 호스트에서 실행하며, SSH 서버는 `<PIVOT_IP>`에서 트래픽을 내부 대역으로 전달한다. 애플리케이션 SOCKS 설정이 아니라 로컬 firewall interception이 적용되는 범위와 TUN·kernel route와의 차이는 [[피벗과 터널의 연결 경계]]를 따른다.
 - 보유 계정·인증 자료: password 또는 private key는 피벗 SSH 인증용이다. 내부 RDP·DB·웹 서비스에는 해당 서비스에서 유효한 별도 인증 자료가 필요하다.
 - 현재 권한: 피벗 계정의 관리자/root 권한은 필수가 아니지만, 공격 호스트에서는 방화벽·라우팅 규칙을 만들 sudo 권한이 필요하다.
 - 지금 가능한 행동: 이 문서의 기본 `auto` 방식으로 `<INTERNAL_CIDR>`의 여러 TCP 호스트·포트를 일반 클라이언트로 반복 확인한다. 일반 ICMP는 전달되지 않으며, UDP는 Linux TPROXY 방식과 추가 조건을 명시적으로 선택한 별도 범위이므로 기본 절차의 성공으로 간주하지 않는다.

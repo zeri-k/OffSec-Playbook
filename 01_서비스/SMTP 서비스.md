@@ -23,16 +23,16 @@ tags:
 |---|---|---|---|
 | 1 | SMTP greeting과 지원 명령 | `nc -nv <TARGET> 25` 후 `EHLO` | `220`, `VRFY`, `EXPN`, `STARTTLS`, 인증 방식과 노출된 도메인을 확인한다. |
 | 2 | STARTTLS와 인증서 | `openssl s_client -starttls smtp -connect <SMTP_HOST>:587 -servername <SMTP_HOST>` | TLS 협상, CN/SAN과 Submission 구성을 확인한다. TLS 성공은 SMTP 인증 성공이 아니다. |
-| 3 | 사용자별 응답 차이 | `smtp-user-enum -M VRFY -U users.txt -t <TARGET>` | valid/invalid 응답이 재현되는지 확인하고, 차이가 없으면 `RCPT TO` 방식을 검토한다. |
+| 3 | 준비된 사용자 후보의 응답 차이 | `smtp-user-enum -M VRFY -U users.txt -t <TARGET>` | 사용자명·메일 주소 후보와 임의 기준값이 있을 때만 valid/invalid 응답을 비교하고, 차이가 없으면 `RCPT TO` 방식을 검토한다. 후보가 없으면 먼저 이름·메일 주소 형식을 수집한다. |
 | 4 | 오픈 릴레이 후보 | `nmap --script smtp-open-relay -p25 <TARGET>` | 스크립트 결과를 후보로만 사용하고 실제 외부 수신 여부를 별도 확인한다. |
 
 ## 단서별 다음 경로
 
 | 관찰 단서·현재 권한 | 지금 가능한 기법 | 도구 | 성공 결과 |
 |---|---|---|---|
-| `EHLO`/`VRFY`/`EXPN`/`RCPT TO` 응답 차이 | [[SMTP 사용자 열거]] | `smtp-user-enum`, `telnet`, `netcat` | 유효 이메일·사용자명 후보 |
+| 이메일·사용자명 후보와 임의 기준값이 있고 `EHLO`/`VRFY`/`EXPN`/`RCPT TO` 응답 차이를 비교할 수 있음 | [[SMTP 사용자 열거]] | `smtp-user-enum`, `telnet`, `netcat` | 응답 차이로 좁힌 이메일·사용자명 후보 |
 | 릴레이 허용 단서 | 이 문서의 Open Relay 검증 | `nmap`, `swaks`, `telnet` | 식별 가능한 테스트 메일의 실제 외부 전달 여부 |
-| STARTTLS 지원과 인증서 이름 | [[SMTP 사용자 열거]] | `openssl` | 암호화 전환 조건과 도메인·호스트명 단서 |
+| STARTTLS 지원과 인증서 이름만 확인됨 | [[DNS 열거와 Zone Transfer]] | `openssl`, `dig` | 암호화 전환 조건과 도메인·호스트명 후보. 사용자 후보를 별도로 얻기 전에는 SMTP 사용자 열거 조건 미충족 |
 | 사용자 이름·비밀번호 후보 확보 | [[원격 비밀번호 공격]] | `hydra`, `smtp-user-enum` | 잠금·스팸 방지 정책을 반영해 검증한 메일 서비스 계정 |
 | 배너·인증서에 내부 도메인 또는 호스트명 노출 | [[DNS 열거와 Zone Transfer]] | `dig` | DNS·웹 vhost·메일 인프라 대상명 확장 |
 | OpenSMTPD 제품·버전 단서와 CVE-2020-7247 수정 상태 미확인 | [[Public Exploit 검토와 검증]] | 배너, 대상 패키지 changelog, OpenSMTPD 보안 공지 | 제품 문자열이 아니라 배포판 backport·설정·노출 범위까지 확인한 취약점 후보 |

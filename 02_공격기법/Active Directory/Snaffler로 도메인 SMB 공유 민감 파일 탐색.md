@@ -52,8 +52,11 @@ Test-NetConnection <DC> -Port 445
 ### 2. Snaffler로 도메인 공유와 민감 파일 후보 탐색
 
 ```powershell
+if (Test-Path -LiteralPath '<OUTPUT_FILE>') { throw 'Output file already exists' }
 .\Snaffler.exe -s -d <DOMAIN> -o <OUTPUT_FILE> -v data
 ```
+
+경로 부재 guard가 통과해야 한다. 기존 파일이 있으면 덮어쓰지 않고 이번 실행의 고유 경로를 다시 정한다.
 
 확인할 출력:
 
@@ -93,6 +96,17 @@ Get-Content -LiteralPath '\\<HOST>\<SHARE>\<PATH>'
 - 파일에서 얻은 계정이 로컬 계정인지 AD 계정인지, 어느 호스트·서비스에 적용되는지 확인한다.
 - Snaffler 로그에는 UNC 경로와 민감 문자열 후보가 포함될 수 있으므로 실행 결과를 다른 재사용 문서에 복사하지 않는다.
 
+## 변경 영향과 로컬 산출물 정리
+
+Snaffler는 원격 공유를 읽고 `<OUTPUT_FILE>`에 민감 경로·match를 남긴다. `-m`으로 파일 사본을 저장하는 모드는 이 문서의 대표 절차에서 사용하지 않았으므로 복구 대상에 추가하지 않는다. 후속 검증·인계 후 생성 전 부재를 확인한 정확한 log만 삭제한다.
+
+```powershell
+Remove-Item -LiteralPath '<OUTPUT_FILE>' -Force
+Test-Path -LiteralPath '<OUTPUT_FILE>'
+```
+
+`False`가 반환되어야 log 정리가 확인된다. `Snaffler.exe`를 이번 작업에서 반입했다면 업로드 전 부재를 확인한 exact path만 별도로 제거한다. 원격 SMB·AD 감사 로그와 이미 전달된 credential은 로컬 log 삭제로 되돌려지지 않는다.
+
 ## 관련 공격기법
 
 - [[SMB 공유 자격증명 수집]]
@@ -107,3 +121,7 @@ Get-Content -LiteralPath '\\<HOST>\<SHARE>\<PATH>'
 - [[AD Identity 확인 후 도메인 컨텍스트 열거]]
 - [[Windows 셸 또는 세션 확보 후 컨텍스트 열거]]
 - [[확보한 자격 증명으로 원격 접근 경로 선택]]
+
+## 참고 링크
+
+- [Snaffler 공식 저장소 — output·scope option](https://github.com/SnaffCon/Snaffler)

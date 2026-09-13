@@ -55,6 +55,22 @@ hashcat -m 1800 -a 0 linux-sha512crypt.hash rockyou.txt --backend-ignore-opencl 
 hashcat --show -m 1000 ntlm.hash --backend-ignore-opencl -d 1 -O -w 3
 ```
 
+### rule 후보 미리 보기
+
+```bash
+hashcat <WORDLIST> -r <RULE_FILE> --stdout --backend-ignore-opencl -d 1 -O -w 3
+```
+
+출력은 rule을 적용한 후보 문자열이며 hash 복구 결과가 아니다. 작은 표본으로 대소문자·치환·접미 규칙이 의도대로 적용되는지 확인한 뒤 실제 cracking에 `-r`을 사용한다. `--force`는 오류·경고를 우회하는 개발용 option이므로 후보 생성의 기본 조건으로 넣지 않는다.
+
+### mask 공격
+
+```bash
+hashcat -m <HASH_MODE> -a 3 <HASH_FILE> '?u?l?l?l?l?d?s' --backend-ignore-opencl -d 1 -O -w 3
+```
+
+이 mask는 대문자 1자, 소문자 4자, 숫자 1자, 기호 1자의 정확한 7자리 후보 공간이다. 정책·관찰 근거 없이 길이와 문자 위치를 고정하지 않고 `?l`·`?u`·`?d`·`?s` 또는 `-1`~`-4` custom charset으로 실제 후보 범위를 표현한다. `Exhausted`는 그 mask만 소진됐다는 뜻이다.
+
 ## 주요 옵션
 
 | 옵션 | 설명 |
@@ -66,6 +82,8 @@ hashcat --show -m 1000 ntlm.hash --backend-ignore-opencl -d 1 -O -w 3
 | `--show` | 이미 crack된 결과 출력 |
 | `--username` | `user:hash` 형식에서 username 필드 무시 |
 | `--session`, `--restore` | 세션 이름 지정/중단 작업 재개 |
+| `--potfile-path` | 복구 결과 cache를 작업별 파일로 분리 |
+| `--restore-file-path` | 중단 상태 파일 경로를 작업별로 분리 |
 | `--status` | 진행 상태 주기적 출력 |
 | `--backend-ignore-opencl` | OpenCL backend를 비활성화 |
 | `-d <device>` | 사용할 backend device 선택 |
@@ -88,6 +106,7 @@ hashcat --show -m 1000 ntlm.hash --backend-ignore-opencl -d 1 -O -w 3
 - device 번호와 사용 가능한 backend는 driver/runtime과 설치된 Hashcat 버전에 따라 달라진다. 장비별 옵션을 적용하기 전 `hashcat -I --backend-ignore-opencl -d 1 -O -w 3`로 device를 확인한다.
 - `--backend-ignore-opencl`은 OpenCL interface를 끄므로 CUDA 또는 다른 backend만 의도적으로 쓸 때 사용한다. `-d 1`은 어느 장비에서나 같은 GPU를 뜻하지 않는다.
 - `-O`는 optimized kernel을 선택해 후보 길이 제한을 바꿀 수 있고, `-w 3`은 기본 `2`보다 높은 부하다. 장시간 실행 전 냉각과 시스템 사용량을 확인한다.
+- 기본 potfile은 다른 작업의 복구 결과를 재사용한다. 민감 결과를 분리해야 하면 `--potfile-path <TASK_POTFILE>`과 `--restore-file-path <TASK_RESTORE>`를 지정하고, `--show`에도 같은 potfile을 사용한다. 종료된 작업의 exact 파일만 제거하며 shared potfile을 일괄 삭제하지 않는다.
 
 ## 관련 공격기법
 
@@ -100,3 +119,4 @@ hashcat --show -m 1000 ntlm.hash --backend-ignore-opencl -d 1 -O -w 3
 ## 참고 링크
 
 - [Hashcat 공식 Wiki](https://hashcat.net/wiki/doku.php?id=hashcat)
+- [Hashcat potfile과 restore 동작](https://hashcat.net/wiki/doku.php?id=frequently_asked_questions)

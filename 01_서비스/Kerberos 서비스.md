@@ -16,7 +16,7 @@ tags:
 
 현재 명령 실행 호스트에서 `<TARGET>`의 Kerberos Key Distribution Center(KDC) TCP/UDP 88에 도달할 수 있고, 도메인 realm·사용자 이름·비밀번호·NT hash·AES key·ticket 중 하나 이상의 후보가 있지만 유효한 AD 계정이나 서비스 권한은 아직 확인하지 않은 상태에서 시작한다. 도메인 컨트롤러(DC) 이름 해석과 시간을 맞춘 뒤 사용자 존재, 계정 인증, Ticket-Granting Ticket(TGT), service ticket과 Kerberos key를 서로 다른 상태로 판단한다.
 
-**첫 화면 상태:** 지금 가능한 일은 사용자 이름·ticket·Kerberos key의 유효성을 나누어 확인하는 것이다. 성공하면 오프라인 크래킹 대상 hash 또는 ticket 기반 서비스 인증 후보를 얻는다. `KRB_AP_ERR_SKEW`는 시간, `KDC_ERR_C_PRINCIPAL_UNKNOWN`은 사용자·realm, `KDC_ERR_PREAUTH_FAILED`는 비밀번호·Kerberos key, `KDC_ERR_S_PRINCIPAL_UNKNOWN`은 대상 Service Principal Name(SPN)과 DNS를 확인한다. 유효 사용자·TGT 보유가 SMB·LDAP·WinRM 권한을 보장하지 않는다.
+**첫 화면 상태:** 지금 가능한 일은 사용자 이름·ticket·Kerberos key의 유효성을 나누어 확인하는 것이다. 성공하면 오프라인 크래킹 대상 hash 또는 ticket 기반 서비스 인증 후보를 얻는다. `KRB_AP_ERR_SKEW`는 시간, `KDC_ERR_C_PRINCIPAL_UNKNOWN`은 사용자·realm, `KDC_ERR_PREAUTH_FAILED`는 비밀번호·Kerberos key, `KDC_ERR_S_PRINCIPAL_UNKNOWN`은 대상 Service Principal Name(SPN)과 DNS를 확인한다. 정상 AS pre-auth, pre-auth 미요구 AS-REP 암호문과 실제 TGT의 관계는 [[Kerberos 인증 자료와 서비스 접근]]을 따른다. 유효 사용자·TGT 보유가 SMB·LDAP·WinRM 권한을 보장하지 않는다.
 
 ## 서비스 고유 확인
 

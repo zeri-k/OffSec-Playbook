@@ -246,7 +246,7 @@ from dba_users
 order by username;
 ```
 
-`PASSWORD_VERSIONS`는 10G·11G·12C 등 보유 verifier 형식이지 offline cracking에 사용할 verifier 본문이 아니다. Oracle이 문서화한 `DBMS_METADATA`의 `USER` metadata도 password 표시가 `SYS`, `EXP_FULL_DATABASE`, 해당 user 자신으로 제한되고 `SELECT_CATALOG_ROLE`만으로는 표시되지 않는다. 이는 지원되는 metadata 조회 경계이지 반환 DDL을 cracking 입력 형식으로 분해하는 계약은 아니다. `SYS.USER$.PASSWORD`는 문서화된 범용 verifier 조회 인터페이스가 아니며, Oracle 11g 서버에서 이 열의 값이 반환됐다는 사실만으로 그 값을 11G verifier라고 해석하지 않는다. 실제 verifier 문자열 추출은 서버 버전, 계정에 남은 password version, 내부 필드 형식과 조회 권한을 별도로 검증해야 하므로 이 문서의 범위에 포함하지 않는다. 원격 `AS SYSDBA`도 해당 계정의 관리 권한과 password file·인증 구성이 확인된 경우에만 별도로 시도한다.
+`PASSWORD_VERSIONS`는 10G·11G·12C 등 보유 verifier 형식이지 offline cracking에 사용할 verifier 본문이 아니다. Oracle이 문서화한 `DBMS_METADATA`의 `USER` metadata도 password 표시가 `SYS`, `EXP_FULL_DATABASE`, 해당 user 자신으로 제한되고 `SELECT_CATALOG_ROLE`만으로는 표시되지 않는다. 이는 지원되는 metadata 조회 경계이지 반환 DDL을 cracking 입력 형식으로 분해하는 계약은 아니다. `SYS.USER$`는 문서화된 범용 verifier 조회 인터페이스가 아니며, Oracle 11g 서버에서 `PASSWORD` 값이 반환됐다는 사실만으로 그 값을 11G verifier라고 해석하지 않는다. 승인된 8i~12c 서버에서 account별 version과 direct internal-field 조회 권한까지 확인한 경우에만 [[Oracle password verifier 추출과 오프라인 입력 준비]]로 이동한다. 18c 이상은 현재 metadata 범위를 유지한다. 원격 `AS SYSDBA`도 해당 계정의 관리 권한과 password file·인증 구성이 확인된 경우에만 별도로 시도한다.
 
 ## 변경 영향과 복구
 
@@ -271,6 +271,7 @@ order by username;
 | DB·table 목록은 보이지만 일부 객체가 거부됨 | 제한된 데이터 READ 권한이 있음 | 제한된 DB 접근 | 읽기 가능한 schema 안에서만 수집 |
 | 민감 table에서 credential, hash, token 또는 내부 URL이 나옴 | 후속 접근 후보를 수집함 | 민감 데이터 또는 자격 증명 후보 | 평문·hash·token을 구분해 별도 검증 |
 | FILE·sysadmin·DBA 같은 권한이 확인됨 | 데이터 조회를 넘어 파일·명령 실행 후보가 있음 | 고권한 DB 기능 후보 | 전용 파일 쓰기·명령 실행 기법으로 이동 |
+| Oracle 8i~10g server release 또는 11g~12c `PASSWORD_VERSIONS`와 내부 field 직접 조회 권한이 확인됨 | account별 raw verifier를 제한적으로 분류할 수 있음 | Oracle verifier 추출 후보 | [[Oracle password verifier 추출과 오프라인 입력 준비]] |
 | 다른 서비스에서 DB credential이 실제 인증됨 | 계정 재사용이 확인됨 | 재사용 가능한 자격 증명 | 새 서비스의 identity와 권한 확인 |
 | 로그인 실패 | 인증 방식, 계정 형식, DB·SID 또는 TLS가 맞지 않음 | DB 세션 미확보 | SQL·Windows 인증과 SID·service name 분리 확인 |
 | hash만 수집됨 | 평문 credential이 아님 | 오프라인 검증 대상 | [[오프라인 해시 크래킹]]으로 이동 |

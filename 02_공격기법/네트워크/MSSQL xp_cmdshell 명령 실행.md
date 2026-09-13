@@ -4,20 +4,20 @@ tags:
 시작조건: ["MSSQL 인증 세션 확보", "sysadmin 또는 xp_cmdshell 실행 권한 확인"]
 필요권한: ["직접 sysadmin 또는 linked server 원격 sysadmin", "xp_cmdshell 활성화/실행 권한"]
 필요조건: ["유효한 MSSQL 계정", "xp_cmdshell 사용 가능 또는 활성화 가능", "linked server 경유 시 RPC/RPC Out 또는 원격 query 가능"]
-결과: ["SQL Server 서비스 계정의 운영체제 명령 실행", "세션"]
+결과: ["SQL Server 서비스 계정 또는 구성된 xp_cmdshell proxy account의 운영체제 명령 실행", "세션"]
 ---
 
 # MSSQL xp_cmdshell 명령 실행
 
 ## 한 줄 판단
 
-현재 MSSQL 로그인에 `xp_cmdshell` 실행 권한이 있거나 `sysadmin`으로 기능을 활성화할 수 있다면, SQL Server가 실행 중인 호스트에서 서비스 계정 권한으로 운영체제 명령을 실행한다. 데이터베이스 `sysadmin`과 Windows 로컬 관리자는 별도 권한이므로 `hostname`과 `whoami`로 확인한다.
+현재 MSSQL 로그인에 `xp_cmdshell` 실행 권한이 있거나 `sysadmin`으로 기능을 활성화할 수 있다면, SQL Server가 실행 중인 호스트에서 Windows child process를 실행한다. `sysadmin` 호출은 SQL Server service account, 실행 권한을 받은 non-sysadmin 호출은 미리 구성된 `##xp_cmdshell_proxy_account##`를 사용하므로 `hostname`과 `whoami`로 실제 host·Identity를 확인한다. DB login과 OS 실행 주체의 공통 경계는 [[DB 서버 측 작업의 실행 주체와 결과 경계]]를 따른다.
 
 ## 사용할 때
 
 - MSSQL 인증에 성공했고 sysadmin 또는 `xp_cmdshell` 실행 권한이 있을 때.
 - DB 내부 데이터 수집을 넘어 OS 명령 실행 영향이 필요한 때.
-- SQL Server 서비스 계정 권한을 확인하고 reverse shell로 전환할 때.
+- 실제 xp_cmdshell Windows 실행 계정의 권한을 확인하고 reverse shell로 전환할 때.
 - [[MSSQL Impersonation 권한 상승]] 또는 [[MSSQL Linked Server 내부 이동]]으로 linked server에서 sysadmin 권한이 확인되었을 때.
 
 ## 전제 조건
@@ -27,6 +27,7 @@ tags:
 | MSSQL 접속 | mssqlclient/sqlcmd/sqsh | query 실행 가능 |
 | sysadmin 여부 | `IS_SRVROLEMEMBER` | `1`이면 활성화 가능성 높음 |
 | xp_cmdshell | 직접 실행 또는 설정 확인 | 명령 출력 반환 |
+| Windows 실행 계정 | `whoami`, 필요 시 기존 `##xp_cmdshell_proxy_account##` 구성 확인 | sysadmin이면 service account, non-sysadmin이면 proxy account의 실제 Identity 확인 |
 | 실행 위치 | `hostname`, `whoami /all` | 목표 호스트와 실행 계정 확인 |
 
 ## 실행
@@ -35,11 +36,14 @@ tags:
 
 | 현재 확인한 상태 | query가 실행되는 SQL Server | 필요한 권한·입력 | 성공 결과 |
 |---|---|---|---|
-| 현재 서버에서 `xp_cmdshell`이 이미 활성화되고 실행 권한이 있음 | 현재 접속한 MSSQL 서버 | `xp_cmdshell` 실행 권한 | 현재 SQL Server 서비스 계정의 OS 명령 출력 |
+| 현재 서버에서 `xp_cmdshell`이 이미 활성화되고 현재 login이 `sysadmin` | 현재 접속한 MSSQL 서버 | 현재 서버의 `sysadmin` | 현재 SQL Server 서비스 계정의 OS 명령 출력 |
+| non-sysadmin login에 `xp_cmdshell` 실행 권한이 있고 기존 proxy credential이 구성됨 | 현재 접속한 MSSQL 서버 | master의 실행 권한과 기존 `##xp_cmdshell_proxy_account##` | proxy account의 OS 명령 출력. proxy가 없으면 실행 실패 |
 | 현재 서버에서 `xp_cmdshell`이 비활성화되고 현재 login이 `sysadmin` | 현재 접속한 MSSQL 서버 | 현재 서버의 `sysadmin`, 변경 전 설정값 | 기능 활성화 후 서비스 계정의 OS 명령 출력 |
 | 현재 login 또는 impersonation 컨텍스트가 linked server에서 `sysadmin`으로 매핑됨 | `[<LINKED_SERVER>]`가 가리키는 원격 SQL Server | linked server query·RPC Out 경로와 원격 `sysadmin` 매핑 | 원격 SQL Server 호스트의 서비스 계정으로 OS 명령 실행 |
 
 직접 실행, 기능 활성화와 linked server 실행은 서로 다른 결과다. 앞 행의 조건을 확인하지 않은 상태에서 다음 행의 명령으로 넘어가지 않는다. 로컬 그룹 변경은 [[로컬 관리자 그룹 구성원 추가]]에서 별도로 수행한다.
+
+이 문서는 `##xp_cmdshell_proxy_account##`를 새로 만들거나 변경하지 않는다. non-sysadmin 실행에서 기존 proxy가 없으면 이 분기는 중단하고 승인된 관리 기준에서 별도 구성을 검토한다.
 
 ### 변경 전 상태 기록
 
@@ -91,8 +95,8 @@ GO
 
 확인할 출력:
 
-- SQL Server 서비스 계정 예: `nt service\mssql$sqlexpress`.
-- 현재 서비스 계정의 특권. `SeImpersonatePrivilege`는 후속 로컬 권한 상승 후보이며 그 자체로 SYSTEM 실행 증거가 아니다.
+- `sysadmin` 호출이면 SQL Server service account, non-sysadmin 호출이면 기존 xp_cmdshell proxy account가 출력된다. 예: `nt service\mssql$sqlexpress`.
+- 현재 출력된 Windows 실행 계정의 특권. `SeImpersonatePrivilege`는 후속 로컬 권한 상승 후보이며 그 자체로 SYSTEM 실행 증거가 아니다.
 - `xp_cmdshell` 비활성 오류이면 다음 활성화 분기로 이동하고, 권한 거부이면 현재 login의 `sysadmin` 또는 명시적 실행 권한을 다시 확인한다.
 
 ### xp_cmdshell 활성화
@@ -139,7 +143,7 @@ GO
 
 | 관찰 | 판단 | 결과 상태 | 다음 행동 |
 |---|---|---|---|
-| `whoami`와 `hostname`이 DB query 결과로 반환된다. | SQL Server 서비스 계정으로 OS 명령 실행 확인 | Windows 명령 실행 | 원복 후 [[Windows 셸 또는 세션 확보 후 컨텍스트 열거]] |
+| `whoami`와 `hostname`이 DB query 결과로 반환된다. | 표시된 SQL Server service account 또는 xp_cmdshell proxy account로 OS 명령 실행 확인 | Windows 명령 실행 | 원복 후 [[Windows 셸 또는 세션 확보 후 컨텍스트 열거]] |
 | reverse shell 또는 파일 전송 명령이 동작한다. | 대상에서 외부 연결 또는 파일 쓰기 가능 | Windows 세션 또는 파일 전송 | [[Reverse Shell 획득]] 후 [[Windows 셸 또는 세션 확보 후 컨텍스트 열거]] |
 | `hostname`과 `whoami`에서 목표 호스트의 `nt authority\system` 실행이 확인된다. | SYSTEM 컨텍스트 확인 | SYSTEM 명령 실행 | 원복 후 [[고권한 세션 확보 후 후속 판단]] |
 | xp_cmdshell disabled | 기본 비활성 | 시작 상태 유지 | sysadmin 여부, sp_configure 가능 여부 |

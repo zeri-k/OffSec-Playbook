@@ -45,8 +45,11 @@ cmdkey /list
 
 ### 저장된 자격 증명으로 새 CMD 실행
 
+다른 기존 `cmd.exe`와 구분할 `<RUNAS_WINDOW_TITLE>`을 정하고 같은 제목의 창이 없는지 먼저 확인한다.
+
 ```cmd
-runas /savecred /user:<DOMAIN_OR_HOST>\<USER> "cmd.exe /k whoami /all"
+tasklist /v /fi "WINDOWTITLE eq <RUNAS_WINDOW_TITLE>"
+runas /savecred /user:<DOMAIN_OR_HOST>\<USER> "cmd.exe /k title <RUNAS_WINDOW_TITLE>"
 ```
 
 새 CMD 창에서 실행 계정과 현재 권한을 다시 확인한다.
@@ -56,6 +59,12 @@ hostname
 whoami
 whoami /groups
 whoami /priv
+```
+
+원래 창에서 제목으로 새 `cmd.exe`를 조회하고 exact PID를 `<RUNAS_PROCESS_PID>`로 기록한다.
+
+```cmd
+tasklist /v /fi "WINDOWTITLE eq <RUNAS_WINDOW_TITLE>" /fo list
 ```
 
 확인할 출력:
@@ -81,6 +90,18 @@ whoami /priv
 - `Attempting to start` 문구가 아니라 새 프로세스의 `whoami /all`로 실행 계정을 확정한다.
 - 다른 사용자 프로세스, 로컬 관리자 token, 도메인 그룹과 원격 서비스 권한을 각각 다른 상태로 기록한다.
 
+## 변경 영향과 복구
+
+이 기법은 저장된 credential 항목을 새로 만들거나 수정하지 않지만, 저장된 계정의 `cmd.exe`와 그 하위 process를 만든다. 필요한 원격·파일 정리를 새 창에서 먼저 끝낸 다음 이번 실행에서 기록한 PID만 종료한다.
+
+```cmd
+tasklist /fi "PID eq <RUNAS_PROCESS_PID>"
+taskkill /PID <RUNAS_PROCESS_PID> /T
+tasklist /fi "PID eq <RUNAS_PROCESS_PID>"
+```
+
+첫 조회의 image·PID가 기록과 일치할 때만 종료한다. `Access is denied`이면 새 창에서 `exit`로 정상 종료한 뒤 원래 창에서 PID 부재를 다시 확인한다. 마지막 조회에 해당 PID가 없어야 process 정리가 확인된다. 이미 창이 닫혔다면 PID가 재사용됐을 수 있으므로 다른 process를 종료하지 말고, 실행 중 생성한 파일·원격 세션은 각 절차의 exact 식별값으로 별도 확인한다. `cmdkey`의 기존 항목은 이번 기법이 만든 자원이 아니므로 삭제하지 않는다.
+
 ## 관련 공격기법
 
 - [[Windows 저장 자격증명 수집]]
@@ -95,3 +116,9 @@ whoami /priv
 
 - [[Windows 셸 또는 세션 확보 후 컨텍스트 열거]]
 - [[고권한 세션 확보 후 후속 판단]]
+
+## 참고 링크
+
+- [Microsoft Learn: cmdkey](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/cmdkey)
+- [Microsoft Learn: tasklist](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/tasklist)
+- [Microsoft Learn: taskkill](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/taskkill)

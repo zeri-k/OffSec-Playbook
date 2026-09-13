@@ -87,11 +87,13 @@ net group "Domain Controllers" /domain
 dsquery user
 dsquery computer
 dsquery * -filter "(userAccountControl:1.2.840.113556.1.4.803:=8192)" -attr sAMAccountName
+dsquery * -filter "(&(objectCategory=person)(objectClass=user)(userAccountControl:1.2.840.113556.1.4.803:=32))" -attr distinguishedName sAMAccountName userAccountControl
 ```
 
 확인할 출력:
 
-- 사용자·컴퓨터 DN과 Domain Controller 계정.
+- 사용자·컴퓨터 DN, Domain Controller 계정과 `PASSWD_NOTREQD` bit가 설정된 사용자 후보.
+- `8192`는 Domain Controller computer account, `32`는 사용자 `PASSWD_NOTREQD` bit의 후보를 고른다. 어느 결과도 host 생존·빈 비밀번호·인증 성공을 확정하지 않는다.
 - `dsquery`가 없거나 접근이 거부되면 객체가 없다고 판단하지 않고 [[AD 사용자 객체 열거]] 또는 [[AD 컴퓨터 객체 열거]]의 다른 실행 경로를 사용한다.
 
 도메인·DC와 현재 계정을 확인한 뒤 필요한 결과별 문서로 이동한다.
@@ -101,6 +103,7 @@ dsquery * -filter "(userAccountControl:1.2.840.113556.1.4.803:=8192)" -attr sAMA
 | 현재 계정·도메인·DC·인증 방식 | [[AD 도메인 컨텍스트 기본 확인]] | 사용할 AD 계정과 조회 대상 도메인 확정 |
 | 사용자명·계정 속성 | [[AD 사용자 객체 열거]] | 사용자 객체와 후속 그룹·SPN 열거 입력 |
 | 컴퓨터명·FQDN·운영체제 단서 | [[AD 컴퓨터 객체 열거]] | DNS·서비스 확인 대상 호스트 목록 |
+| Description·`PASSWD_NOTREQD` 등 위험 속성 | [[AD 계정 위험 속성과 Description 열거]] | 현재 LDAP에서 읽힌 속성 후보와 별도 검증 대상 |
 | 별도 인터페이스·route·내부 주소 | [[피벗팅 경로 식별과 내부망 열거]] | 현재 호스트에서 도달 가능한 내부망 후보 |
 
 ## 관찰과 상태 전환

@@ -121,7 +121,7 @@ dnscat2> window -i <SHELL_WINDOW_ID>
 | 관찰 | 판단 | 결과 상태 | 다음 행동 |
 |---|---|---|---|
 | 대상의 `nslookup` 질의가 권한 있는 DNS 경로 또는 server에 도달함 | DNS egress baseline이 유효함 | DNS 터널 후보 | dnscat2 server와 domain 설정 |
-| server가 UDP·TCP 53에서 수신하고 secret을 출력함 | listener와 사전 공유 secret이 준비됨 | DNS server 준비 | 같은 domain·secret으로 client 실행 |
+| server가 구성한 UDP 53에서 수신하고 secret을 출력함 | DNS listener와 사전 공유 secret이 준비됨 | DNS server 준비 | 같은 domain·secret으로 client 실행 |
 | client용 `New window created`와 연결이 보임 | DNS 명령 및 제어 채널이 생성됨 | dnscat2 command session | PowerShell `-Exec` window 또는 native client의 `shell` window에서 명령 실행 확인 |
 | Windows window에서 `whoami`·`hostname` 결과가 돌아옴 | DNS 채널을 통한 Windows 명령 실행이 성공함 | Windows 명령 세션 | [[Windows 셸 또는 세션 확보 후 컨텍스트 열거]] |
 | Linux window에서 `id`·`hostname` 결과가 돌아옴 | DNS 채널을 통한 Linux 명령 실행이 성공함 | Linux 명령 세션 | [[Linux 셸 확보 후 초기 열거와 권한 상승]] |
@@ -134,7 +134,7 @@ dnscat2> window -i <SHELL_WINDOW_ID>
 | 확인 지점 | 확인할 출력 | 권한 판단 |
 |---|---|---|
 | DNS baseline | `nslookup` 응답과 server 또는 packet capture의 질의 | resolver 경로와 직접 53 포트 접근을 구분 |
-| listener·protocol | UDP·TCP 53 bind와 configured domain | DNS server 준비 여부 확인 |
+| listener·protocol | 구성한 UDP 53 bind와 configured domain | DNS server 준비 여부 확인 |
 | 세션 인증 | 동일 secret과 `New window created` | 단순 DNS 질의와 dnscat2 세션을 구분 |
 | 셸 권한 | `whoami`, `hostname`, 명령 결과 | dnscat2 process의 실제 사용자와 호스트 확인 |
 

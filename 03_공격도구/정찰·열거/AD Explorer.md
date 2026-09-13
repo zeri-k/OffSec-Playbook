@@ -43,7 +43,7 @@ ADExplorer.exe
 
 ### 오프라인 분석용 snapshot 생성
 
-`File -> Create Snapshot`에서 설명과 저장 경로를 지정한다. 생성된 snapshot을 다시 열어 현재 AD 연결 없이 객체와 속성을 탐색한다.
+`File -> Create Snapshot`에서 설명과 기존에 없던 exact 저장 경로 `<AD_EXPLORER_SNAPSHOT_PATH>`를 지정한다. 생성된 snapshot을 다시 열어 현재 AD 연결 없이 객체와 속성을 탐색한다.
 
 확인할 출력:
 
@@ -68,6 +68,23 @@ ADExplorer.exe
 | snapshot 간 차이 | 객체·속성·권한 변경 후보 | 현재 AD에서 실제 변경 상태 확인 |
 | 연결 또는 객체 조회 실패 | 대상·인증·네트워크 또는 읽기 권한 문제 | DNS, LDAP 연결, 계정 형식과 객체 ACL 확인 |
 
+## 변경 영향과 복구
+
+snapshot은 연결 계정이 읽을 수 있던 AD 객체·속성·권한을 포함할 수 있는 민감한 로컬 파일이다. 실행 전 `Test-Path -LiteralPath '<AD_EXPLORER_SNAPSHOT_PATH>'`가 `False`인지 확인하고, 생성한 exact 경로와 수집 시점을 Vault 밖의 승인된 작업 기록에 남긴다.
+
+AD Explorer에서 snapshot을 닫고 후속 분석이 끝난 뒤 다음처럼 이번 작업 파일만 제거한다.
+
+```powershell
+Remove-Item -LiteralPath '<AD_EXPLORER_SNAPSHOT_PATH>'
+Test-Path -LiteralPath '<AD_EXPLORER_SNAPSHOT_PATH>'
+```
+
+마지막 출력이 `False`여야 로컬 파일 정리가 끝난 것이다. 이미 복사·업로드한 snapshot과 디렉터리 조회 감사 기록은 이 삭제로 제거되지 않는다.
+
 ## 관련 공격기법
 
 - [[AD 보안 구성과 GPO 감사]]
+
+## 참고 링크
+
+- [Microsoft Sysinternals: AD Explorer](https://learn.microsoft.com/sysinternals/downloads/adexplorer)

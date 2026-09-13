@@ -81,6 +81,7 @@ mysql -h <TARGET_FQDN> -u <USER> -p --ssl-mode=VERIFY_IDENTITY --ssl-ca=<CA_FILE
 
 - [[DB 인증과 데이터 열거]]
 - [[DB 서버 파일 수집]]
+- [[DB 서버 파일 쓰기 검증]]
 
 ## 참고 링크
 

@@ -5,7 +5,7 @@ tags:
 시작조건: ["MSSQL 인증과 query 실행 가능", "공격자 SMB listener로의 outbound 445 도달 가능"]
 필요권한: ["MSSQL query 실행 권한"]
 필요조건: ["공격자 SMB listener 접근 가능", "대상 SQL Server에서 공격자 TCP/445 outbound 가능", "UNC 경로 사용 가능"]
-결과: ["SQL Server 서비스 계정의 NetNTLMv2 challenge-response", "서비스 계정 단서", "오프라인 크래킹 또는 실시간 relay 후보"]
+결과: ["SQL Server 서비스 계정의 NetNTLMv2 challenge-response", "서비스 계정 단서", "오프라인 크래킹 입력 또는 새 인증의 실시간 relay 요청 경로 후보"]
 ---
 
 # MSSQL 서비스 Hash 캡처
@@ -23,7 +23,7 @@ MSSQL에서 UNC 경로를 처리하는 stored procedure를 호출해 SQL Server 
 - 현재 보유 정보: MSSQL에 query를 실행할 수 있는 로그인 또는 통합 인증 ticket·password·hash, 공격자 listener 주소와 대상 SQL Server 후보.
 - 명령 실행 위치: SQL query를 보낼 수 있고 listener TCP/445를 열 수 있는 공격 호스트. SQL Server 호스트에서도 이 listener의 주소·TCP/445에 outbound로 도달해야 한다.
 - 현재 권한과 대상: SQL query 실행 또는 해당 procedure 실행 권한은 `sysadmin`, SQL Server Windows 서비스 계정의 로컬 관리자, 도메인 관리자 권한과 다르다.
-- 획득 결과: listener의 `USER::DOMAIN:...`은 NetNTLMv2 challenge-response다. 평문 비밀번호, NT hash, relay 성공은 후속 분기로 별도 확인한다.
+- 획득 결과: listener의 `USER::DOMAIN:...`은 NetNTLMv2 challenge-response다. 평문 비밀번호, NT hash, relay 성공은 후속 분기로 별도 확인하며 자료와 참여 주체의 관계는 [[NTLM 인증 자료, 실시간 Relay와 서비스 권한 경계]]를 따른다.
 
 ## 전제 조건
 
@@ -219,7 +219,7 @@ NetNTLMv2는 원본 NTLM hash가 아니므로 [[Pass the Hash]]에 바로 사용
 
 - SQL 에러보다 listener의 원본 IP, 계정명, 도메인명과 전체 NetNTLMv2 라인을 우선 확인한다.
 - MSSQL query 실행 권한과 `sysadmin`, Windows 로컬 관리자, 도메인 권한은 서로 다르다.
-- 캡처한 NetNTLM challenge-response는 오프라인 비밀번호 복구 또는 relay 입력 후보이며, 평문 비밀번호·계정 NTLM hash·인증 성공을 뜻하지 않는다.
+- 캡처한 NetNTLM challenge-response는 오프라인 비밀번호 복구 입력이며, 평문 비밀번호·계정 NT hash·인증 성공을 뜻하지 않는다. Relay에는 저장 line이 아니라 같은 UNC 요청 경로에서 새로 발생하는 실시간 인증 교환이 필요하다.
 
 ## 후속 공격 연결
 

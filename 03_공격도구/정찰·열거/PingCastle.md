@@ -34,16 +34,23 @@ PingCastle.exe
 
 ### 기본 healthcheck 실행
 
-```cmd
-PingCastle.exe
-```
+PingCastle은 command line 실행 시 현재 디렉터리에 HTML·XML 보고서를 생성한다. 기존 파일과 섞이지 않는 전용 디렉터리를 만든 뒤 현재 지원 버전의 명시적 healthcheck 명령을 사용하고, 출력된 exact 파일명을 기록한다.
 
-대화형 메뉴에서 `healthcheck`를 선택한다.
+```powershell
+if (Test-Path -LiteralPath '<PINGCASTLE_RUN_DIRECTORY>') { throw 'run directory already exists' }
+New-Item -ItemType Directory -Path '<PINGCASTLE_RUN_DIRECTORY>' | Out-Null
+Push-Location '<PINGCASTLE_RUN_DIRECTORY>'
+try {
+    & '<PINGCASTLE_EXE_PATH>' --healthcheck --server <DOMAIN_FQDN>
+} finally {
+    Pop-Location
+}
+```
 
 확인할 출력:
 
 - 도메인 개요, 사용자·그룹·trust와 이상 징후, 전체 위험 점수가 포함된 보고서.
-- 보고서 파일이 실제 생성됐는지와 대상 도메인·수집 시점을 확인한다.
+- HTML·XML 보고서의 exact 경로, 대상 도메인·수집 시점과 실행 버전을 확인한다.
 
 ### 대상 서버와 프로토콜 입력 확인
 
@@ -81,8 +88,28 @@ PingCastle.exe --help
 
 ## 버전과 환경 차이
 
-- 이 문서에서 확인한 예시는 PingCastle `2.10.1.0` 출력이다. 현재 버전의 메뉴·scanner·옵션은 `--help`에서 다시 확인한다.
+- 교육 원천의 `2.10.1.0` TUI와 지원 종료 시각은 역사적 출력이다. 시스템 시간을 과거로 바꾸지 말고 현재 지원 release와 그 `--help`를 사용한다.
+- 현재 문서의 명령은 `--healthcheck --server`를 지원하는 release 기준이다. scanner 이름·report level·runtime 요구 사항은 설치한 release 문서에서 확인한다.
+
+## 변경 영향과 복구
+
+보고서에는 계정·그룹·trust·GPO와 보안 finding이 포함될 수 있다. 후속 분석이 끝나면 실행 출력에서 기록한 HTML·XML·log exact 경로만 제거하고, 전용 디렉터리가 비었을 때만 삭제한다.
+
+```powershell
+foreach ($path in @('<PINGCASTLE_HTML_PATH>', '<PINGCASTLE_XML_PATH>', '<PINGCASTLE_LOG_PATH>')) {
+    if (Test-Path -LiteralPath $path) { Remove-Item -LiteralPath $path }
+}
+Remove-Item -LiteralPath '<PINGCASTLE_RUN_DIRECTORY>'
+Test-Path -LiteralPath '<PINGCASTLE_RUN_DIRECTORY>'
+```
+
+마지막 출력이 `False`여야 로컬 정리가 끝난 것이다. 보고서를 다른 분석 system에 업로드했다면 그 사본과 AD·host 조회 기록은 별도 잔여 영향으로 관리한다.
 
 ## 관련 공격기법
 
 - [[AD 보안 구성과 GPO 감사]]
+
+## 참고 링크
+
+- [PingCastle: Healthcheck](https://pingcastle.com/documentation/healthcheck/)
+- [Netwrix: PingCastle Standard and Basic User Guide](https://docs.netwrix.com/docs/pingcastle/4_0)

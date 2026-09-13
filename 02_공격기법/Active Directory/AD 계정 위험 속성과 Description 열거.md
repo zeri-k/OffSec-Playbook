@@ -4,7 +4,7 @@ tags:
   - 서비스/ldap
 시작조건: ["유효한 AD 계정 자격 증명 또는 해당 계정의 Windows 세션 확보", "실행 호스트에서 DC LDAP 접근 가능"]
 필요권한: ["현재 인증 주체로 도메인 사용자 Description과 UAC 속성을 읽을 권한"]
-필요조건: ["DC LDAP에 닿는 Windows PowerShell", "PowerView 또는 ActiveDirectory PowerShell 모듈"]
+필요조건: ["DC LDAP에 닿는 Windows PowerShell 또는 CMD", "PowerView·ActiveDirectory PowerShell 모듈 또는 dsquery"]
 결과: ["Description의 민감 정보 후보", "위험한 UAC 설정 계정 후보", "별도 인증이 필요한 자격 증명 후보"]
 ---
 
@@ -58,6 +58,14 @@ Get-DomainUser -UACFilter PASSWD_NOTREQD |
 - 해당 플래그가 설정된 `samaccountname`과 `useraccountcontrol`을 확인한다.
 - 결과가 없으면 필터 지원 여부와 원시 UAC 값을 확인한 뒤 해당 설정이 없다고 판정한다.
 
+외부 모듈을 사용할 수 없고 `dsquery`가 설치된 제한 셸에서는 AD의 bitwise AND matching rule로 같은 플래그 후보를 조회한다.
+
+```cmd
+dsquery * -filter "(&(objectCategory=person)(objectClass=user)(userAccountControl:1.2.840.113556.1.4.803:=32))" -attr distinguishedName sAMAccountName userAccountControl
+```
+
+`1.2.840.113556.1.4.803`은 filter 값에 설정된 모든 bit가 속성에도 설정됐는지 검사한다. `32`가 일치한다는 결과는 `PASSWD_NOTREQD` bit만 확인하며 빈 비밀번호나 인증 성공을 뜻하지 않는다. `dsquery` 부재·DC 연결 실패·접근 거부와 일치 객체 없음은 각각 구분한다.
+
 ### 3. 가역 암호화 저장 허용 계정 확인
 
 ```powershell
@@ -109,3 +117,8 @@ Get-ADUser -Filter 'userAccountControl -band 128' -Properties userAccountControl
 ## 관련 상태 라우터
 
 - [[확보한 자격 증명으로 원격 접근 경로 선택]]
+
+## 참고 링크
+
+- [Microsoft LDAP matching rules](https://learn.microsoft.com/openspecs/windows_protocols/ms-adts/4e638665-f466-4597-93c4-12f2ebfabab5)
+- [Microsoft Directory Service command-line tools](https://learn.microsoft.com/troubleshoot/windows-server/active-directory/directory-service-manage-objects)

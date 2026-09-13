@@ -97,6 +97,7 @@ SQL> xp_cmdshell whoami /priv
 ## 관련 공격기법
 
 - [[DB 인증과 데이터 열거]]
+- [[DB 서버 파일 쓰기 검증]]
 - [[MSSQL xp_cmdshell 명령 실행]]
 - [[MSSQL 서비스 Hash 캡처]]
 - [[MSSQL Impersonation 권한 상승]]

@@ -42,6 +42,7 @@ tags:
 | 사용자·그룹·컴퓨터 열거 | [[원격 비밀번호 공격]] | `netexec`, `kerbrute` | SMB/WinRM/RDP/SSH/메일처럼 실제 지원되는 서비스에서 검증할 사용자 이름·비밀번호 후보 |
 | SPN 사용자 계정 | [[Kerberoasting]] | `impacket-GetUserSPNs`, `rubeus` | offline cracking 대상 TGS hash |
 | pre-auth 미요구 계정 | [[AS-REP Roasting]] | `impacket-GetNPUsers`, `rubeus` | offline cracking 대상 AS-REP hash |
+| 프린터·애플리케이션 관리 화면의 LDAP `Test Connection`과 TLS 없는 simple bind 설정 | [[LDAP Test Connection 자격 증명 노출 검증]] | `tcpdump`, `netcat` | 장비의 bind 전송·평문 노출 여부와 설정 복구 상태 |
 | LDAP signing·channel binding 조건이 relay를 허용할 가능성 | [[NTLM Relay 조건 검토]] | `impacket-ntlmrelayx` | relay된 계정 권한으로 가능한 LDAP action 후보 |
 | 사용자·컴퓨터 객체의 `msDS-KeyCredentialLink` 쓰기 권한 | [[Shadow Credentials]] | `pywhisker`, `certipy` | 대상 객체에 KeyCredential을 추가해 certificate와 Kerberos ticket을 발급받을 가능성 |
 | `DS-Replication-Get-Changes` 계열 복제 권한 | [[DCSync]] | `impacket-secretsdump`, `mimikatz` | 검증된 디렉터리 복제 가능성 |

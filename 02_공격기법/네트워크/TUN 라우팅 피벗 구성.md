@@ -17,7 +17,7 @@ tags:
 ## 사용할 때
 
 - 현재 네트워크 위치: 운영 호스트에서는 `<INTERNAL_IP>:<PORT>`에 직접 연결할 수 없지만, 셸 또는 원격 명령 실행을 보유한 피벗 호스트에서는 해당 내부 TCP 포트에 연결할 수 있다.
-- 명령 실행 위치: Ligolo-ng `proxy`, interface·route 구성과 최종 클라이언트는 운영 호스트에서 실행하고, `agent`는 피벗 호스트의 현재 세션에서 실행한다.
+- 명령 실행 위치: Ligolo-ng `proxy`, interface·route 구성과 최종 클라이언트는 운영 호스트에서 실행하고, `agent`는 피벗 호스트의 현재 세션에서 실행한다. kernel route가 적용되는 client 범위와 agent의 실제 connect 범위는 [[피벗과 터널의 연결 경계]]에서 구분한다.
 - 보유 계정·피벗 세션: 피벗 호스트의 유지 중인 셸 또는 원격 명령 실행이 필요하다. agent 제어 채널에는 내부 서비스용 계정이나 Kerberos ticket을 전달하지 않는다.
 - 현재 권한: 피벗 호스트에서는 현재 계정으로 agent를 실행할 수 있으면 되고, 운영 호스트에서는 TUN interface와 route를 만들 관리자/root 권한이 필요하다.
 - 지금 가능한 행동: `<INTERNAL_CIDR>`의 여러 호스트·TCP 포트를 ProxyChains 없이 일반 클라이언트로 확인한다.

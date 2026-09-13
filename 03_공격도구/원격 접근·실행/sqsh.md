@@ -62,6 +62,7 @@ sqsh -S <TARGET> -U sa -P '<PASSWORD>'
 ## 관련 공격기법
 
 - [[DB 인증과 데이터 열거]]
+- [[DB 서버 파일 쓰기 검증]]
 - [[MSSQL Impersonation 권한 상승]]
 - [[MSSQL Linked Server 내부 이동]]
 - [[MSSQL xp_cmdshell 명령 실행]]

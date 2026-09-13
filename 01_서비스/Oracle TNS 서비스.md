@@ -14,7 +14,7 @@ tags:
 
 현재 명령 실행 호스트에서 `<TARGET>:1521`의 Oracle Transparent Network Substrate(TNS) listener에 도달할 수 있고, 아직 유효한 System Identifier(SID)·service name·DB 계정은 확인하지 않은 상태에서 시작한다. 접속 식별자를 확정한 뒤 계정 인증, 일반 DB role, `sysdba`, 계정 상태·verifier 버전 메타데이터, `UTL_FILE` 파일 쓰기를 서로 다른 권한 상태로 판단한다.
 
-성공하면 로그인 계정이 읽을 수 있는 DB 객체와 role을 얻는다. `ORA-12505`·`ORA-12514`는 SID/service name과 listener 등록을, `ORA-01017`은 사용자·비밀번호와 인증 방식을, query·파일 작업 거부는 DB privilege와 directory object를 다시 확인한다. 파일 생성에는 `UTL_FILE` 실행 권한, writable Oracle directory object와 서버 파일 시스템 권한이 모두 필요하다.
+성공하면 로그인 계정이 읽을 수 있는 DB 객체와 role을 얻는다. `ORA-12505`·`ORA-12514`는 SID/service name과 listener 등록을, `ORA-01017`은 사용자·비밀번호와 인증 방식을, query·파일 작업 거부는 DB privilege와 directory object를 다시 확인한다. 파일 생성에는 `UTL_FILE` 실행 권한, writable Oracle directory object와 서버 파일 시스템 권한이 모두 필요하며, DB client·server path·OS Identity·웹 handler 경계는 [[DB 서버 측 작업의 실행 주체와 결과 경계]]를 따른다.
 
 ## 서비스 고유 확인
 
@@ -94,6 +94,7 @@ END;
 | 기본 계정 또는 확보한 사용자 이름·비밀번호 후보 | [[원격 비밀번호 공격]] | `sqlplus`, `odat` | 계정 인증 성공 여부 |
 | DB 로그인·role 확보 | [[DB 인증과 데이터 열거]] | `sqlplus`, `odat` | 접근 가능한 테이블·view·사용자 정보 |
 | DBA view 조회 권한 | [[DB 인증과 데이터 열거]] | `sqlplus` | 계정 상태·인증 방식·verifier 버전 메타데이터; verifier 본문은 미확보 |
+| Oracle 8i~10g server release 또는 11g~12c account별 verifier version과 `SYS.USER$` 직접 조회 권한 | [[Oracle password verifier 추출과 오프라인 입력 준비]] | `sqlplus`, `hashcat` | 10G·11G·12C component별 오프라인 입력과 평문 후보 |
 | `UTL_FILE` 실행 권한과 writable DIRECTORY object | 이 문서의 선택적 UTL_FILE 텍스트 쓰기 proof | `sqlplus`, `curl` | writable directory의 파일 생성과 별도 웹 접근 여부 |
 
 ## 서비스 고유 주의 사항

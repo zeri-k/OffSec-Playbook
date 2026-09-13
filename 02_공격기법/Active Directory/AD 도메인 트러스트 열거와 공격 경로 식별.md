@@ -51,6 +51,16 @@ netdom query /domain:<CURRENT_FQDN> trust
 - `IntraForest`, `ForestTransitive`, 선택적 인증과 SID filtering 속성을 구분한다.
 - 한 도구의 빈 결과만으로 trust 부재를 단정하지 않는다.
 
+`Direction`은 명령을 실행한 현재 도메인, 즉 해당 trust object의 `Source` 관점에서 읽는다.
+
+| `Direction` | 현재 `Source` 도메인 관점의 의미 | 바로 확인할 것 |
+|---|---|---|
+| `Inbound` | `Target`이 `Source`를 신뢰하므로 `Source` identity가 `Target` 쪽에서 인증 후보가 됨 | `Target` 서비스의 selective authentication·ACL |
+| `Outbound` | `Source`가 `Target`을 신뢰하므로 `Target` identity가 `Source` 쪽에서 인증 후보가 됨 | 현재 보유 identity의 소속과 실제 접근 방향 |
+| `Bidirectional` | 위 두 방향의 trust relationship이 모두 존재함 | 양쪽 서비스에서 인증·권한을 각각 확인 |
+
+이 표는 인증 경로의 후보를 해석하는 기준이다. `Direction`만으로 referral ticket 발급이나 대상 서비스 권한을 확정하지 않는다. PowerView의 `TrustAttributes`에서는 `WITHIN_FOREST`, `FOREST_TRANSITIVE`, `NON_TRANSITIVE`, `QUARANTINED_DOMAIN` 등을 구분한다. `WITHIN_FOREST`와 `FOREST_TRANSITIVE`는 같은 의미가 아니며 동시에 설정되는 속성으로 해석하지 않는다. 자세한 KDC referral과 authorization data 관계는 [[Kerberos 인증 자료와 서비스 접근]]을 참조한다.
+
 ## 관찰과 상태 전환
 
 | 관찰 | 판단 | 결과 상태 | 다음 행동 |
@@ -59,6 +69,7 @@ netdom query /domain:<CURRENT_FQDN> trust
 | `ForestTransitive` | forest trust 후보 | 포리스트 간 trust | 대상 도메인 DNS·LDAP·Kerberos 도달성 확인 |
 | 포리스트 외부 비전이 trust | external trust 후보 | 직접 연결 trust | 직접 연결된 Source·Target과 SID filtering 확인 |
 | 양방향 또는 단방향 표시 | 인증 가능 방향 후보 | 대상 도메인 조회 후보 | 방향 이름만 해석하지 말고 대상 도메인 객체·서비스에서 실제 확인 |
+| `SelectiveAuthentication` 또는 quarantine·SID filtering 단서 | trust는 있으나 대상별 인증 또는 SID 전달이 제한될 수 있음 | 제한된 신뢰 경계 | 대상 컴퓨터의 인증 허용 권한, PAC SID와 실제 서비스 ACL 확인 |
 | 대상 도메인 SPN 계정 조사 필요 | trust 열거와 별도 계정·SPN 조회 | 신뢰 대상 서비스 계정 후보 필요 | [[SPN 계정 열거]] |
 | 대상 도메인 그룹의 외부 구성원 조사 필요 | trust 열거와 별도 그룹 객체 조회 | 외부 그룹 멤버십 후보 필요 | [[AD 외부 도메인 그룹 구성원 열거]] |
 | 양쪽 도메인 객체 관계 조사 필요 | trust 열거와 별도 그래프 수집 | ACL·세션·그룹 관계 후보 필요 | [[AD 관계 그래프 수집과 공격 경로 식별]] |
@@ -86,3 +97,10 @@ netdom query /domain:<CURRENT_FQDN> trust
 
 - [[AD Identity 확인 후 도메인 컨텍스트 열거]]
 - [[자식 도메인 장악 후 부모 도메인 경로 선택]]
+
+## 참고 링크
+
+- [MS-ADTS: trustDirection](https://learn.microsoft.com/openspecs/windows_protocols/ms-adts/5026a939-44ba-47b2-99cf-386a9e674b04)
+- [MS-ADTS: trustAttributes](https://learn.microsoft.com/openspecs/windows_protocols/ms-adts/e9a2d23c-c31e-4a6f-88a0-6646fdb51a3c)
+- [MS-KILE: Cross-Domain Referrals](https://learn.microsoft.com/openspecs/windows_protocols/ms-kile/bac4dc69-352d-416c-a9f4-730b81ababb3)
+- [Microsoft: TGS request for krbtgt account fails with KDC_ERR_POLICY](https://learn.microsoft.com/troubleshoot/windows-server/windows-security/tgs-request-for-krbtgt-account-fails)

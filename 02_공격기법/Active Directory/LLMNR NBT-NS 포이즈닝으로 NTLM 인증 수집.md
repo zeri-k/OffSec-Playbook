@@ -6,7 +6,7 @@ tags:
 시작조건: ["내부 네트워크에서 LLMNR 또는 NBT-NS 요청 관찰", "포이즈닝할 인터페이스와 시간대 확인"]
 필요권한: ["Linux의 패킷 캡처와 서비스 바인딩 권한 또는 Windows 로컬 관리자 권한"]
 필요조건: ["피해 호스트와 이름 해석 요청을 관찰할 수 있는 네트워크 위치", "수신 포트 충돌이 없는 공격 호스트"]
-결과: ["NetNTLM challenge-response", "인증 주체와 출발지 단서", "오프라인 크래킹 또는 NTLM relay 후보"]
+결과: ["NetNTLM challenge-response", "인증 주체와 출발지 단서", "오프라인 크래킹 입력 또는 새 인증의 실시간 relay 수신 경로 후보"]
 ---
 
 # LLMNR NBT-NS 포이즈닝으로 NTLM 인증 수집
@@ -77,17 +77,35 @@ sudo responder -I <INTERFACE> -wrfv
 
 ### Windows 공격 호스트에서 실행
 
-#### Inveigh 활성 포이즈닝
+#### 1. Inveigh inspect mode로 가능성 확인
 
-C# Inveigh 실행 파일을 사용할 수 있다. 시작 요약에서 실제 활성화된 spoofer와 listener를 확인하고 사용하지 않을 프로토콜은 실행 전에 비활성화한다.
+C# Inveigh 실행 파일을 사용할 수 있다. 설치된 build의 parameter를 확인하고 먼저 응답하지 않는 inspect mode에서 요청·interface·listener 충돌을 확인한다.
 
 ```powershell
-.\Inveigh.exe
+.\Inveigh.exe -?
+.\Inveigh.exe -Inspect Y -FileOutput N -RunTime <MINUTES>
 ```
 
 확인할 출력:
 
-- Responder의 poisoner 응답과 `NTLMv1` 또는 `NTLMv2` capture.
+- LLMNR·NBNS 요청과 출발지. inspect mode에서는 `response sent`나 인증 capture를 기대하지 않는다.
+- `address already in use` 또는 listener 시작 실패가 보이면 활성 모드로 전환하지 않는다.
+
+#### 2. Inveigh 활성 포이즈닝
+
+inspect mode를 `STOP`으로 끝낸 뒤 작업 전 없던 `<INVEIGH_RUN_DIRECTORY>`를 만들고, 필요한 이름 해석 protocol과 제한 시간을 명시한다. current C# Inveigh에서 output directory·prefix·runtime option을 지원할 때 사용하는 대표 명령이다.
+
+```powershell
+Test-Path -LiteralPath '<INVEIGH_RUN_DIRECTORY>'
+New-Item -ItemType Directory -Path '<INVEIGH_RUN_DIRECTORY>'
+.\Inveigh.exe -LLMNR Y -NBNS Y -DNS N -MDNS N -DHCPv6 N -ICMPv6 N -HTTP Y -HTTPS N -LDAP N -Proxy N -WebDAV N -SMB Y -FileOutput Y -FileDirectory '<INVEIGH_RUN_DIRECTORY>' -FilePrefix 'inveigh-<UNIQUE_ID>' -RunTime <MINUTES>
+```
+
+`Test-Path`가 `False`일 때만 directory를 만든다. 기존 경로가 있으면 다른 고유 경로를 사용한다.
+
+확인할 출력:
+
+- 시작 줄의 exact PID·output directory, LLMNR·NBNS와 HTTP·SMB capture 활성 상태 및 나머지 명시한 protocol의 비활성 상태.
 - Inveigh의 `response sent`, SMB/HTTP NTLM challenge와 캡처 수 증가.
 - Inveigh 대화형 콘솔의 `GET NTLMV2UNIQUE`, `GET NTLMV2USERNAMES` 결과.
 - `address already in use` 또는 listener 시작 실패가 보이면 포트 충돌을 해결하기 전 결과를 신뢰하지 않는다.
@@ -95,8 +113,8 @@ C# Inveigh 실행 파일을 사용할 수 있다. 시작 요약에서 실제 활
 
 ### 3. 수집 결과를 목적별로 분기
 
-- 저장한 NetNTLM challenge-response를 비밀번호 후보와 대조하려면 [[오프라인 해시 크래킹]]으로 넘긴다. NetNTLMv2는 Hashcat mode `5600` 후보이며 Pass the Hash에 직접 쓰지 않는다.
-- relay는 저장된 응답을 나중에 재사용하는 절차가 아니라 들어오는 인증을 실시간으로 다른 서비스에 전달하는 흐름이다. SMB signing, EPA/CBT, 대상 서비스와 계정 권한은 [[NTLM Relay 조건 검토]]에서 별도로 확인한다.
+- 저장한 NetNTLM challenge-response를 비밀번호 후보와 대조하려면 [[오프라인 해시 크래킹]]으로 넘긴다. NetNTLMv2는 Hashcat mode `5600` 후보이며 Pass the Hash에 직접 쓰지 않는다. NT hash·challenge-response와 relay 연결의 차이는 [[NTLM 인증 자료, 실시간 Relay와 서비스 권한 경계]]를 따른다.
+- relay는 저장된 응답을 나중에 재사용하는 절차가 아니라 새로 들어오는 인증을 실시간으로 다른 서비스에 전달하는 흐름이다. SMB signing, EPA/CBT, 대상 서비스와 계정 권한은 [[NTLM Relay 조건 검토]]에서 별도로 확인한다.
 - relay를 선택하면 Responder의 충돌하는 SMB/HTTP listener를 끄고 `ntlmrelayx` 수신 구성을 맞춘다. 같은 인증을 크래킹 분기와 relay 분기로 혼동하지 않는다.
 
 ## 관찰과 상태 전환
@@ -123,6 +141,7 @@ C# Inveigh 실행 파일을 사용할 수 있다. 시작 요약에서 실제 활
 | 링크 로컬 이름 해석 응답 | 잘못된 이름 요청이 공격 호스트로 향해 정상 연결 실패, 지연 또는 인증 프롬프트가 발생할 수 있음 | `response sent` 대상·시간과 사용자 또는 서비스 오류를 대조 | Responder는 `Ctrl+C`, Inveigh는 대화형 콘솔의 `STOP` 또는 PowerShell의 `Stop-Inveigh`로 즉시 중지 |
 | 공격 호스트의 rogue SMB·HTTP·WPAD listener | 기존 서비스와 포트 충돌하거나 의도하지 않은 프로토콜에서 인증을 받을 수 있음 | 시작 요약과 listener 오류, 로컬 포트 점유 확인 | 프로세스를 중지하고 listener가 닫혔는지 확인한 뒤 변경한 Responder 설정을 작업 전 상태로 복원 |
 | 대상 밖 요청 처리 | 다른 VLAN·호스트의 정상 통신에 영향을 줄 수 있음 | 캡처 로그의 출발지와 대상 목록 비교 | 대상 밖 응답이 보이면 즉시 중지하고 네트워크 정상화 및 관련 서비스 연결을 재검증 |
+| Inveigh 고유 output directory | NetNTLM·사용자·출발지와 log 파일이 남음 | 시작 줄의 output path와 이번 prefix 파일 | [[Inveigh]]에서 exact PID·listener를 종료하고 이번 prefix 파일과 빈 directory만 제거 |
 
 - 이 절차는 대상 호스트 설정을 영구 변경하지 않는다. 중지 후 공격 호스트가 더 이상 LLMNR/NBT-NS 응답이나 rogue service를 제공하지 않는지 확인한다.
 

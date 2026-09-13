@@ -77,3 +77,7 @@ impacket-lookupsid -no-pass '<TARGET>'
 
 - [[자식 도메인 ExtraSids Golden Ticket]]
 - [[인증 후 AD 사용자와 컴퓨터 객체 열거]]
+
+## 참고 링크
+
+- [Impacket lookupsid](https://github.com/fortra/impacket/blob/master/examples/lookupsid.py)

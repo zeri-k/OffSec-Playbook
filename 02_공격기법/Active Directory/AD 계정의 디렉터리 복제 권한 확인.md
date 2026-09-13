@@ -63,7 +63,7 @@ $effectiveSids
 - `$userSid`가 권한을 확인하려는 사용자와 일치하고, `$effectiveSids`에 그 SID와 직접·중첩 보안 그룹 SID 후보가 포함된다.
 - PowerView의 `Get-DomainGroup -MemberIdentity`는 사용자의 유효 그룹 관계를 위로 조회한다. 불러온 배포본이 이 매개변수를 제공하지 않으면 `Get-Command Get-DomainGroup -Syntax`를 확인하고 [[AD 고권한 그룹과 중첩 구성원 열거]]에서 그룹 목록을 얻어 각 이름을 `Convert-NameToSid`로 변환한다.
 - 사용자 SID나 그룹 목록이 비어 있으면 ACL 권한 부재로 판단하지 않는다. 이름 형식, 대상 도메인, DC LDAP 접근과 그룹 조회 범위를 먼저 확인한다.
-- 이 목록은 LDAP에서 계산한 후보이며 기존 로컬 로그온 token의 즉시 갱신을 보장하지 않는다. 현재 token을 사용하는 실행이면 `whoami /groups`로 활성·deny-only 상태를 대조한다.
+- 이 목록은 LDAP에서 계산한 후보이며 기존 로컬 로그온 token의 즉시 갱신을 보장하지 않는다. 디렉터리 그룹 관계와 현재 token의 차이는 [[Windows 액세스 토큰과 특권 활성화]]를 따르며, 현재 token을 사용하는 실행이면 `whoami /groups`로 활성·deny-only 상태를 대조한다.
 
 ### 3. 도메인 루트에서 요청자 SID 집합의 복제 권한만 조회
 

@@ -14,7 +14,7 @@ tags:
 
 ## 도구 개요
 
-LAPSToolkit은 AD에서 Local Administrator Password Solution(LAPS) 적용 컴퓨터와 비밀번호 읽기 위임 관계를 열거한다. LAPS 배포 범위와 노출된 위임을 점검하고 현재 계정이 읽을 수 있는 로컬 관리자 비밀번호를 식별할 때 사용한다.
+LAPSToolkit은 legacy Microsoft LAPS의 `ms-Mcs-AdmPwd` 적용 컴퓨터와 비밀번호 읽기 위임 관계를 열거한다. legacy 배포 범위와 노출된 위임을 점검하고 현재 계정이 읽을 수 있는 로컬 관리자 비밀번호를 식별할 때 사용한다. Windows LAPS native schema·encrypted password·Microsoft Entra ID backup은 이 도구의 지원 범위가 아니다.
 
 ## 필요한 입력과 실행 환경
 
@@ -82,6 +82,16 @@ Get-LAPSComputers
 | `Password` 값 표시 | 현재 사용 중인 계정이 해당 LAPS 비밀번호를 평문으로 읽을 수 있음 | 만료 시점과 대상 호스트의 로컬 관리자 계정명 확인 |
 | `Password`가 비어 있음 | LAPS 적용 여부 또는 현재 사용 중인 계정의 읽기 권한 부족 | 컴퓨터 속성, 위임 ACL, 스키마 버전 확인 |
 
+## 버전과 구현 경계
+
+- 이 도구는 오래된 PowerView code를 포함하며 legacy Microsoft LAPS attribute를 조회한다. Windows LAPS 환경에서는 [[LAPS 비밀번호 읽기 권한과 자격 증명 수집]]의 `Find-LapsADExtendedRights`와 `Get-LapsADPassword` 경로를 사용한다.
+- 함수가 반환한 `All Extended Rights`는 읽기 가능성 단서다. 현재 사용 중인 계정의 유효 membership과 실제 `Password` 반환을 별도로 확인한다.
+
 ## 관련 공격기법
 
 - [[LAPS 비밀번호 읽기 권한과 자격 증명 수집]]
+
+## 참고 링크
+
+- [LAPSToolkit 공식 저장소](https://github.com/leoloobeek/LAPSToolkit)
+- [Microsoft: Windows LAPS와 legacy Microsoft LAPS cmdlet 비교](https://learn.microsoft.com/windows-server/identity/laps/laps-management-powershell)

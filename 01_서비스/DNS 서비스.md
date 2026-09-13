@@ -55,6 +55,9 @@ openssl s_client -connect <SUBDOMAIN>:443 -servername <SUBDOMAIN> </dev/null
 | NS/SOA/MX/TXT/SRV, PTR 응답 또는 recursion 허용 | [[DNS 열거와 Zone Transfer]] | `dig` | 도메인·호스트 역할과 추가 서비스 후보 |
 | AXFR 성공 | [[DNS 열거와 Zone Transfer]] | `dig`, `dnsenum`, `fierce` | 전체 zone의 내부 호스트명·IP·서비스명 |
 | 서브도메인 후보 필요 또는 새 이름 발견 | [[DNS 열거와 Zone Transfer]] | `dnsenum`, `subfinder`, `subbrute` | 웹·관리·개발 호스트 후보 |
+| `_ldap._tcp`, `_kerberos._tcp`, `dc._msdcs` SRV 또는 DC 역할 hostname 발견 | [[AD 도메인 컨텍스트 기본 확인]] | `dig`, `nslookup`, `ldapsearch` | DNS 단서와 실제 DC·도메인·현재 AD Identity를 분리해 확인 |
+| 현재 AD 계정의 DnsAdmins 멤버십이 Windows token에 반영되고 대상이 Windows DNS Server임 | [[DnsAdmins DNS 서버 플러그인 DLL 실행]] | `dnscmd` | 기존 plug-in 값과 별도 service-control 권한을 확인한 controlled DNS 서비스 계정 실행 후보 |
+| DnsAdmins token으로 승인된 Windows DNS zone의 WPAD 영향과 client 인증 경로를 확인해야 함 | [[DnsAdmins WPAD DNS 레코드로 NTLM 인증 유도]] | `PowerShell`, `Responder`, `Inveigh` | DNS 응답·client HTTP 요청·NetNTLM 수집을 분리한 인증 유도 결과 |
 | CNAME이 S3, GitHub Pages, CDN 등 외부 서비스로 연결 | 이 문서의 외부 CNAME과 Subdomain Takeover 후보 확인 | `dig`, `curl`, `openssl` | 외부 CNAME과 공급자별 미점유 신호가 일치한 후보 |
 | 피해자와 게이트웨이 사이 L2 MITM 가능 | [[Ettercap L2 MITM DNS Spoofing]] | `ettercap` | 관찰한 DNS 질의의 응답 조작과 HTTP 트래픽 유도 가능성 |
 

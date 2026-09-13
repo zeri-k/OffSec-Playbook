@@ -1,6 +1,7 @@
 ---
 tags:
   - 환경/windows
+  - 환경/linux
   - 서비스/smb
 시작조건: ["실행 호스트에서 SMB 서비스 접근 가능", "공유 목록 또는 공유명 확보"]
 필요권한: ["익명·Guest 또는 요청자 SMB 계정으로 공유와 개별 파일을 읽을 권한"]
@@ -79,16 +80,24 @@ smbclient //<TARGET_FQDN>/<SHARE> --use-kerberos=required --use-krb5-ccache=<CCA
 
 ### 공유 접근과 다운로드
 
+다운로드 전에 이번 작업의 고유 로컬 디렉터리를 만든다.
+
+```bash
+test ! -e '<SMB_COLLECTION_DIR>' || exit 1
+install -d -m 700 '<SMB_COLLECTION_DIR>'
+```
+
 ```bash
 smbclient //<TARGET>/<SHARE> -U '<REQUESTER>%<PASSWORD>'
 smb: \> recurse ON
-smb: \> prompt OFF
-smb: \> mget *
+smb: \> lcd <SMB_COLLECTION_DIR>
+smb: \> get <REMOTE_FILE> <LOCAL_FILE>
 ```
 
 확인할 출력:
 
-- 실제로 로컬에 저장된 설정·백업·스크립트·문서의 경로. 공유 목록 조회만 성공한 상태와 파일 다운로드 성공을 구분한다.
+- 실제로 `<SMB_COLLECTION_DIR>/<LOCAL_FILE>`에 저장된 설정·백업·스크립트·문서의 크기와 hash. 공유 목록 조회만 성공한 상태와 파일 다운로드 성공을 구분한다.
+- 전체 `mget *`보다 역할·확장자·수정 시간으로 선별한 `<REMOTE_FILE>`을 우선한다. 추가 파일은 각 원격·로컬 경로를 작업 기록에 별도로 남긴다.
 
 ### 권한과 파일 후보 빠른 확인
 
@@ -104,8 +113,10 @@ smbmap -H <TARGET> -u <REQUESTER> -p '<PASSWORD>' -R <SHARE>
 ### 키워드 검색
 
 ```bash
-manspider <TARGET> -u <REQUESTER> -p '<PASSWORD>' --content "password"
-rg -i "password|passwd|pwd|secret|token|connection|string|key" ./loot
+test ! -e '<MANSPIDER_OUTPUT_DIR>' || exit 1
+install -d -m 700 '<MANSPIDER_OUTPUT_DIR>'
+manspider <TARGET> --sharenames '<SHARE>' -u <REQUESTER> -p '<PASSWORD>' -c 'password' -l '<MANSPIDER_OUTPUT_DIR>'
+rg -i "password|passwd|pwd|secret|token|connection|string|key" '<MANSPIDER_OUTPUT_DIR>/loot'
 ```
 
 확인할 출력:
@@ -114,22 +125,66 @@ rg -i "password|passwd|pwd|secret|token|connection|string|key" ./loot
 - `NT_STATUS_ACCESS_DENIED`가 나오면 SMB 인증 실패인지 share READ 또는 개별 파일 ACL 거부인지 실행 단계별로 확인한다.
 - `NT_STATUS_LOGON_FAILURE`는 익명 허용 여부 또는 요청자 계정 범위·비밀번호·NT hash·ccache를 확인한다. session은 생성됐지만 다운로드가 거부되면 인증 성공과 share·파일 READ 권한을 분리한다.
 
+### NetExec로 파일명 후보 선별
+
+이미 NetExec을 사용하고 있고 특정 공유의 파일명·경로를 먼저 좁힐 때 쓴다. 현재 공식 `--spider`·`--pattern` 예시는 파일명 pattern을 찾으며 본문 content 검색·다운로드를 증명하지 않는다.
+
+```bash
+nxc smb <TARGET> -u <REQUESTER> -p '<PASSWORD>' --spider '<SHARE>' --pattern '<FILENAME_PATTERN>'
+```
+
+확인할 출력:
+
+- SMB 인증 성공, spider 시작과 pattern에 일치한 원격 경로를 각각 분리한다.
+- content 검색·매치 파일 로컬 보존이 필요하면 [[manspider]]로 전환한다. NetExec workspace에 인증·host 자료가 남을 수 있으므로 [[netexec]]의 workspace 경계를 확인한다.
+
 ### Windows 공격 호스트에서 여러 SMB 공유 검색
+
+현재 Windows 세션에서 공유 하나를 직접 검색할 때는 작업 전 존재하지 않는 PSDrive 이름을 고르고 password를 prompt에 입력한다. `<SMB_DRIVE>`에는 콜론 없는 한 글자 이름을 사용한다.
+
+```powershell
+Get-PSDrive -PSProvider FileSystem
+$Credential = Get-Credential -UserName '<DOMAIN>\<REQUESTER>' -Message 'SMB share credential'
+New-PSDrive -Name '<SMB_DRIVE>' -PSProvider FileSystem -Root '\\<TARGET>\<SHARE>' -Credential $Credential
+Get-ChildItem '<SMB_DRIVE>:\' -Recurse -File -Include '*cred*','*pass*','*secret*','*.config','*.xml','*.ps1','*.bat' -ErrorAction SilentlyContinue
+Get-ChildItem '<SMB_DRIVE>:\' -Recurse -File -Include '*.txt','*.config','*.xml','*.ps1','*.bat' -ErrorAction SilentlyContinue |
+  Select-String -Pattern 'password|passwd|pwd|credential|secret|token|connection|string|key' -List
+```
+
+확인할 출력:
+
+- `New-PSDrive`의 Root가 의도한 UNC이고, 파일명·본문 검색 결과가 현재 요청자에게 실제 READ 가능한 원격 경로를 가리키는지 확인한다.
+- `Get-Credential`의 `SecureString`은 이 PowerShell 프로세스 안에서 credential object로 쓰일 뿐 원격 서비스가 수락했다는 증거가 아니다. drive 생성과 실제 파일 조회로 SMB 인증·share READ를 각각 확인한다.
+- `Access is denied`는 drive 인증, share ACL 또는 개별 파일 ACL 중 어느 단계인지 명령별로 구분한다. 재귀 검색이 느리거나 차단되면 역할 기반 하위 경로와 확장자로 범위를 줄인다.
+
+검색 뒤에는 이번에 만든 PSDrive만 제거하고 기존 drive·SMB session은 건드리지 않는다.
+
+```powershell
+Remove-PSDrive -Name '<SMB_DRIVE>'
+Remove-Variable Credential
+Get-PSDrive -Name '<SMB_DRIVE>' -ErrorAction SilentlyContinue
+Get-Variable Credential -ErrorAction SilentlyContinue
+```
+
+마지막 두 확인이 아무것도 반환하지 않아야 이번 매핑과 작업용 credential 변수 정리가 확인된다. 현재 위치가 해당 drive 안이면 `Remove-PSDrive`가 실패하므로 기존 로컬 경로로 이동한 뒤 같은 정확한 이름을 다시 제거한다. 원격 파일은 조회만 하며 복사·수정·삭제하지 않는다.
 
 PowerHuntShares를 사용할 수 있으면 도메인 공유를 병렬로 확인하고 HTML 보고서를 생성한다.
 
 현재 도메인 사용자 컨텍스트에서 도메인 전체 공유를 순회하며 자격 증명·키·설정 파일 후보를 자동 분류해야 하면 [[Snaffler로 도메인 SMB 공유 민감 파일 탐색]]으로 분기한다.
 
 ```powershell
+if (Test-Path -LiteralPath '<POWERSHARES_PARENT>') { throw 'Output parent already exists' }
+New-Item -ItemType Directory -Path '<POWERSHARES_PARENT>'
 Import-Module .\PowerHuntShares.psm1
-Invoke-HuntSMBShares -Threads 100 -OutputDirectory <OUTPUT_DIRECTORY>
+Invoke-HuntSMBShares -Threads <THREAD_COUNT> -OutputDirectory '<POWERSHARES_PARENT>'
 ```
 
 확인할 출력:
 
 - 탐색한 호스트·공유와 읽기 가능한 경로 수.
-- `<OUTPUT_DIRECTORY>`에 생성된 HTML 보고서와 로그 파일.
+- 출력에 표시된 `<POWERSHARES_RUN_DIR>` 절대 경로와 그 안에 생성된 HTML·CSV·log. `-OutputDirectory`는 parent이며 도구가 `SmbShareHunt-<timestamp>` 하위 경로를 만들 수 있으므로 실제 출력을 기록한다.
 - 자동 분류 결과는 파일 접근 권한과 민감 정보 노출을 확정하지 않으므로 실제 파일 경로와 내용을 다시 확인한다.
+- `<THREAD_COUNT>`는 승인된 호스트 수·SMB 제한·관찰 조건에서 작게 시작해 조정한다. 교육 예시의 `100`을 모든 환경의 기본값으로 쓰지 않는다.
 
 ### SYSVOL 스크립트의 평문 자격 증명 검색
 
@@ -167,6 +222,30 @@ cat \\<DC>\SYSVOL\<DOMAIN>\scripts\<SCRIPT>
 - credential 유효성, 원격 로그인 권한, 로컬 관리자 또는 도메인 권한은 각각 별도로 확인한다.
 - token·SSH key·DB 접속 문자열은 평문 비밀번호와 사용 방법이 다르므로 값의 종류와 적용 서비스부터 확인한다.
 
+## 변경 영향과 로컬 산출물 정리
+
+원격 SMB 파일은 읽기만 하고 수정·삭제하지 않는다. 이 절차는 로컬 파일 사본, MANSPIDER loot·log, PowerHuntShares report, NetExec workspace 기록을 남길 수 있다.
+
+- 로컬 사본은 `<SMB_COLLECTION_DIR>` 안의 이번 작업 파일 경로를 전부 확인한 뒤 하위에서부터 정리한다.
+- MANSPIDER는 [[manspider]]의 `<MANSPIDER_OUTPUT_DIR>` 생성·정리 절차를 따른다.
+- PowerHuntShares는 출력에서 확인한 `<POWERSHARES_RUN_DIR>`을 먼저 제거하고, 이번 작업이 만든 parent가 빈 후에만 제거한다.
+- NetExec workspace 삭제는 설치 버전의 지원 계약이 확인되지 않았다면 완료로 표시하지 않고 [[netexec]]에 남은 민감 상태를 기록한다.
+
+```bash
+find '<SMB_COLLECTION_DIR>' -xdev -depth -type f -delete
+find '<SMB_COLLECTION_DIR>' -xdev -depth -type d -empty -delete
+test ! -e '<SMB_COLLECTION_DIR>'
+```
+
+```powershell
+Remove-Item -LiteralPath '<POWERSHARES_RUN_DIR>' -Recurse -Force
+Remove-Item -LiteralPath '<POWERSHARES_PARENT>' -Force
+Test-Path -LiteralPath '<POWERSHARES_RUN_DIR>'
+Test-Path -LiteralPath '<POWERSHARES_PARENT>'
+```
+
+두 `Test-Path`가 `False`여야 report 정리가 확인된다. 예상하지 않은 파일·하위 디렉터리가 있거나 경로·소유자가 다르면 재귀 삭제를 중단한다. 이미 전달된 credential·terminal history·SMB·AD 감사 로그는 로컬 파일 정리로 되돌려지지 않는다.
+
 ## 후속 공격 연결
 
 - 도메인 전체 공유 자동 선별: [[Snaffler로 도메인 SMB 공유 민감 파일 탐색]]
@@ -198,3 +277,5 @@ cat \\<DC>\SYSVOL\<DOMAIN>\scripts\<SCRIPT>
 
 - [Samba smbclient manual](https://www.samba.org/samba/docs/current/man-html/smbclient.1.html)
 - [Microsoft — What is SMB File Sharing](https://learn.microsoft.com/en-us/windows-server/storage/file-server/file-server-smb-overview)
+- [Microsoft — New-PSDrive](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.management/new-psdrive)
+- [Microsoft — Remove-PSDrive](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.management/remove-psdrive)

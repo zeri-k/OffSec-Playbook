@@ -52,6 +52,18 @@ Get-ADUser -Filter { ServicePrincipalName -ne "$null" } -Properties ServicePrinc
 
 - `SamAccountName`, `Enabled`, `ServicePrincipalName`, `SID`
 
+### 사용자와 컴퓨터 객체의 필요한 속성 조회
+
+```powershell
+Get-ADUser -Filter * -Server '<DC_FQDN>' -Properties Enabled,PasswordLastSet,LastLogonDate,ServicePrincipalName
+Get-ADComputer -Filter * -Server '<DC_FQDN>' -Properties DNSHostName,OperatingSystem,OperatingSystemVersion,LastLogonDate
+```
+
+확인할 출력:
+
+- 사용자와 컴퓨터 객체의 DN·SID 및 `-Properties`로 요청한 추가 속성.
+- 모듈 import나 DC 연결 성공만으로 객체 반환 범위가 확정되지는 않는다. 큰 환경에서는 `-SearchBase`·`-ResultSetSize`로 조회 범위를 먼저 줄인다.
+
 ### 도메인 트러스트 관계 열거
 
 ```powershell
@@ -80,6 +92,8 @@ Get-ADGroupMember -Identity "<GROUP>"
 | `Import-Module ActiveDirectory` | ActiveDirectory cmdlet 불러오기 | `Get-AD*` 명령을 사용하기 전 |
 | `Get-ADDomain` | 현재 또는 지정한 도메인의 기본 속성 반환 | 도메인 SID, 기능 수준, DC와 하위 도메인 확인 |
 | `Get-ADUser` | AD 사용자 조회 | SPN, 계정 상태와 사용자 property 열거 |
+| `Get-ADComputer` | AD 컴퓨터 조회 | DNS hostname, 운영체제와 마지막 로그온 단서 열거 |
+| `Set-ADAccountControl` | 특정 UAC Boolean flag 변경 | 승인된 객체 제어 기법에서 원래 값 기록·즉시 복구와 함께 사용 |
 | `Get-ADTrust` | 도메인 트러스트 조회 | 트러스트 방향과 범위 확인 |
 | `Get-ADGroupMember` | 지정한 그룹 구성원 조회 | 고권한 또는 운영 그룹의 직접 구성원 확인 |
 | `Get-ADGroup` | 그룹 객체와 SID 조회 | 다른 도메인의 Enterprise Admins 등 그룹 SID 확인 |
@@ -115,3 +129,12 @@ Get-ADGroupMember -Identity "<GROUP>"
 - [[AD 도메인 트러스트 열거와 공격 경로 식별]]
 - [[자식 도메인 ExtraSids Golden Ticket]]
 - [[AD 보안 구성과 GPO 감사]]
+- [[임시 DONT_REQ_PREAUTH 설정과 AS-REP 요청]]
+
+## 참고 링크
+
+- [Microsoft: Get-ADTrust](https://learn.microsoft.com/powershell/module/activedirectory/get-adtrust)
+- [Microsoft: Get-ADUser](https://learn.microsoft.com/powershell/module/activedirectory/get-aduser)
+- [Microsoft: Get-ADComputer](https://learn.microsoft.com/powershell/module/activedirectory/get-adcomputer)
+- [Microsoft: ActiveDirectory module](https://learn.microsoft.com/powershell/module/activedirectory/)
+- [Microsoft: Set-ADAccountControl](https://learn.microsoft.com/powershell/module/activedirectory/set-adaccountcontrol)

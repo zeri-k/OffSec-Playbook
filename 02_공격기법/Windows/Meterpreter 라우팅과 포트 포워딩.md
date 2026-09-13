@@ -20,7 +20,7 @@ tags:
 - 명령 실행 위치: `route`·SOCKS 모듈은 공격 호스트의 Metasploit console에서, `ipconfig`·`portfwd`는 피벗 호스트의 Meterpreter 세션에서 실행한다.
 - 도달해야 하는 대상: 피벗 호스트에서는 `<INTERNAL_IP>:<PORT>`가 응답하지만 공격 호스트에서는 직접 도달하지 못한다.
 - 현재 계정·권한: `getuid`로 피벗 세션의 실행 계정을 확인하며, 세션 확보 자체는 피벗 호스트의 관리자 권한이나 내부 대상의 서비스 권한을 의미하지 않는다.
-- 지금 가능한 행동·성공 범위: 전체 `<INTERNAL_CIDR>`이 필요하면 route와 SOCKS, 특정 `<INTERNAL_IP>:<PORT>`만 필요하면 `portfwd`를 구성한다. 성공해도 TCP 경로만 확보하며 인증·원격 실행·관리자 권한은 최종 서비스에서 별도로 검증한다.
+- 지금 가능한 행동·성공 범위: 전체 `<INTERNAL_CIDR>`이 필요하면 route와 SOCKS, 특정 `<INTERNAL_IP>:<PORT>`만 필요하면 `portfwd`를 구성한다. Metasploit route가 자동 적용되는 모듈과 외부 client가 별도 SOCKS hook을 필요로 하는 이유는 [[피벗과 터널의 연결 경계]]를 따른다. 성공해도 TCP 경로만 확보하며 인증·원격 실행·관리자 권한은 최종 서비스에서 별도로 검증한다.
 
 ## 전제 조건
 
